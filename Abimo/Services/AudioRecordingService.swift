@@ -66,8 +66,8 @@ class AudioRecordingService: NSObject, ObservableObject {
             guard let self = self else { return }
             self.audioRecorder?.updateMeters()
             let averagePower = self.audioRecorder?.averagePower(forChannel: 0) ?? -160
-            // Convert to 0-1 range
-            let normalized = max(0.0, min(1.0, (averagePower + 160) / 160))
+            // Convert to 0-1 range using calibrated normalization
+            let normalized = Self.normalizeAudioLevel(averagePower: averagePower)
             Task { @MainActor in
                 self.audioLevel = normalized
             }
@@ -98,6 +98,14 @@ class AudioRecordingService: NSObject, ObservableObject {
         if let url = stopRecording() {
             try? FileManager.default.removeItem(at: url)
         }
+    }
+
+    /// Normalizes AVAudioRecorder averagePower (dB) to a 0–1 visual level.
+    /// Maps [-50, 0] dB linearly to [0.0, 1.0]. Values below -50 dB clamp to 0.
+    nonisolated static func normalizeAudioLevel(averagePower: Float) -> Float {
+        let floorDb: Float = -50.0
+        let clamped = max(floorDb, min(0.0, averagePower))
+        return (clamped - floorDb) / (-floorDb)
     }
 
     func formatDuration(_ duration: TimeInterval) -> String {
