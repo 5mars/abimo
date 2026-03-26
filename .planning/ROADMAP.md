@@ -89,7 +89,7 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 16-01-PLAN.md — Waveform sensitivity fix and green-to-brand color replacement
+- [x] 16-01-PLAN.md — Waveform sensitivity fix and green-to-brand color replacement
 - [ ] 16-02-PLAN.md — Unified discard pill button and visual verification
 
 ## Progress
@@ -111,4 +111,4 @@ Plans:
 | 13. All-Actions View and Unified Switching | v1.3 | 1/1 | Complete | 2026-03-21 |
 | 14. Custom Tab Bar | v1.4 | 2/2 | Complete | 2026-03-22 |
 | 15. Title Consistency | v1.5 | 1/1 | Complete    | 2026-03-22 |
-| 16. Recording Page Polish | v1.5 | 0/2 | Planning | - |
+| 16. Recording Page Polish | v1.5 | 1/2 | In Progress|  |

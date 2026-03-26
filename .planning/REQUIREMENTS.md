@@ -13,11 +13,11 @@ Requirements for UI Polish milestone. Each maps to roadmap phases.
 
 ### Recording Waveform
 
-- [ ] **WAVE-01**: Waveform bars during recording respond to actual microphone audio levels (not random pulsing)
+- [x] **WAVE-01**: Waveform bars during recording respond to actual microphone audio levels (not random pulsing)
 
 ### Recording Buttons
 
-- [ ] **BTNS-01**: All recording buttons (start, stop, lock-in, cancel) use brand colors — no green
+- [x] **BTNS-01**: All recording buttons (start, stop, lock-in, cancel) use brand colors — no green
 
 ### Recording Cancel Flow
 
@@ -43,8 +43,8 @@ Requirements for UI Polish milestone. Each maps to roadmap phases.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | TITL-01 | Phase 15 | Complete |
-| WAVE-01 | Phase 16 | Pending |
-| BTNS-01 | Phase 16 | Pending |
+| WAVE-01 | Phase 16 | Complete |
+| BTNS-01 | Phase 16 | Complete |
 | CANC-01 | Phase 16 | Pending |
 
 **Coverage:**
