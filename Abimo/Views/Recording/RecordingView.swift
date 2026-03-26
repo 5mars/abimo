@@ -111,17 +111,14 @@ struct RecordingView: View {
                     } else if viewModel.recordingFileURL != nil {
                         // Has recording — show save UI below
                         Circle()
-                            .fill(Color.brandGreen.opacity(0.12))
+                            .fill(Color.brand.opacity(0.12))
                             .frame(width: 96, height: 96)
 
                         ZStack {
                             Circle()
-                                .fill(LinearGradient(
-                                    colors: [.brandGreen, Color(hex: "0D9488")],
-                                    startPoint: .topLeading, endPoint: .bottomTrailing
-                                ))
+                                .fill(LinearGradient.brand)
                                 .frame(width: 88, height: 88)
-                                .shadow(color: Color.brandGreen.opacity(0.4), radius: 18, x: 0, y: 6)
+                                .shadow(color: Color.brand.opacity(0.4), radius: 18, x: 0, y: 6)
 
                             Image(systemName: "checkmark")
                                 .font(.system(size: 30, weight: .semibold))
@@ -236,7 +233,7 @@ struct RecordingView: View {
 
     private var statusDotColor: Color {
         if viewModel.isRecording { return .brand }
-        if viewModel.recordingFileURL != nil { return .brandGreen }
+        if viewModel.recordingFileURL != nil { return .brand }
         return .textSec
     }
 
