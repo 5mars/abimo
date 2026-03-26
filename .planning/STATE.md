@@ -1,41 +1,47 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.4
-milestone_name: Custom Tab Bar
+milestone: v1.5
+milestone_name: UI Polish
 status: unknown
-stopped_at: Completed 14-02-PLAN.md (human verification, flash fix, stronger haptic)
-last_updated: "2026-03-22T01:47:33.267Z"
+stopped_at: Completed 15-01-PLAN.md
+last_updated: "2026-03-22T20:35:04.713Z"
 progress:
-  total_phases: 1
+  total_phases: 2
   completed_phases: 1
-  total_plans: 2
-  completed_plans: 2
+  total_plans: 1
+  completed_plans: 1
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-21)
+See: .planning/PROJECT.md (updated 2026-03-22)
 
 **Core value:** Users actually complete their micro-actions because the experience is engaging, rewarding, and fun
-**Current focus:** Phase 14 — custom-tab-bar
+**Current focus:** Phase 15 — title-consistency
 
 ## Current Position
 
-Phase: 14 (custom-tab-bar) — EXECUTING
-Plan: 2 of 2
+Phase: 15 (title-consistency) — EXECUTING
+Plan: 1 of 1
 
 ## Performance Metrics
 
-| Metric | Value |
-|--------|-------|
-| Phases defined | 1 |
-| Phases complete | 0 |
-| Plans complete | 0 |
-| Requirements mapped | 7/7 |
-| Phase 14-custom-tab-bar P01 | 46min | 2 tasks | 6 files |
-| Phase 14-custom-tab-bar P02 | 15min | 1 tasks | 2 files |
+**Velocity:**
+
+- Total plans completed: 0 (this milestone)
+- Average duration: —
+- Total execution time: —
+
+**By Phase:**
+
+| Phase | Plans | Total | Avg/Plan |
+|-------|-------|-------|----------|
+| - | - | - | - |
+
+*Updated after each plan completion*
+| Phase 15-title-consistency P01 | 4min | 1 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -43,11 +49,7 @@ Plan: 2 of 2
 
 Decisions are logged in PROJECT.md Key Decisions table.
 
-- [Phase 14-custom-tab-bar]: ZStack opacity switching preserves all tab view state across switches (vs. switch/if)
-- [Phase 14-custom-tab-bar]: safeAreaInset(edge: .bottom) for CustomTabBar — adapts automatically to all device safe areas
-- [Phase 14-custom-tab-bar]: AppTab conforms to CaseIterable for ForEach-driven CustomTabBar rendering
-- [Phase 14-custom-tab-bar]: .animation(nil) on ZStack content eliminates tab-switch icon flash by suppressing implicit animation bleed
-- [Phase 14-custom-tab-bar]: UIImpactFeedbackGenerator(.medium) for tab haptic: stronger tactile feel than UISelectionFeedbackGenerator
+- [Phase 15-title-consistency]: Use .toolbarColorScheme(.light, for: .navigationBar) to force black nav title text on pink-background bars
 
 ### Pending Todos
 
@@ -62,6 +64,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-22T01:47:33.265Z
-Stopped at: Completed 14-02-PLAN.md (human verification, flash fix, stronger haptic)
-Next: `/gsd:plan-phase 14`
+Last session: 2026-03-22T20:35:04.711Z
+Stopped at: Completed 15-01-PLAN.md
+Resume file: None

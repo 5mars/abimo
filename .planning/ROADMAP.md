@@ -59,7 +59,7 @@
 
 **Milestone Goal:** Fix visual inconsistencies and improve the recording experience — consistent title colors, real waveform, brand-colored buttons, and proper cancel flow.
 
-- [ ] **Phase 15: Title Consistency** - Black playful titles on all 4 main pages
+- [x] **Phase 15: Title Consistency** - Black playful titles on all 4 main pages (completed 2026-03-22)
 - [ ] **Phase 16: Recording Page Polish** - Real waveform, brand colors, and always-visible cancel
 
 ## Phase Details
@@ -75,7 +75,7 @@
 **Plans**: 1 plan
 
 Plans:
-- [ ] 15-01-PLAN.md — Apply .toolbarColorScheme(.light) to RecordingView, ActionsTabView, and ProfileView
+- [x] 15-01-PLAN.md — Apply .toolbarColorScheme(.light) to RecordingView, ActionsTabView, and ProfileView
 
 ### Phase 16: Recording Page Polish
 **Goal**: The recording page shows a real audio-level waveform, uses brand colors on all buttons, and always displays a visible discard/cancel control whenever a recording exists
@@ -86,7 +86,11 @@ Plans:
   2. All recording controls (start, stop, lock-in, cancel) render in brand colors with no green visible anywhere
   3. A discard/cancel button is visible and tappable as soon as a recording begins, and remains visible after recording stops until the user takes an action
   4. Tapping discard clears the current recording and returns the page to its initial state, allowing the user to start a fresh recording
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 16-01-PLAN.md — Waveform sensitivity fix and green-to-brand color replacement
+- [ ] 16-02-PLAN.md — Unified discard pill button and visual verification
 
 ## Progress
 
@@ -106,5 +110,5 @@ Plans:
 | 12. Path Curves and Actions Tab Cleanup | v1.3 | 2/2 | Complete | 2026-03-21 |
 | 13. All-Actions View and Unified Switching | v1.3 | 1/1 | Complete | 2026-03-21 |
 | 14. Custom Tab Bar | v1.4 | 2/2 | Complete | 2026-03-22 |
-| 15. Title Consistency | v1.5 | 0/1 | Not started | - |
-| 16. Recording Page Polish | v1.5 | 0/? | Not started | - |
+| 15. Title Consistency | v1.5 | 1/1 | Complete    | 2026-03-22 |
+| 16. Recording Page Polish | v1.5 | 0/2 | Planning | - |
