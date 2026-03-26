@@ -151,15 +151,8 @@ struct RecordingView: View {
 
                 // Action controls below button
                 VStack(spacing: 14) {
-                    if viewModel.isRecording {
-                        Button {
-                            viewModel.cancelRecording()
-                        } label: {
-                            Text("Cancel")
-                                .font(.system(size: 15, weight: .medium))
-                                .foregroundColor(.textSec)
-                        }
-                    } else if viewModel.recordingFileURL != nil {
+                    // Primary CTA: only shown when recording is stopped and file exists
+                    if viewModel.recordingFileURL != nil && !viewModel.isRecording {
                         GradientButton(
                             title: "Lock it in",
                             isLoading: viewModel.isSaving
@@ -167,21 +160,34 @@ struct RecordingView: View {
                             showingSaveDialog = true
                         }
                         .padding(.horizontal, 32)
+                    }
 
+                    // Discard pill: visible whenever any recording state is active (D-06/D-07/D-08)
+                    if viewModel.isRecording || viewModel.recordingFileURL != nil {
                         Button {
                             viewModel.cancelRecording()
                         } label: {
-                            Text("Scratch that")
+                            Text("Discard")
                                 .font(.system(size: 15, weight: .medium))
                                 .foregroundColor(.brandRed)
+                                .padding(.horizontal, 24)
+                                .padding(.vertical, 12)
+                                .background(Color.brandRed.opacity(0.08))
+                                .clipShape(Capsule())
                         }
-                    } else {
+                        .buttonStyle(PlayfulButtonStyle())
+                        .disabled(viewModel.isSaving)
+                        .frame(minHeight: 44)
+                    }
+
+                    // Idle hint
+                    if !viewModel.isRecording && viewModel.recordingFileURL == nil {
                         Text("Tap the mic, start talking")
-                            .font(.system(size: 14))
+                            .font(.system(size: 13, weight: .medium))
                             .foregroundColor(Color.textSec.opacity(0.6))
                     }
                 }
-                .frame(height: 60)
+                .frame(minHeight: 60)
 
                 if let error = viewModel.errorMessage {
                     Text(error)
@@ -209,7 +215,7 @@ struct RecordingView: View {
         .toolbarColorScheme(.light, for: .navigationBar)
         .alert("Name Your Idea", isPresented: $showingSaveDialog) {
             TextField("Title", text: $recordingTitle)
-            Button("Save") {
+            Button("Save Idea") {
                 Task {
                     if let note = await viewModel.saveRecording(
                         title: recordingTitle.isEmpty ? "Untitled Recording" : recordingTitle
@@ -219,7 +225,7 @@ struct RecordingView: View {
                     }
                 }
             }
-            Button("Cancel", role: .cancel) { recordingTitle = "" }
+            Button("Keep Editing", role: .cancel) { recordingTitle = "" }
         } message: {
             Text("What are we calling this one?")
         }
