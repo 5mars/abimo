@@ -193,14 +193,6 @@ struct IdeaCardView: View {
 
     private var isAnalyzed: Bool { note.analysisId != nil }
 
-    private var nextStepHint: String {
-        if isAnalyzed {
-            return "View lab results"
-        } else {
-            return "Ready to analyze"
-        }
-    }
-
     private func timeAgo(_ date: Date) -> String {
         let s = Int(Date().timeIntervalSince(date))
         if s < 60              { return "just now" }
@@ -259,15 +251,6 @@ struct IdeaCardView: View {
                     .foregroundColor(Color.textSec.opacity(0.3))
             }
 
-            // Next step hint
-            HStack(spacing: 6) {
-                Image(systemName: "arrow.right.circle.fill")
-                    .font(.system(size: 11))
-                    .foregroundColor(.brand.opacity(0.6))
-                Text(nextStepHint)
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(.brand.opacity(0.7))
-            }
         }
         .padding(.horizontal, 18)
         .padding(.vertical, 16)
