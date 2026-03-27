@@ -44,7 +44,10 @@ struct NoteDetailView: View {
     }
 
     var body: some View {
-        ScrollView(.vertical, showsIndicators: false) {
+        ZStack {
+            Color.appBg.ignoresSafeArea()
+
+            ScrollView(.vertical, showsIndicators: false) {
                 VStack(spacing: 16) {
 
                     // Note header card
@@ -351,9 +354,10 @@ struct NoteDetailView: View {
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
                 .animation(.spring(response: 0.4, dampingFraction: 0.8), value: isLoadingTranscription)
+            }
+            .scrollBounceBehavior(.basedOnSize)
+            .contentMargins(.top, 4, for: .scrollContent)
         }
-        .scrollBounceBehavior(.basedOnSize)
-        .background(Color.appBg)
         .navigationTitle("The Pitch")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(Color.appBg, for: .navigationBar)
