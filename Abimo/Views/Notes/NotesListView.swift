@@ -189,12 +189,10 @@ struct IdeaCardView: View {
     private var isAnalyzed: Bool { note.analysisId != nil }
 
     private var nextStepHint: String {
-        if note.transcriptionId == nil {
-            return "Tap to transcribe"
-        } else if note.analysisId == nil {
-            return "Ready to analyze"
-        } else {
+        if isAnalyzed {
             return "View lab results"
+        } else {
+            return "Ready to analyze"
         }
     }
 
