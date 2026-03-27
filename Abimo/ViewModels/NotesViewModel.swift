@@ -31,16 +31,15 @@ class NotesViewModel: ObservableObject {
     func deleteNote(_ note: VoiceNote) async {
         errorMessage = nil
 
+        // Optimistic removal — update UI immediately to prevent flicker
+        notes.removeAll { $0.id == note.id }
+
         do {
-            // Delete from database
             try await supabase.deleteVoiceNote(id: note.id)
-
-            // Delete audio file from storage
             try await supabase.deleteAudioFile(filePath: note.audioFileURL)
-
-            // Remove from local array
-            notes.removeAll { $0.id == note.id }
         } catch {
+            // Restore on failure
+            await fetchNotes()
             errorMessage = "Failed to delete note: \(error.localizedDescription)"
         }
     }

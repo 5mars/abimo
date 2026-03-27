@@ -8,6 +8,7 @@ import SwiftUI
 struct NotesListView: View {
     @EnvironmentObject var coordinator: NavigationCoordinator
     @StateObject private var viewModel = NotesViewModel()
+    @State private var confirmingDeleteNote: VoiceNote? = nil
 
     var body: some View {
         ZStack {
@@ -40,6 +41,24 @@ struct NotesListView: View {
             if let error = viewModel.errorMessage { Text(error) }
         }
         .task { await viewModel.fetchNotes() }
+        .alert("Delete Idea?", isPresented: Binding(
+            get: { confirmingDeleteNote != nil },
+            set: { if !$0 { confirmingDeleteNote = nil } }
+        )) {
+            Button("Delete", role: .destructive) {
+                if let note = confirmingDeleteNote {
+                    Task { await viewModel.deleteNote(note) }
+                    confirmingDeleteNote = nil
+                }
+            }
+            Button("Cancel", role: .cancel) {
+                confirmingDeleteNote = nil
+            }
+        } message: {
+            if let note = confirmingDeleteNote {
+                Text(""\(note.title)" will be permanently deleted.")
+            }
+        }
     }
 
     // MARK: - Loading
@@ -90,11 +109,12 @@ struct NotesListView: View {
                     .listRowBackground(Color.appBg)
                     .listRowSeparator(.hidden)
                     .listRowInsets(EdgeInsets(top: 5, leading: 16, bottom: 5, trailing: 16))
-                }
-                .onDelete { indexSet in
-                    for index in indexSet {
-                        let note = viewModel.notes[index]
-                        Task { await viewModel.deleteNote(note) }
+                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                        Button(role: .destructive) {
+                            confirmingDeleteNote = note
+                        } label: {
+                            Label("Delete", systemImage: "trash")
+                        }
                     }
                 }
             } header: {

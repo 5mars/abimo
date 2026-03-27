@@ -363,7 +363,15 @@ struct NoteDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(Color.appBg, for: .navigationBar)
         .sheet(isPresented: $showingSWOTAnalysis, onDismiss: {
-            // Force scroll state cleanup after sheet dismissal
+            // Refresh analysis state — user may have generated a new SWOT
+            if let t = transcription {
+                Task {
+                    await loadSWOTAnalysis(transcriptionId: t.id)
+                    if let analysis = swotAnalysis {
+                        await loadActionPlan(analysisId: analysis.id)
+                    }
+                }
+            }
         }) {
             if let transcription = transcription {
                 SWOTAnalysisView(transcription: transcription, preloadedAnalysis: swotAnalysis, noteTitle: noteTitle)
