@@ -351,9 +351,8 @@ struct NoteDetailView: View {
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
                 .animation(.spring(response: 0.4, dampingFraction: 0.8), value: isLoadingTranscription)
-            }
-            .scrollBounceBehavior(.basedOnSize)
         }
+        .scrollBounceBehavior(.basedOnSize)
         .background(Color.appBg)
         .navigationTitle("The Pitch")
         .navigationBarTitleDisplayMode(.inline)
