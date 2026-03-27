@@ -70,21 +70,30 @@ struct NotesListView: View {
     // MARK: - Empty State
 
     private var labEmptyView: some View {
-        VStack(spacing: 20) {
-            Text("🧪")
-                .font(.system(size: 56))
+        VStack(spacing: 24) {
+            Image("MascotNeutral")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 160, height: 160)
 
-            Text("The Lab is empty")
-                .font(.system(size: 22, weight: .bold, design: .rounded))
-                .foregroundColor(.textPri)
+            VStack(spacing: 10) {
+                Text("Welcome to The Lab")
+                    .font(.system(size: 22, weight: .bold, design: .rounded))
+                    .foregroundColor(.textPri)
 
-            Text("Record your first idea and drop it\ninto the lab for analysis")
-                .font(.system(size: 15))
-                .foregroundColor(.textSec)
-                .multilineTextAlignment(.center)
-                .lineSpacing(4)
+                Text("Record an idea and we'll turn it\ninto a real action plan")
+                    .font(.system(size: 15))
+                    .foregroundColor(.textSec)
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(4)
+            }
+
+            GradientButton(title: "Record your first idea") {
+                coordinator.selectedTab = .record
+            }
+            .padding(.horizontal, 40)
         }
-        .padding(.horizontal, 40)
+        .padding(.horizontal, 32)
     }
 
     // MARK: - Idea List
@@ -119,7 +128,7 @@ struct NotesListView: View {
                 }
             } header: {
                 HStack {
-                    Text("On the bench")
+                    Text("Your Ideas")
                         .font(.system(size: 13, weight: .bold, design: .rounded))
                         .foregroundColor(.textSec)
                         .textCase(nil)
@@ -159,6 +168,10 @@ struct LabHeaderView: View {
             Text(tagline)
                 .font(.system(size: 14, weight: .medium))
                 .foregroundColor(.textSec)
+            Text("Your ideas, one tap away")
+                .font(.system(size: 13))
+                .foregroundColor(.textSec.opacity(0.6))
+                .padding(.top, 2)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 20)
@@ -174,6 +187,16 @@ struct IdeaCardView: View {
     let viewModel: NotesViewModel
 
     private var isAnalyzed: Bool { note.analysisId != nil }
+
+    private var nextStepHint: String {
+        if note.transcriptionId == nil {
+            return "Tap to transcribe"
+        } else if note.analysisId == nil {
+            return "Ready to analyze"
+        } else {
+            return "View lab results"
+        }
+    }
 
     private func timeAgo(_ date: Date) -> String {
         let s = Int(Date().timeIntervalSince(date))
@@ -203,7 +226,7 @@ struct IdeaCardView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
 
                 // Status tag
-                Text(isAnalyzed ? "Analyzed" : "Fresh idea")
+                Text(isAnalyzed ? "Analyzed" : "New")
                     .font(.system(size: 11, weight: .bold))
                     .foregroundColor(isAnalyzed ? .brandGreen : .brand)
                     .padding(.horizontal, 10)
@@ -231,6 +254,16 @@ struct IdeaCardView: View {
                 Image(systemName: "chevron.right")
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundColor(Color.textSec.opacity(0.3))
+            }
+
+            // Next step hint
+            HStack(spacing: 6) {
+                Image(systemName: "arrow.right.circle.fill")
+                    .font(.system(size: 11))
+                    .foregroundColor(.brand.opacity(0.6))
+                Text(nextStepHint)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(.brand.opacity(0.7))
             }
         }
         .padding(.horizontal, 18)
