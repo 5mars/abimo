@@ -9,6 +9,7 @@ struct ActionsTabView: View {
     @StateObject private var viewModel = ActionsTabViewModel()
     @EnvironmentObject var coordinator: NavigationCoordinator
     @State private var expandedCommitmentPlanId: UUID? = nil
+    @AppStorage("hasSeenActionsOnboarding") private var hasSeenOnboarding = false
 
     var body: some View {
         ZStack {
@@ -45,6 +46,11 @@ struct ActionsTabView: View {
                             )
                             .padding(.horizontal, 16)
                             .cardEntrance(delay: 0)
+                        }
+
+                        if !hasSeenOnboarding {
+                            onboardingCard
+                                .transition(.opacity.combined(with: .move(edge: .top)))
                         }
 
                         if coordinator.pendingPlanGeneration {
@@ -163,7 +169,7 @@ struct ActionsTabView: View {
                 ActionPlanDetailView(planId: plan.id, analysisId: plan.analysisId)
             } label: {
                 HStack(spacing: 6) {
-                    Text(committedAction != nil ? "See all actions" : "Pick an action")
+                    Text(committedAction != nil ? "Continue your plan" : "Choose your first step")
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundColor(.brand)
                     Image(systemName: "arrow.right")
@@ -179,27 +185,87 @@ struct ActionsTabView: View {
     // MARK: - Empty State
 
     private var emptyState: some View {
-        VStack(spacing: 20) {
-            ZStack {
-                Circle()
-                    .fill(Color.brand.opacity(0.1))
-                    .frame(width: 100, height: 100)
-                Image(systemName: "bolt.fill")
-                    .font(.system(size: 40, weight: .semibold))
-                    .foregroundColor(.brand)
-            }
+        VStack(spacing: 28) {
+            Image("MascotNeutral")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 140, height: 140)
 
-            VStack(spacing: 8) {
-                Text("No action plans yet")
+            VStack(spacing: 10) {
+                Text("Your action plans will live here")
                     .font(.system(size: 20, weight: .bold, design: .rounded))
                     .foregroundColor(.textPri)
-                Text("Record an idea, run the analysis,\nthen generate your action plan")
-                    .font(.system(size: 15))
+
+                Text("Here's how it works")
+                    .font(.system(size: 14))
                     .foregroundColor(.textSec)
-                    .multilineTextAlignment(.center)
             }
+
+            VStack(alignment: .leading, spacing: 16) {
+                stepRow(number: 1, icon: "mic.fill", text: "Record an idea")
+                stepRow(number: 2, icon: "flask.fill", text: "Run it through the lab")
+                stepRow(number: 3, icon: "bolt.fill", text: "Get your action plan")
+            }
+            .padding(.horizontal, 32)
+
+            GradientButton(title: "Record an idea") {
+                coordinator.selectedTab = .record
+            }
+            .padding(.horizontal, 40)
         }
         .frame(maxWidth: .infinity)
-        .padding(.top, 60)
+        .padding(.top, 40)
+    }
+
+    private func stepRow(number: Int, icon: String, text: String) -> some View {
+        HStack(spacing: 14) {
+            ZStack {
+                Circle()
+                    .fill(Color.brand.opacity(0.12))
+                    .frame(width: 36, height: 36)
+                Image(systemName: icon)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.brand)
+            }
+            Text(text)
+                .font(.system(size: 15, weight: .medium))
+                .foregroundColor(.textPri)
+        }
+    }
+
+    // MARK: - Onboarding Card
+
+    private var onboardingCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Image(systemName: "lightbulb.fill")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(.brand)
+                Text("What are actions?")
+                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                    .foregroundColor(.textPri)
+                Spacer()
+                Button {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                        hasSeenOnboarding = true
+                    }
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(.textSec)
+                        .padding(6)
+                        .background(Color.black.opacity(0.05))
+                        .clipShape(Circle())
+                }
+            }
+            Text("Actions are small, concrete steps generated from your ideas. Complete them one by one to turn your thoughts into real progress.")
+                .font(.system(size: 14))
+                .foregroundColor(.textSec)
+                .lineSpacing(3)
+        }
+        .padding(16)
+        .background(Color.brand.opacity(0.06))
+        .cornerRadius(16)
+        .padding(.horizontal, 16)
     }
 }
