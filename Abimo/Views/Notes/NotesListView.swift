@@ -56,7 +56,7 @@ struct NotesListView: View {
             }
         } message: {
             if let note = confirmingDeleteNote {
-                Text(""\(note.title)" will be permanently deleted.")
+                Text("\"\(note.title)\" will be permanently deleted.")
             }
         }
     }
