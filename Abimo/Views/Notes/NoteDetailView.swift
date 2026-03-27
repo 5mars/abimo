@@ -730,6 +730,11 @@ struct NoteDetailView: View {
         let result = try? await supabase.fetchSWOTAnalysis(transcriptionId: transcriptionId)
         swotAnalysis = result
         isLoadingSWOT = false
+
+        // Sync analysis_id back to voice_notes so the list shows correct status
+        if let analysis = result {
+            try? await supabase.updateVoiceNoteAnalysisId(noteId: note.id, analysisId: analysis.id)
+        }
     }
 
     private func saveTitleEdit() async {

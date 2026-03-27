@@ -107,6 +107,14 @@ class SupabaseService {
             .execute()
     }
 
+    func updateVoiceNoteAnalysisId(noteId: UUID, analysisId: UUID) async throws {
+        try await client
+            .from("voice_notes")
+            .update(["analysis_id": analysisId.uuidString])
+            .eq("id", value: noteId)
+            .execute()
+    }
+
     // MARK: - Storage
 
     func uploadAudioFile(userId: UUID, fileURL: URL) async throws -> String {
