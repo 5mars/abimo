@@ -46,6 +46,7 @@ struct ActionPlanDetailView: View {
         .animation(.easeInOut(duration: 0.3), value: viewModel.celebrationState)
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(Color.appBg, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
         .sheet(item: $selectedAction) { action in
             let state = nodeStateForAction(action)
             ActionDetailSheet(

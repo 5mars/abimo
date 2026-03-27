@@ -75,6 +75,7 @@ struct ActionsTabView: View {
         }
         .navigationTitle("Actions")
         .toolbarBackground(Color.appBg, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
         .toolbarColorScheme(.light, for: .navigationBar)
         .task {
             await viewModel.loadAllPlans()

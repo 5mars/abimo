@@ -173,6 +173,7 @@ struct ProfileView: View {
             }
             .navigationTitle("Profile")
             .toolbarBackground(Color.appBg, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
             .toolbarColorScheme(.light, for: .navigationBar)
         }
         .alert("Sign Out", isPresented: $showSignOutAlert) {

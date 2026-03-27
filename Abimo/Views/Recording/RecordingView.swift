@@ -212,6 +212,8 @@ struct RecordingView: View {
         }
         .navigationTitle("Drop an Idea")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(Color.appBg, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
         .toolbarColorScheme(.light, for: .navigationBar)
         .alert("Name Your Idea", isPresented: $showingSaveDialog) {
             TextField("Title", text: $recordingTitle)
