@@ -12,7 +12,7 @@ struct RootView: View {
     var body: some View {
         ZStack {
             if authViewModel.isLoading {
-                LoadingView()
+                MascotLoadingView(mode: .fullscreen, text: "abimo")
                     .transition(.opacity)
             } else if authViewModel.isAuthenticated {
                 MainContentView()

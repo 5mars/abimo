@@ -7,7 +7,7 @@
 - ✅ **v1.2 Flow Polish** - Phases 9-10 (shipped 2026-03-21)
 - ✅ **v1.3 Actions Polish** - Phases 11-13 (shipped 2026-03-21)
 - ✅ **v1.4 Custom Tab Bar** - Phase 14 (shipped 2026-03-22)
-- 🚧 **v1.5 UI Polish** - Phases 15-16 (in progress)
+- ✅ **v1.5 UI Polish** - Phases 15-16 (shipped 2026-03-27)
 
 ## Phases
 
@@ -55,12 +55,12 @@
 
 </details>
 
-### 🚧 v1.5 UI Polish (In Progress)
+### ✅ v1.5 UI Polish (Shipped 2026-03-27)
 
 **Milestone Goal:** Fix visual inconsistencies and improve the recording experience — consistent title colors, real waveform, brand-colored buttons, and proper cancel flow.
 
 - [x] **Phase 15: Title Consistency** - Black playful titles on all 4 main pages (completed 2026-03-22)
-- [ ] **Phase 16: Recording Page Polish** - Real waveform, brand colors, and always-visible cancel
+- [x] **Phase 16: Recording Page Polish** - Real waveform, brand colors, and always-visible discard (completed 2026-03-27)
 
 ## Phase Details
 
@@ -90,7 +90,7 @@ Plans:
 
 Plans:
 - [x] 16-01-PLAN.md — Waveform sensitivity fix and green-to-brand color replacement
-- [ ] 16-02-PLAN.md — Unified discard pill button and visual verification
+- [x] 16-02-PLAN.md — Unified discard pill button, waveform fix, and visual verification
 
 ## Progress
 
@@ -111,4 +111,4 @@ Plans:
 | 13. All-Actions View and Unified Switching | v1.3 | 1/1 | Complete | 2026-03-21 |
 | 14. Custom Tab Bar | v1.4 | 2/2 | Complete | 2026-03-22 |
 | 15. Title Consistency | v1.5 | 1/1 | Complete    | 2026-03-22 |
-| 16. Recording Page Polish | v1.5 | 1/2 | In Progress|  |
+| 16. Recording Page Polish | v1.5 | 2/2 | Complete | 2026-03-27 |

@@ -45,7 +45,7 @@ struct NotesListView: View {
     // MARK: - Loading
 
     private var labLoadingView: some View {
-        LoadingView(text: "Setting up the lab...")
+        MascotLoadingView(mode: .inline, text: "Setting up the lab...")
     }
 
     // MARK: - Empty State

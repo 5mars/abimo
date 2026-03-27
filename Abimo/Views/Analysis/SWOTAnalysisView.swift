@@ -32,19 +32,27 @@ struct SWOTAnalysisView: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView(.vertical, showsIndicators: false) {
-                VStack(spacing: 20) {
-                    if viewModel.isLoading {
-                        analyzingView
-                    } else if let analysis = viewModel.analysis {
-                        analysisContent(analysis)
-                    } else if viewModel.errorMessage != nil {
-                        errorView
+            Group {
+                if viewModel.isLoading {
+                    MascotLoadingView(
+                        mode: .inline,
+                        rotatingMessages: cookingMessages,
+                        subtitle: "This might take 15–30 seconds"
+                    )
+                } else {
+                    ScrollView(.vertical, showsIndicators: false) {
+                        VStack(spacing: 20) {
+                            if let analysis = viewModel.analysis {
+                                analysisContent(analysis)
+                            } else if viewModel.errorMessage != nil {
+                                errorView
+                            }
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 16)
                     }
                 }
-                .frame(maxWidth: .infinity)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 16)
             }
             .background(Color.appBg, ignoresSafeAreaEdges: .all)
             .navigationTitle("Lab Results")
@@ -153,13 +161,6 @@ struct SWOTAnalysisView: View {
         "Stress-testing your thesis...",
         "Nearly plated up...",
     ]
-
-    private var analyzingView: some View {
-        LoadingView(
-            rotatingMessages: cookingMessages,
-            subtitle: "This might take 15–30 seconds"
-        )
-    }
 
     private var errorView: some View {
         VStack(spacing: 20) {

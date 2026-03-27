@@ -19,7 +19,7 @@ struct ActionsTabView: View {
                     Spacer().frame(height: 4)
 
                     if viewModel.isLoading {
-                        LoadingView(text: "Loading your actions...")
+                        MascotLoadingView(mode: .inline, text: "Loading your actions...")
                     } else if viewModel.plans.isEmpty && !coordinator.pendingPlanGeneration {
                         emptyState
                             .cardEntrance(delay: 0.1)
