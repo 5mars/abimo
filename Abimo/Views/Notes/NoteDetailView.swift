@@ -362,7 +362,6 @@ struct NoteDetailView: View {
         .navigationTitle("The Pitch")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(Color.appBg, for: .navigationBar)
-        .toolbarBackground(.visible, for: .navigationBar)
         .sheet(isPresented: $showingSWOTAnalysis, onDismiss: {
             // Refresh analysis state — user may have generated a new SWOT
             if let t = transcription {
