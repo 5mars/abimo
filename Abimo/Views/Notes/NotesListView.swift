@@ -41,6 +41,11 @@ struct NotesListView: View {
             if let error = viewModel.errorMessage { Text(error) }
         }
         .task { await viewModel.fetchNotes() }
+        .onChange(of: coordinator.selectedTab) { _, newTab in
+            if newTab == .ideas {
+                Task { await viewModel.fetchNotes() }
+            }
+        }
         .alert("Delete Idea?", isPresented: Binding(
             get: { confirmingDeleteNote != nil },
             set: { if !$0 { confirmingDeleteNote = nil } }
