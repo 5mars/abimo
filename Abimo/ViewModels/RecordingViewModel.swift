@@ -19,6 +19,14 @@ class RecordingViewModel: ObservableObject {
     private let audioService = AudioRecordingService()
     private let supabase = SupabaseService.shared
     private let permissionsManager = PermissionsManager()
+    private var cancellables = Set<AnyCancellable>()
+
+    init() {
+        // Forward audioService changes so SwiftUI observes audioLevel/duration updates
+        audioService.objectWillChange
+            .sink { [weak self] _ in self?.objectWillChange.send() }
+            .store(in: &cancellables)
+    }
 
     var recordingDuration: TimeInterval {
         audioService.recordingDuration

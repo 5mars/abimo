@@ -101,11 +101,12 @@ class AudioRecordingService: NSObject, ObservableObject {
     }
 
     /// Normalizes AVAudioRecorder averagePower (dB) to a 0–1 visual level.
-    /// Maps [-50, 0] dB linearly to [0.0, 1.0]. Values below -50 dB clamp to 0.
+    /// Maps [-35, 0] dB linearly to [0.0, 1.0] then applies power curve for punch.
     nonisolated static func normalizeAudioLevel(averagePower: Float) -> Float {
-        let floorDb: Float = -50.0
+        let floorDb: Float = -35.0
         let clamped = max(floorDb, min(0.0, averagePower))
-        return (clamped - floorDb) / (-floorDb)
+        let linear = (clamped - floorDb) / (-floorDb)
+        return pow(linear, 0.6)
     }
 
     func formatDuration(_ duration: TimeInterval) -> String {

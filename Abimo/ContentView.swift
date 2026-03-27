@@ -243,7 +243,7 @@ struct WaveformBarsView: View {
         let dist = abs(Double(index) - center) / center
         let envelope = 1.0 - pow(dist, 1.5) * 0.65
         let base: CGFloat = 4
-        let maxExtra: CGFloat = 52
+        let maxExtra: CGFloat = 56
         return base + maxExtra * CGFloat(level) * CGFloat(envelope)
     }
 
@@ -255,7 +255,7 @@ struct WaveformBarsView: View {
                     .frame(width: 3.5, height: height(for: i))
             }
         }
-        .frame(height: 64)
+        .frame(height: 72)
         .animation(.spring(response: 0.12, dampingFraction: 0.6), value: level)
     }
 }
