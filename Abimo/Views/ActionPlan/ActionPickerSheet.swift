@@ -113,7 +113,7 @@ struct ActionPickerSheet: View {
                     viewModel.pickAction(id: id)
                     dismiss()
                 } label: {
-                    Text("Start this one!")
+                    Text("Let's go")
                         .font(.system(size: 16, weight: .bold))
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
@@ -143,8 +143,8 @@ struct ActionPickerSheet: View {
 
     private var headingText: String {
         switch mode {
-        case .firstVisit: return "Pick your first action"
-        case .postCompletion: return "Keep the momentum?"
+        case .firstVisit: return "Commit to your first step"
+        case .postCompletion: return "What's your next move?"
         case .browse: return "All Actions"
         }
     }
