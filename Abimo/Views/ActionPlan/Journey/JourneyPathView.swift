@@ -9,7 +9,6 @@ import SwiftUI
 
 struct JourneyPathView: View {
     @ObservedObject var viewModel: ActionPlanViewModel
-    @Binding var selectedAction: MicroAction?
 
     @State private var activeBubbleId: UUID? = nil
 
@@ -57,8 +56,16 @@ struct JourneyPathView: View {
                             state: nodeState(at: index, actions: viewModel.orderedActions),
                             isLastNode: index == viewModel.orderedActions.count - 1,
                             onTap: {
+                                let isOpening = activeBubbleId != action.id
                                 AnimationPolicy.animate(.spring(response: 0.3, dampingFraction: 0.6)) {
-                                    activeBubbleId = activeBubbleId == action.id ? nil : action.id
+                                    activeBubbleId = isOpening ? action.id : nil
+                                }
+                                if isOpening {
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                                        withAnimation(.easeInOut(duration: 0.3)) {
+                                            proxy.scrollTo(action.id, anchor: .top)
+                                        }
+                                    }
                                 }
                             },
                             justCompletedActionId: viewModel.justCompletedActionId,
@@ -121,16 +128,15 @@ struct JourneyPathView: View {
             // Positioning constants
             let headerHeight: CGFloat = 162
             let nodeStride: CGFloat = 136
-            let bubbleWidth: CGFloat = 290
-            let bubbleEstimatedHeight: CGFloat = 130
-            let arrowHeight: CGFloat = 8
-            let gapAboveNode: CGFloat = 4
+            let bubbleWidth: CGFloat = 300
+            let nodeRadius: CGFloat = 28
+            let gapBelowNode: CGFloat = 6
 
-            // Vertical: place bubble so its arrow tip is just above the node center
-            let nodeCenterY = headerHeight + CGFloat(index) * nodeStride + 28
-            let yPos = nodeCenterY - 28 - arrowHeight - gapAboveNode - bubbleEstimatedHeight
+            // Vertical: place bubble BELOW the node
+            let nodeCenterY = headerHeight + CGFloat(index) * nodeStride + nodeRadius
+            let yPos = nodeCenterY + nodeRadius + gapBelowNode
 
-            // Horizontal: use actual container width from GeometryReader (not UIScreen)
+            // Horizontal: use actual container width from GeometryReader
             let nodeCenterX = containerWidth / 2 + zigzagOffset
             let rawX = nodeCenterX - bubbleWidth / 2
             let xPos = max(8, min(containerWidth - bubbleWidth - 8, rawX))
@@ -138,21 +144,17 @@ struct JourneyPathView: View {
             // Dynamic arrow offset: distance from bubble left edge to node center
             let arrowOffset = nodeCenterX - xPos
 
+            // Active action name for locked state unlock hint
+            let activeActionName = viewModel.orderedActions.first(where: { !$0.isCompleted })?.text ?? "the current action"
+
             NodeBubbleView(
                 action: action,
                 state: state,
                 arrowOffset: arrowOffset,
+                activeActionName: activeActionName,
                 onComplete: {
                     activeBubbleId = nil
                     Task { await viewModel.toggleMicroAction(id: action.id, isCompleted: true) }
-                },
-                onSwitch: {                  // SWAP-01 — opens action picker so user can choose next action
-                    activeBubbleId = nil
-                    viewModel.showActionPicker = true
-                },
-                onSeeMore: {
-                    activeBubbleId = nil
-                    selectedAction = action
                 },
                 onDismiss: {
                     activeBubbleId = nil
@@ -160,7 +162,7 @@ struct JourneyPathView: View {
             )
             .frame(width: bubbleWidth)
             .offset(x: xPos, y: yPos)
-            .transition(.scale(scale: 0.01, anchor: .bottom).combined(with: .opacity))
+            .transition(.scale(scale: 0.01, anchor: .top).combined(with: .opacity))
             .zIndex(10)
             .id(id)
         }
@@ -173,8 +175,7 @@ struct JourneyPathView: View {
     let viewModel = ActionPlanViewModel()
 
     return JourneyPathView(
-        viewModel: viewModel,
-        selectedAction: .constant(nil)
+        viewModel: viewModel
     )
     .background(Color.appBg)
 }

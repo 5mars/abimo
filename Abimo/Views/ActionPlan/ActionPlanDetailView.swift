@@ -10,7 +10,6 @@ struct ActionPlanDetailView: View {
     let analysisId: UUID
 
     @StateObject private var viewModel = ActionPlanViewModel()
-    @State private var selectedAction: MicroAction? = nil
     @State private var pickerMode: PickerMode = .browse
 
     var body: some View {
@@ -21,8 +20,7 @@ struct ActionPlanDetailView: View {
                 LoadingView(text: "Loading your plan...")
             } else if viewModel.actionPlan != nil {
                 JourneyPathView(
-                    viewModel: viewModel,
-                    selectedAction: $selectedAction
+                    viewModel: viewModel
                 )
             }
 
@@ -46,17 +44,6 @@ struct ActionPlanDetailView: View {
         .animation(.easeInOut(duration: 0.3), value: viewModel.celebrationState)
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(Color.appBg, for: .navigationBar)
-        .sheet(item: $selectedAction) { action in
-            let state = nodeStateForAction(action)
-            ActionDetailSheet(
-                action: action,
-                state: state,
-                viewModel: viewModel
-            )
-            .presentationDetents([.medium, .large])
-            .presentationDragIndicator(.visible)
-            .presentationBackground(Color.appBg)
-        }
         .sheet(isPresented: $viewModel.showActionPicker) {
             ActionPickerSheet(viewModel: viewModel, mode: pickerMode)
                 .presentationDetents([.large])
@@ -75,10 +62,4 @@ struct ActionPlanDetailView: View {
         }
     }
 
-    private func nodeStateForAction(_ action: MicroAction) -> NodeState {
-        guard let index = viewModel.orderedActions.firstIndex(where: { $0.id == action.id }) else {
-            return .locked
-        }
-        return nodeState(at: index, actions: viewModel.orderedActions)
-    }
 }
