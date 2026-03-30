@@ -8,12 +8,18 @@ import SwiftUI
 struct RootView: View {
     @StateObject private var authViewModel = AuthViewModel()
     @StateObject private var coordinator = NavigationCoordinator()
+    @AppStorage("hasSeenNotificationPermission") private var hasSeenPermission = false
 
     var body: some View {
         ZStack {
             if authViewModel.isLoading {
                 MascotLoadingView(mode: .fullscreen, text: "abimo")
                     .transition(.opacity)
+            } else if authViewModel.isAuthenticated && !hasSeenPermission {
+                NotificationPermissionView {
+                    hasSeenPermission = true
+                }
+                .transition(.opacity)
             } else if authViewModel.isAuthenticated {
                 MainContentView()
                     .environmentObject(authViewModel)
@@ -27,6 +33,7 @@ struct RootView: View {
         }
         .animation(.easeInOut(duration: 0.4), value: authViewModel.isLoading)
         .animation(.easeInOut(duration: 0.4), value: authViewModel.isAuthenticated)
+        .animation(.easeInOut(duration: 0.4), value: hasSeenPermission)
     }
 }
 
