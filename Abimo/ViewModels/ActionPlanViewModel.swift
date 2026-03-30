@@ -137,6 +137,16 @@ class ActionPlanViewModel: ObservableObject {
 
     func toggleMicroAction(id: UUID, isCompleted: Bool) async {
         if isCompleted {
+            // Cancel nudge for completed action + streak-risk
+            NotificationScheduler.shared.cancelActionNudge(actionId: id)
+            NotificationService.shared.cancelNotification(id: "streak-risk")
+
+            // Check for streak milestone
+            let streak = currentStreak
+            if [3, 7, 14, 30].contains(streak) {
+                NotificationScheduler.shared.sendStreakMilestone(days: streak)
+            }
+
             // Auto-confirm with default outcome, then show post-completion sheet
             await confirmCompletion(id: id, outcome: "did_it", note: nil)
             completingActionId = id
@@ -295,6 +305,11 @@ class ActionPlanViewModel: ObservableObject {
         showActionPicker = false
         HapticEngine.selection()
         Task { await silentCommit(actionId: id) }
+
+        // Schedule nudge if action not completed within 24h
+        if let action = orderedActions.first(where: { $0.id == id }) {
+            NotificationScheduler.shared.scheduleActionNudge(actionId: id, actionText: action.text)
+        }
     }
 
     /// Deprecated: In-sheet content swap replaces dismiss+re-present pattern.

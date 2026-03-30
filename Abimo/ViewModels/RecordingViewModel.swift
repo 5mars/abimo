@@ -120,6 +120,9 @@ class RecordingViewModel: ObservableObject {
             AudioFileManager.deleteFile(at: fileURL)
             recordingFileURL = nil
 
+            // Schedule nudge if idea not analyzed within 24h
+            NotificationScheduler.shared.scheduleIdeaNudge(noteId: voiceNote.id, noteTitle: title)
+
             return voiceNote
         } catch {
             errorMessage = "Failed to save recording: \(error.localizedDescription)"
