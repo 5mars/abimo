@@ -4,6 +4,7 @@
 //
 
 import Foundation
+import UserNotifications
 
 @MainActor
 class NotificationScheduler {
