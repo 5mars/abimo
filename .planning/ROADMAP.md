@@ -101,7 +101,7 @@
 
 - [x] **Phase 27: Settings Screen & Profile Stats** - Dedicated settings screen with gear icon navigation, wire up real idea/analysis counts (completed 2026-04-07)
 - [x] **Phase 28: Notification Preferences** - Per-type notification toggles with UserDefaults persistence, wire into NotificationScheduler (completed 2026-04-07)
-- [ ] **Phase 29: Data, Privacy & App Info** - Delete account, clear local data, privacy policy link, version, rate app, feedback, about
+- [x] **Phase 29: Data, Privacy & App Info** - Delete account, clear local data, privacy policy link, version, rate app, feedback, about (completed 2026-04-07)
 
 ## Phase Details
 
@@ -296,7 +296,7 @@ Plans:
 
 Plans:
 - [x] 29-01-PLAN.md — Data & Privacy: delete account (Supabase RPC), clear local data, privacy policy link
-- [ ] 29-02-PLAN.md — App Info: rate app, send feedback, about/credits screen
+- [x] 29-02-PLAN.md — App Info: rate app, send feedback, about/credits screen
 
 ## Progress
 
@@ -330,4 +330,4 @@ Plans:
 | 26. Notification Triggers | v1.8 | 2/2 | Complete | 2026-03-30 |
 | 27. Settings Screen & Profile Stats | v1.9 | 1/1 | Complete   | 2026-04-07 |
 | 28. Notification Preferences | v1.9 | 1/1 | Complete   | 2026-04-07 |
-| 29. Data, Privacy & App Info | v1.9 | 1/2 | In Progress|  |
+| 29. Data, Privacy & App Info | v1.9 | 2/2 | Complete   | 2026-04-07 |

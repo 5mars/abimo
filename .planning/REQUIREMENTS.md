@@ -30,10 +30,10 @@ Requirements for Settings & Profile milestone. Each maps to roadmap phases.
 
 ### App Info
 
-- [ ] **INFO-01**: App version and build number are displayed (pulled from bundle)
-- [ ] **INFO-02**: "Rate the App" opens the App Store review page
-- [ ] **INFO-03**: "Send Feedback" opens a pre-filled email or feedback link
-- [ ] **INFO-04**: An About/Credits screen or section is accessible
+- [x] **INFO-01**: App version and build number are displayed (pulled from bundle)
+- [x] **INFO-02**: "Rate the App" opens the App Store review page
+- [x] **INFO-03**: "Send Feedback" opens a pre-filled email or feedback link
+- [x] **INFO-04**: An About/Credits screen or section is accessible
 
 ### Profile Stats
 
@@ -80,10 +80,10 @@ Requirements for Settings & Profile milestone. Each maps to roadmap phases.
 | DATA-02 | Phase 29 | Complete |
 | DATA-03 | Phase 29 | Complete |
 | DATA-04 | Phase 29 | Complete |
-| INFO-01 | Phase 29 | Pending |
-| INFO-02 | Phase 29 | Pending |
-| INFO-03 | Phase 29 | Pending |
-| INFO-04 | Phase 29 | Pending |
+| INFO-01 | Phase 29 | Complete |
+| INFO-02 | Phase 29 | Complete |
+| INFO-03 | Phase 29 | Complete |
+| INFO-04 | Phase 29 | Complete |
 | STAT-01 | Phase 27 | Complete |
 | STAT-02 | Phase 27 | Complete |
 

@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.9
 milestone_name: Settings & Profile
 status: Phase complete — ready for verification
-stopped_at: Completed 29-01-PLAN.md
-last_updated: "2026-04-07T15:09:18.721Z"
+stopped_at: Completed 29-02-PLAN.md
+last_updated: "2026-04-07T15:12:45.809Z"
 progress:
   total_phases: 15
-  completed_phases: 6
+  completed_phases: 7
   total_plans: 18
-  completed_plans: 11
+  completed_plans: 12
 ---
 
 # Project State
@@ -44,6 +44,7 @@ Plan: 0 of 0
 | Phase 27 P01 | 4min | 2 tasks | 3 files |
 | Phase 28 P01 | 2min | 2 tasks | 3 files |
 | Phase 29 P01 | 2min | 2 tasks | 3 files |
+| Phase 29 P02 | 5min | 1 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -55,6 +56,7 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - [Phase 28]: Used @AppStorage directly in SettingsView instead of dedicated NotificationPreferences class
 - [Phase 29]: Clear local auth state after RPC deletion instead of signOut (Supabase Issue #358)
 - [Phase 29]: Use removePersistentDomain for UserDefaults reset instead of individual keys
+- [Phase 29]: Used @Environment(requestReview) over SKStoreReviewController for iOS 17+ target
 
 ### Pending Todos
 
@@ -69,6 +71,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-07T15:09:18.719Z
-Stopped at: Completed 29-01-PLAN.md
+Last session: 2026-04-07T15:12:45.806Z
+Stopped at: Completed 29-02-PLAN.md
 Resume file: None
