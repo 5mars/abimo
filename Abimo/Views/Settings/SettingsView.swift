@@ -17,6 +17,12 @@ struct SettingsView: View {
     @AppStorage("notif_idea_nudge") private var ideaNudgeEnabled = true
     @AppStorage("notif_streak") private var streakEnabled = true
 
+    @EnvironmentObject var authViewModel: AuthViewModel
+
+    @State private var showDeleteAlert = false
+    @State private var showClearDataAlert = false
+    @State private var showClearDataConfirmation = false
+
     var body: some View {
         ZStack {
             Color.appBg.ignoresSafeArea()
@@ -36,13 +42,23 @@ struct SettingsView: View {
                         notificationToggle(icon: "flame", title: "Streak Alerts", color: .brandRed, isOn: $streakEnabled)
                     }
 
-                    // Data & Privacy section (Phase 29 will wire actions)
+                    // Data & Privacy section
                     settingsSection(title: "Data & Privacy") {
-                        settingsRow(icon: "trash", title: "Delete Account", color: .brandRed)
+                        Button {
+                            showDeleteAlert = true
+                        } label: {
+                            settingsRow(icon: "trash", title: "Delete Account", color: .brandRed)
+                        }
                         Divider().padding(.leading, 44)
-                        settingsRow(icon: "arrow.clockwise", title: "Clear Local Data", color: .brandOrange)
+                        Button {
+                            showClearDataAlert = true
+                        } label: {
+                            settingsRow(icon: "arrow.clockwise", title: "Clear Local Data", color: .brandOrange)
+                        }
                         Divider().padding(.leading, 44)
-                        settingsRow(icon: "hand.raised", title: "Privacy Policy", color: .accentTeal)
+                        Link(destination: URL(string: "https://abimo.app/privacy")!) {
+                            settingsRow(icon: "hand.raised", title: "Privacy Policy", color: .accentTeal)
+                        }
                     }
 
                     // About section
@@ -65,6 +81,28 @@ struct SettingsView: View {
         }
         .onChange(of: streakEnabled) { _, enabled in
             if !enabled { NotificationService.shared.cancelNotifications(withPrefix: "streak-") }
+        }
+        .alert("Delete Account", isPresented: $showDeleteAlert) {
+            Button("Delete", role: .destructive) {
+                Task { await authViewModel.deleteAccountAndSignOut() }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This will permanently delete your account and all your data. This action cannot be undone.")
+        }
+        .alert("Clear Local Data", isPresented: $showClearDataAlert) {
+            Button("Clear", role: .destructive) {
+                authViewModel.clearLocalData()
+                showClearDataConfirmation = true
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This will reset all local preferences and cached data. Your account and cloud data will not be affected.")
+        }
+        .alert("Data Cleared", isPresented: $showClearDataConfirmation) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Local data has been cleared. Notification preferences have been reset to defaults.")
         }
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.inline)
