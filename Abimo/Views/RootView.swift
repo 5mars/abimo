@@ -71,7 +71,10 @@ struct MainContentView: View {
 
 struct ProfileView: View {
     @EnvironmentObject var authViewModel: AuthViewModel
+    @EnvironmentObject var coordinator: NavigationCoordinator
     @State private var showSignOutAlert = false
+    @State private var ideaCount: Int?
+    @State private var analysisCount: Int?
 
     var body: some View {
         NavigationStack {
@@ -115,7 +118,7 @@ struct ProfileView: View {
                                 Image(systemName: "note.text")
                                     .font(.system(size: 20, weight: .semibold))
                                     .foregroundColor(.accentBlue)
-                                Text("—")
+                                Text("\(ideaCount ?? 0)")
                                     .font(.system(size: 28, weight: .bold, design: .rounded))
                                     .foregroundColor(.textPri)
                                 Text("ideas")
@@ -129,7 +132,7 @@ struct ProfileView: View {
                                 Image(systemName: "chart.bar.fill")
                                     .font(.system(size: 20, weight: .semibold))
                                     .foregroundColor(.accentTeal)
-                                Text("—")
+                                Text("\(analysisCount ?? 0)")
                                     .font(.system(size: 28, weight: .bold, design: .rounded))
                                     .foregroundColor(.textPri)
                                 Text("analyses")
@@ -181,6 +184,19 @@ struct ProfileView: View {
             .navigationTitle("Profile")
             .toolbarBackground(Color.appBg, for: .navigationBar)
             .toolbarColorScheme(.light, for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    NavigationLink(destination: SettingsView()) {
+                        Image(systemName: "gearshape")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(.textSec)
+                    }
+                }
+            }
+            .task { await loadStats() }
+            .onChange(of: coordinator.selectedTab) { _, newTab in
+                if newTab == .profile { Task { await loadStats() } }
+            }
         }
         .alert("Sign Out", isPresented: $showSignOutAlert) {
             Button("Sign Out", role: .destructive) {
@@ -190,6 +206,11 @@ struct ProfileView: View {
         } message: {
             Text("Are you sure you want to sign out?")
         }
+    }
+
+    private func loadStats() async {
+        ideaCount = try? await SupabaseService.shared.countVoiceNotes()
+        analysisCount = try? await SupabaseService.shared.countAnalyses()
     }
 }
 
