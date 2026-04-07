@@ -415,4 +415,25 @@ class SupabaseService {
             .eq("id", value: id)
             .execute()
     }
+
+    // MARK: - Account Deletion
+
+    func deleteAccount() async throws {
+        let session = try await client.auth.session
+        let userId = session.user.id
+
+        // Delete storage files first (RPC won't handle storage)
+        let files = try await client.storage
+            .from("voice-recordings")
+            .list(path: "\(userId)")
+        if !files.isEmpty {
+            let paths = files.map { "\(userId)/\($0.name)" }
+            try await client.storage
+                .from("voice-recordings")
+                .remove(paths: paths)
+        }
+
+        // Delete all user data + auth record via server-side RPC
+        try await client.rpc("delete_user_account").execute()
+    }
 }

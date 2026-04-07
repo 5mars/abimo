@@ -99,4 +99,31 @@ class AuthViewModel: ObservableObject {
             errorMessage = "Sign out failed: \(error.localizedDescription)"
         }
     }
+
+    func deleteAccountAndSignOut() async {
+        isLoading = true
+        errorMessage = nil
+        defer { isLoading = false }
+
+        do {
+            try await supabase.deleteAccount()
+            // User no longer exists on server -- just clear local state
+            // Do NOT call signOut() -- it will fail for deleted user
+            currentUser = nil
+            isAuthenticated = false
+        } catch {
+            errorMessage = "Account deletion failed: \(error.localizedDescription)"
+        }
+    }
+
+    func clearLocalData() {
+        guard let bundleId = Bundle.main.bundleIdentifier else { return }
+        UserDefaults.standard.removePersistentDomain(forName: bundleId)
+        UserDefaults.standard.register(defaults: [
+            "notif_inactivity": true,
+            "notif_action_nudge": true,
+            "notif_idea_nudge": true,
+            "notif_streak": true
+        ])
+    }
 }
