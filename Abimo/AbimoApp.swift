@@ -12,13 +12,20 @@ import Supabase
 struct AbimoApp: App {
     @Environment(\.scenePhase) var scenePhase
 
+    init() {
+        UserDefaults.standard.register(defaults: [
+            "notif_inactivity": true,
+            "notif_action_nudge": true,
+            "notif_idea_nudge": true,
+            "notif_streak": true
+        ])
+    }
+
     var body: some Scene {
         WindowGroup {
             RootView()
                 .onOpenURL { url in
-                    Task {
-                        try? await SupabaseService.shared.client.auth.handle(url)
-                    }
+                    try? SupabaseService.shared.client.auth.handle(url)
                 }
                 .onChange(of: scenePhase) { _, newPhase in
                     switch newPhase {

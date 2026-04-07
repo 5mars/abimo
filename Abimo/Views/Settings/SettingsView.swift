@@ -12,6 +12,11 @@ struct SettingsView: View {
         return "\(version) (\(build))"
     }
 
+    @AppStorage("notif_inactivity") private var inactivityEnabled = true
+    @AppStorage("notif_action_nudge") private var actionNudgeEnabled = true
+    @AppStorage("notif_idea_nudge") private var ideaNudgeEnabled = true
+    @AppStorage("notif_streak") private var streakEnabled = true
+
     var body: some View {
         ZStack {
             Color.appBg.ignoresSafeArea()
@@ -20,9 +25,15 @@ struct SettingsView: View {
                 VStack(spacing: 20) {
                     Spacer().frame(height: 8)
 
-                    // Notifications section (Phase 28 will wire toggles)
+                    // Notifications section
                     settingsSection(title: "Notifications") {
-                        settingsRow(icon: "bell.fill", title: "Notification Preferences", color: .accentBlue)
+                        notificationToggle(icon: "moon.zzz", title: "Inactivity Reminders", color: .brandOrange, isOn: $inactivityEnabled)
+                        Divider().padding(.leading, 44)
+                        notificationToggle(icon: "checkmark.circle", title: "Action Nudges", color: .accentBlue, isOn: $actionNudgeEnabled)
+                        Divider().padding(.leading, 44)
+                        notificationToggle(icon: "lightbulb", title: "Idea Nudges", color: .brandAmber, isOn: $ideaNudgeEnabled)
+                        Divider().padding(.leading, 44)
+                        notificationToggle(icon: "flame", title: "Streak Alerts", color: .brandRed, isOn: $streakEnabled)
                     }
 
                     // Data & Privacy section (Phase 29 will wire actions)
@@ -42,6 +53,18 @@ struct SettingsView: View {
                     Spacer()
                 }
             }
+        }
+        .onChange(of: inactivityEnabled) { _, enabled in
+            if !enabled { NotificationService.shared.cancelNotifications(withPrefix: "inactivity-") }
+        }
+        .onChange(of: actionNudgeEnabled) { _, enabled in
+            if !enabled { NotificationService.shared.cancelNotifications(withPrefix: "action-nudge-") }
+        }
+        .onChange(of: ideaNudgeEnabled) { _, enabled in
+            if !enabled { NotificationService.shared.cancelNotifications(withPrefix: "idea-nudge-") }
+        }
+        .onChange(of: streakEnabled) { _, enabled in
+            if !enabled { NotificationService.shared.cancelNotifications(withPrefix: "streak-") }
         }
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.inline)
@@ -100,5 +123,24 @@ struct SettingsView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 14)
+    }
+
+    // MARK: - Toggle Row Builder
+
+    @ViewBuilder
+    private func notificationToggle(icon: String, title: String, color: Color, isOn: Binding<Bool>) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(color)
+                .frame(width: 28, height: 28)
+
+            Toggle(title, isOn: isOn)
+                .font(.system(size: 15, weight: .medium))
+                .foregroundColor(.textPri)
+                .tint(.brand)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
     }
 }
