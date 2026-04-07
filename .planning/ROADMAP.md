@@ -100,7 +100,7 @@
 **Milestone Goal:** Transform the bare Profile tab into a proper settings experience with notification controls, data & privacy management, app info, and real profile stats.
 
 - [x] **Phase 27: Settings Screen & Profile Stats** - Dedicated settings screen with gear icon navigation, wire up real idea/analysis counts (completed 2026-04-07)
-- [ ] **Phase 28: Notification Preferences** - Per-type notification toggles with UserDefaults persistence, wire into NotificationScheduler
+- [x] **Phase 28: Notification Preferences** - Per-type notification toggles with UserDefaults persistence, wire into NotificationScheduler (completed 2026-04-07)
 - [ ] **Phase 29: Data, Privacy & App Info** - Delete account, clear local data, privacy policy link, version, rate app, feedback, about
 
 ## Phase Details
@@ -275,7 +275,10 @@ Plans:
   2. Toggle states persist across app launches via UserDefaults
   3. NotificationScheduler skips scheduling for disabled categories
   4. Toggling a category off cancels any pending notifications for that category
-**Plans**: TBD (via /gsd:plan-phase 28)
+**Plans**: 1 plan
+
+Plans:
+- [x] 28-01-PLAN.md — Notification toggles in SettingsView + UserDefaults guards in NotificationScheduler
 
 ### Phase 29: Data, Privacy & App Info
 **Goal**: Settings screen includes data & privacy controls (delete account, clear local data, privacy policy) and app info (version, rate, feedback, about)
@@ -322,5 +325,5 @@ Plans:
 | 25. Copy & Mood System | v1.8 | 1/1 | Complete | 2026-03-30 |
 | 26. Notification Triggers | v1.8 | 2/2 | Complete | 2026-03-30 |
 | 27. Settings Screen & Profile Stats | v1.9 | 1/1 | Complete   | 2026-04-07 |
-| 28. Notification Preferences | v1.9 | 0/0 | Planned | |
+| 28. Notification Preferences | v1.9 | 1/1 | Complete   | 2026-04-07 |
 | 29. Data, Privacy & App Info | v1.9 | 0/0 | Planned | |

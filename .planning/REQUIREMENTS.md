@@ -14,12 +14,12 @@ Requirements for Settings & Profile milestone. Each maps to roadmap phases.
 
 ### Notification Preferences
 
-- [ ] **NPRF-01**: User can toggle inactivity reminder notifications on/off
-- [ ] **NPRF-02**: User can toggle action nudge notifications on/off
-- [ ] **NPRF-03**: User can toggle idea nudge notifications on/off
-- [ ] **NPRF-04**: User can toggle streak notifications on/off
-- [ ] **NPRF-05**: Toggle states persist across app launches (UserDefaults)
-- [ ] **NPRF-06**: NotificationScheduler respects toggle states — disabled categories are not scheduled
+- [x] **NPRF-01**: User can toggle inactivity reminder notifications on/off
+- [x] **NPRF-02**: User can toggle action nudge notifications on/off
+- [x] **NPRF-03**: User can toggle idea nudge notifications on/off
+- [x] **NPRF-04**: User can toggle streak notifications on/off
+- [x] **NPRF-05**: Toggle states persist across app launches (UserDefaults)
+- [x] **NPRF-06**: NotificationScheduler respects toggle states — disabled categories are not scheduled
 
 ### Data & Privacy
 
@@ -70,12 +70,12 @@ Requirements for Settings & Profile milestone. Each maps to roadmap phases.
 |-------------|-------|--------|
 | SETT-01 | Phase 27 | Complete |
 | SETT-02 | Phase 27 | Complete |
-| NPRF-01 | Phase 28 | Pending |
-| NPRF-02 | Phase 28 | Pending |
-| NPRF-03 | Phase 28 | Pending |
-| NPRF-04 | Phase 28 | Pending |
-| NPRF-05 | Phase 28 | Pending |
-| NPRF-06 | Phase 28 | Pending |
+| NPRF-01 | Phase 28 | Complete |
+| NPRF-02 | Phase 28 | Complete |
+| NPRF-03 | Phase 28 | Complete |
+| NPRF-04 | Phase 28 | Complete |
+| NPRF-05 | Phase 28 | Complete |
+| NPRF-06 | Phase 28 | Complete |
 | DATA-01 | Phase 29 | Pending |
 | DATA-02 | Phase 29 | Pending |
 | DATA-03 | Phase 29 | Pending |

@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.9
 milestone_name: Settings & Profile
 status: Phase complete — ready for verification
-stopped_at: Completed 27-01-PLAN.md
-last_updated: "2026-04-07T14:38:18.794Z"
+stopped_at: Completed 28-01-PLAN.md
+last_updated: "2026-04-07T14:53:06.703Z"
 progress:
   total_phases: 15
-  completed_phases: 5
-  total_plans: 15
-  completed_plans: 9
+  completed_phases: 6
+  total_plans: 16
+  completed_plans: 10
 ---
 
 # Project State
@@ -42,6 +42,7 @@ Plan: 0 of 0
 
 *Updated after each plan completion*
 | Phase 27 P01 | 4min | 2 tasks | 3 files |
+| Phase 28 P01 | 2min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -50,6 +51,7 @@ Plan: 0 of 0
 Decisions are logged in PROJECT.md Key Decisions table.
 
 - [Phase 27]: SettingsView has no NavigationStack (parent provides it); count queries use select-id-only pattern; stats refresh on tab switch
+- [Phase 28]: Used @AppStorage directly in SettingsView instead of dedicated NotificationPreferences class
 
 ### Pending Todos
 
@@ -64,6 +66,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-07T14:38:18.792Z
-Stopped at: Completed 27-01-PLAN.md
+Last session: 2026-04-07T14:53:06.699Z
+Stopped at: Completed 28-01-PLAN.md
 Resume file: None
