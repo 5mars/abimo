@@ -10,6 +10,7 @@ import UserNotifications
 class NotificationScheduler {
     static let shared = NotificationScheduler()
     private let service = NotificationService.shared
+    private let defaults = UserDefaults.standard
 
     private init() {}
 
@@ -28,6 +29,7 @@ class NotificationScheduler {
     // MARK: - Inactivity Cycle
 
     private func scheduleInactivityCycle() {
+        guard defaults.bool(forKey: "notif_inactivity") else { return }
         let msg1 = NotificationCopy.message(for: .inactivity, sass: .playful)
         service.scheduleNotification(
             id: "inactivity-1d",
@@ -56,6 +58,7 @@ class NotificationScheduler {
     // MARK: - Streak At Risk
 
     private func scheduleStreakAtRisk() {
+        guard defaults.bool(forKey: "notif_streak") else { return }
         let hour = Calendar.current.component(.hour, from: Date())
         guard hour < 20 else { return }
 
@@ -72,6 +75,7 @@ class NotificationScheduler {
     // MARK: - Action Nudge
 
     func scheduleActionNudge(actionId: UUID, actionText: String) {
+        guard defaults.bool(forKey: "notif_action_nudge") else { return }
         let msg = NotificationCopy.message(for: .incompleteAction, sass: .playful, context: actionText)
         service.scheduleNotification(
             id: "action-nudge-\(actionId.uuidString)",
@@ -88,6 +92,7 @@ class NotificationScheduler {
     // MARK: - Idea Nudge
 
     func scheduleIdeaNudge(noteId: UUID, noteTitle: String) {
+        guard defaults.bool(forKey: "notif_idea_nudge") else { return }
         let msg = NotificationCopy.message(for: .unanalyzedIdea, sass: .playful, context: noteTitle)
         service.scheduleNotification(
             id: "idea-nudge-\(noteId.uuidString)",
@@ -104,6 +109,7 @@ class NotificationScheduler {
     // MARK: - Streak Milestone
 
     func sendStreakMilestone(days: Int) {
+        guard defaults.bool(forKey: "notif_streak") else { return }
         let msg = NotificationCopy.message(for: .streakMilestone(days: days), sass: .playful)
         service.scheduleNotification(
             id: "streak-milestone-\(days)",
