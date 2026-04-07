@@ -1,56 +1,96 @@
 # Requirements: Abimo
 
-**Defined:** 2026-03-22
+**Defined:** 2026-04-07
 **Core Value:** Users actually complete their micro-actions because the experience is engaging, rewarding, and fun — not another abandoned to-do list.
 
-## v1.5 Requirements
+## v1.9 Requirements
 
-Requirements for UI Polish milestone. Each maps to roadmap phases.
+Requirements for Settings & Profile milestone. Each maps to roadmap phases.
 
-### Title Consistency
+### Settings Screen
 
-- [x] **TITL-01**: All 4 main page navigation titles render in black with the existing playful rounded font — no white-on-pink visibility issues
+- [x] **SETT-01**: A dedicated Settings screen is accessible from the Profile tab via a gear icon in the navigation bar
+- [x] **SETT-02**: Settings screen uses grouped sections with clear headers matching the app's visual style
 
-### Recording Waveform
+### Notification Preferences
 
-- [x] **WAVE-01**: Waveform bars during recording respond to actual microphone audio levels (not random pulsing)
+- [ ] **NPRF-01**: User can toggle inactivity reminder notifications on/off
+- [ ] **NPRF-02**: User can toggle action nudge notifications on/off
+- [ ] **NPRF-03**: User can toggle idea nudge notifications on/off
+- [ ] **NPRF-04**: User can toggle streak notifications on/off
+- [ ] **NPRF-05**: Toggle states persist across app launches (UserDefaults)
+- [ ] **NPRF-06**: NotificationScheduler respects toggle states — disabled categories are not scheduled
 
-### Recording Buttons
+### Data & Privacy
 
-- [x] **BTNS-01**: All recording buttons (start, stop, lock-in, cancel) use brand colors — no green
+- [ ] **DATA-01**: User can delete their account with a confirmation dialog explaining the action is permanent
+- [ ] **DATA-02**: Account deletion removes user data from Supabase and signs the user out
+- [ ] **DATA-03**: User can clear local data (UserDefaults, cached preferences) with confirmation
+- [ ] **DATA-04**: A privacy policy link is accessible and opens in an in-app browser or Safari
 
-### Recording Cancel Flow
+### App Info
 
-- [ ] **CANC-01**: A visible discard/cancel button is present whenever a recording exists (during recording and after stopping), allowing the user to start over at any time
+- [ ] **INFO-01**: App version and build number are displayed (pulled from bundle)
+- [ ] **INFO-02**: "Rate the App" opens the App Store review page
+- [ ] **INFO-03**: "Send Feedback" opens a pre-filled email or feedback link
+- [ ] **INFO-04**: An About/Credits screen or section is accessible
 
-## Future Requirements
+### Profile Stats
 
-### Deferred
+- [x] **STAT-01**: Profile screen shows real count of user's ideas (from Supabase data)
+- [x] **STAT-02**: Profile screen shows real count of user's completed analyses (from Supabase data)
 
-- **DISC-04**: "Pick this next" bubble on unchosen/locked nodes as ordering entry point
-- **CELB-04**: Voice note CTA ("What's next" edge function) — Supabase not ready
+## Previous Milestones
+
+### v1.8 (Complete)
+- [x] Push notifications, notification copy with sass levels, all triggers wired
+
+### v1.7 (Complete)
+- [x] Ideas tab clarity, Actions tab onboarding, self-contained popovers, picker commitment framing
+
+### v1.6 (Complete)
+- [x] Unified mascot loading, analysis refresh, delete confirmation
+
+### v1.5 (Complete)
+- [x] Title consistency, real waveform, brand colors, discard button
 
 ## Out of Scope
 
 | Feature | Reason |
 |---------|--------|
-| XP/points system | Adds complexity without clear value |
-| Sound effects | Adds bundle size, may annoy users |
-| Full recording redesign | v1.5 fixes specific issues, not a full redesign |
+| Notification scheduling UI (quiet hours, frequency) | Per-type toggles are sufficient for v1.9 — add timing controls later if needed |
+| Appearance settings (dark mode, text size) | iOS system settings handle this — not enough value for v1.9 |
+| Profile editing (name, avatar) | User model is email-only from Supabase auth — would need schema changes |
+| Data export | Low user demand, complex implementation — revisit if requested |
+| In-app feedback form | Email link is simpler and sufficient |
 
 ## Traceability
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| TITL-01 | Phase 15 | Complete |
-| WAVE-01 | Phase 16 | Complete |
-| BTNS-01 | Phase 16 | Complete |
-| CANC-01 | Phase 16 | Pending |
+| SETT-01 | Phase 27 | Complete |
+| SETT-02 | Phase 27 | Complete |
+| NPRF-01 | Phase 28 | Pending |
+| NPRF-02 | Phase 28 | Pending |
+| NPRF-03 | Phase 28 | Pending |
+| NPRF-04 | Phase 28 | Pending |
+| NPRF-05 | Phase 28 | Pending |
+| NPRF-06 | Phase 28 | Pending |
+| DATA-01 | Phase 29 | Pending |
+| DATA-02 | Phase 29 | Pending |
+| DATA-03 | Phase 29 | Pending |
+| DATA-04 | Phase 29 | Pending |
+| INFO-01 | Phase 29 | Pending |
+| INFO-02 | Phase 29 | Pending |
+| INFO-03 | Phase 29 | Pending |
+| INFO-04 | Phase 29 | Pending |
+| STAT-01 | Phase 27 | Complete |
+| STAT-02 | Phase 27 | Complete |
 
 **Coverage:**
-- v1.5 requirements: 4 total
-- Mapped to phases: 4
+- v1.9 requirements: 18 total
+- Mapped to phases: 18
 - Unmapped: 0
 
 ---
-*Requirements defined: 2026-03-22*
+*Requirements defined: 2026-04-07*
