@@ -4,6 +4,7 @@
 //
 
 import SwiftUI
+import StoreKit
 
 struct SettingsView: View {
     private var appVersion: String {
@@ -17,6 +18,7 @@ struct SettingsView: View {
     @AppStorage("notif_idea_nudge") private var ideaNudgeEnabled = true
     @AppStorage("notif_streak") private var streakEnabled = true
 
+    @Environment(\.requestReview) private var requestReview
     @EnvironmentObject var authViewModel: AuthViewModel
 
     @State private var showDeleteAlert = false
@@ -64,6 +66,24 @@ struct SettingsView: View {
                     // About section
                     settingsSection(title: "About") {
                         settingsRow(icon: "info.circle", title: "App Version", color: .textSec, detail: appVersion)
+                        Divider().padding(.leading, 44)
+                        Button {
+                            requestReview()
+                        } label: {
+                            settingsRow(icon: "star", title: "Rate the App", color: .brandAmber)
+                        }
+                        Divider().padding(.leading, 44)
+                        Button {
+                            if let url = URL(string: "mailto:feedback@abimo.app?subject=Abimo%20Feedback") {
+                                UIApplication.shared.open(url)
+                            }
+                        } label: {
+                            settingsRow(icon: "envelope", title: "Send Feedback", color: .accentBlue)
+                        }
+                        Divider().padding(.leading, 44)
+                        NavigationLink(destination: AboutView()) {
+                            settingsRow(icon: "heart", title: "About", color: .brand)
+                        }
                     }
 
                     Spacer()
