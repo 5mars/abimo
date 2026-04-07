@@ -292,7 +292,11 @@ Plans:
   5. "Rate the App" opens App Store review page
   6. "Send Feedback" opens pre-filled email
   7. About/Credits section is accessible
-**Plans**: TBD (via /gsd:plan-phase 29)
+**Plans**: 2 plans
+
+Plans:
+- [ ] 29-01-PLAN.md — Data & Privacy: delete account (Supabase RPC), clear local data, privacy policy link
+- [ ] 29-02-PLAN.md — App Info: rate app, send feedback, about/credits screen
 
 ## Progress
 
@@ -326,4 +330,4 @@ Plans:
 | 26. Notification Triggers | v1.8 | 2/2 | Complete | 2026-03-30 |
 | 27. Settings Screen & Profile Stats | v1.9 | 1/1 | Complete   | 2026-04-07 |
 | 28. Notification Preferences | v1.9 | 1/1 | Complete   | 2026-04-07 |
-| 29. Data, Privacy & App Info | v1.9 | 0/0 | Planned | |
+| 29. Data, Privacy & App Info | v1.9 | 0/2 | Planned | |
