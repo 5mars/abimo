@@ -20,7 +20,10 @@ class SupabaseService {
 
         client = SupabaseClient(
             supabaseURL: supabaseURL,
-            supabaseKey: supabaseAnonKey
+            supabaseKey: supabaseAnonKey,
+            options: .init(
+                auth: .init(emitLocalSessionAsInitialSession: true)
+            )
         )
     }
 
@@ -113,6 +116,28 @@ class SupabaseService {
             .update(["analysis_id": analysisId.uuidString])
             .eq("id", value: noteId)
             .execute()
+    }
+
+    // MARK: - Counts
+
+    func countVoiceNotes() async throws -> Int {
+        struct IdOnly: Decodable { let id: UUID }
+        let rows: [IdOnly] = try await client
+            .from("voice_notes")
+            .select("id")
+            .execute()
+            .value
+        return rows.count
+    }
+
+    func countAnalyses() async throws -> Int {
+        struct IdOnly: Decodable { let id: UUID }
+        let rows: [IdOnly] = try await client
+            .from("swot_analyses")
+            .select("id")
+            .execute()
+            .value
+        return rows.count
     }
 
     // MARK: - Storage
