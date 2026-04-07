@@ -23,10 +23,10 @@ Requirements for Settings & Profile milestone. Each maps to roadmap phases.
 
 ### Data & Privacy
 
-- [ ] **DATA-01**: User can delete their account with a confirmation dialog explaining the action is permanent
-- [ ] **DATA-02**: Account deletion removes user data from Supabase and signs the user out
-- [ ] **DATA-03**: User can clear local data (UserDefaults, cached preferences) with confirmation
-- [ ] **DATA-04**: A privacy policy link is accessible and opens in an in-app browser or Safari
+- [x] **DATA-01**: User can delete their account with a confirmation dialog explaining the action is permanent
+- [x] **DATA-02**: Account deletion removes user data from Supabase and signs the user out
+- [x] **DATA-03**: User can clear local data (UserDefaults, cached preferences) with confirmation
+- [x] **DATA-04**: A privacy policy link is accessible and opens in an in-app browser or Safari
 
 ### App Info
 
@@ -76,10 +76,10 @@ Requirements for Settings & Profile milestone. Each maps to roadmap phases.
 | NPRF-04 | Phase 28 | Complete |
 | NPRF-05 | Phase 28 | Complete |
 | NPRF-06 | Phase 28 | Complete |
-| DATA-01 | Phase 29 | Pending |
-| DATA-02 | Phase 29 | Pending |
-| DATA-03 | Phase 29 | Pending |
-| DATA-04 | Phase 29 | Pending |
+| DATA-01 | Phase 29 | Complete |
+| DATA-02 | Phase 29 | Complete |
+| DATA-03 | Phase 29 | Complete |
+| DATA-04 | Phase 29 | Complete |
 | INFO-01 | Phase 29 | Pending |
 | INFO-02 | Phase 29 | Pending |
 | INFO-03 | Phase 29 | Pending |

@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.9
 milestone_name: Settings & Profile
 status: Phase complete — ready for verification
-stopped_at: Completed 28-01-PLAN.md
-last_updated: "2026-04-07T14:53:06.703Z"
+stopped_at: Completed 29-01-PLAN.md
+last_updated: "2026-04-07T15:09:18.721Z"
 progress:
   total_phases: 15
   completed_phases: 6
-  total_plans: 16
-  completed_plans: 10
+  total_plans: 18
+  completed_plans: 11
 ---
 
 # Project State
@@ -43,6 +43,7 @@ Plan: 0 of 0
 *Updated after each plan completion*
 | Phase 27 P01 | 4min | 2 tasks | 3 files |
 | Phase 28 P01 | 2min | 2 tasks | 3 files |
+| Phase 29 P01 | 2min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -52,6 +53,8 @@ Decisions are logged in PROJECT.md Key Decisions table.
 
 - [Phase 27]: SettingsView has no NavigationStack (parent provides it); count queries use select-id-only pattern; stats refresh on tab switch
 - [Phase 28]: Used @AppStorage directly in SettingsView instead of dedicated NotificationPreferences class
+- [Phase 29]: Clear local auth state after RPC deletion instead of signOut (Supabase Issue #358)
+- [Phase 29]: Use removePersistentDomain for UserDefaults reset instead of individual keys
 
 ### Pending Todos
 
@@ -66,6 +69,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-07T14:53:06.699Z
-Stopped at: Completed 28-01-PLAN.md
+Last session: 2026-04-07T15:09:18.719Z
+Stopped at: Completed 29-01-PLAN.md
 Resume file: None
