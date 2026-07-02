@@ -71,8 +71,20 @@ struct AchievementGridView: View {
             Spacer(minLength: 0)
         }
         .padding(10)
-        .background(Color.cardSurface)
-        .cornerRadius(14)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(Color.cardSurface)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .strokeBorder(unlocked ? Color.brandAmber.opacity(0.35) : Color.cardEdge, lineWidth: 1.5)
+        )
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(unlocked ? Color.brandAmberDark.opacity(0.35) : Color.cardEdge)
+                .offset(y: 2)
+        )
+        .padding(.bottom, 2)
         .opacity(unlocked ? 1 : 0.55)
         .scaleEffect(justUnlocked == achievement ? 1.06 : 1)
         .animation(.spring(response: 0.4, dampingFraction: 0.6), value: justUnlocked)

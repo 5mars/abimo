@@ -150,6 +150,19 @@ struct JourneyPathView: View {
                 .cardEntrance(delay: Double(index) * 0.05)
             }
 
+            // The critic loiters beside the current step
+            if let activeIndex = viewModel.orderedActions.firstIndex(where: { !$0.isCompleted }) {
+                let center = layout.center(activeIndex, width: width)
+                Image(MascotMood.neutral.assetName)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 64, height: 64)
+                    .scaleEffect(x: layout.xOffset(activeIndex, width: width) > 0 ? 1 : -1)
+                    .position(x: width / 2 - layout.xOffset(activeIndex, width: width), y: center.y)
+                    .allowsHitTesting(false)
+                    .transition(.opacity)
+            }
+
             bubbleView(width: width)
         }
     }

@@ -5,17 +5,16 @@
 
 import SwiftUI
 
+/// In-app nudge banner with the mascot doing the nudging. Dismissal is
+/// persisted per nudge type per day, so it stays gone after a swipe away
+/// but can return tomorrow if the situation hasn't improved.
 struct NudgeBanner: View {
     let nudge: NudgeMessage
-    @State private var isVisible = true
+    @State private var isVisible: Bool
 
-    private var iconName: String {
-        switch nudge.type {
-        case .inactivity:    return "bell.badge"
-        case .commitmentDue: return "clock.badge.exclamationmark"
-        case .milestone:     return "party.popper"
-        case .nextAction:    return "arrow.right.circle"
-        }
+    init(nudge: NudgeMessage) {
+        self.nudge = nudge
+        _isVisible = State(initialValue: !Self.isDismissedToday(type: nudge.type))
     }
 
     private var tintColor: Color {
@@ -36,13 +35,21 @@ struct NudgeBanner: View {
         }
     }
 
+    private var mood: MascotMood {
+        switch nudge.type {
+        case .inactivity, .commitmentDue: return .sassy
+        case .milestone:                  return .playful
+        case .nextAction:                 return .neutral
+        }
+    }
+
     var body: some View {
         if isVisible {
-            HStack(spacing: 12) {
-                Image(systemName: iconName)
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundColor(tintColor)
-                    .frame(width: 32)
+            HStack(spacing: 10) {
+                Image(mood.assetName)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 40, height: 40)
 
                 VStack(alignment: .leading, spacing: 3) {
                     Text(nudge.title)
@@ -57,6 +64,7 @@ struct NudgeBanner: View {
                 Spacer()
 
                 Button {
+                    Self.markDismissedToday(type: nudge.type)
                     withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
                         isVisible = false
                     }
@@ -69,8 +77,27 @@ struct NudgeBanner: View {
             }
             .padding(14)
             .background(bgColor)
-            .cornerRadius(18)
+            .cornerRadius(DuoTokens.Radius.card)
+            .overlay(
+                RoundedRectangle(cornerRadius: DuoTokens.Radius.card, style: .continuous)
+                    .strokeBorder(tintColor.opacity(0.25), lineWidth: 1.5)
+            )
             .transition(.opacity.combined(with: .move(edge: .top)))
         }
+    }
+
+    // MARK: - Daily dismissal persistence
+
+    private static func dismissKey(type: NudgeType) -> String {
+        let day = Calendar.current.startOfDay(for: Date()).timeIntervalSince1970
+        return "nudge_dismissed_\(type.rawValue)_\(Int(day))"
+    }
+
+    static func isDismissedToday(type: NudgeType) -> Bool {
+        UserDefaults.standard.bool(forKey: dismissKey(type: type))
+    }
+
+    static func markDismissedToday(type: NudgeType) {
+        UserDefaults.standard.set(true, forKey: dismissKey(type: type))
     }
 }

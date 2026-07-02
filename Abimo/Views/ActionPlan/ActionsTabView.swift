@@ -58,6 +58,14 @@ struct ActionsTabView: View {
                             .cardEntrance(delay: 0)
                         }
 
+                        // Most relevant nudge (mascot does the nagging)
+                        if let nudge = viewModel.nudges.first,
+                           !NudgeBanner.isDismissedToday(type: nudge.type) {
+                            NudgeBanner(nudge: nudge)
+                                .padding(.horizontal, 16)
+                                .cardEntrance(delay: 0.04)
+                        }
+
                         if !hasSeenOnboarding {
                             onboardingCard
                                 .transition(.opacity.combined(with: .move(edge: .top)))
@@ -263,10 +271,17 @@ struct ActionsTabView: View {
 
     private var emptyState: some View {
         VStack(spacing: 28) {
-            Image("MascotNeutral")
-                .resizable()
-                .scaledToFit()
-                .frame(width: 140, height: 140)
+            HStack(alignment: .center, spacing: 2) {
+                Image("MascotNeutral")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 130, height: 130)
+                MascotSpeechLine(
+                    line: MascotVoice.moment(for: .emptyKitchen).line,
+                    arrowOffsetY: 24
+                )
+            }
+            .padding(.horizontal, 8)
 
             VStack(spacing: 10) {
                 Text("Your action plans will live here")

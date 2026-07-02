@@ -79,10 +79,17 @@ struct NotesListView: View {
 
     private var labEmptyView: some View {
         VStack(spacing: 24) {
-            Image("MascotNeutral")
-                .resizable()
-                .scaledToFit()
-                .frame(width: 160, height: 160)
+            HStack(alignment: .center, spacing: 2) {
+                Image("MascotNeutral")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 150, height: 150)
+                MascotSpeechLine(
+                    line: MascotVoice.moment(for: .emptyKitchen).line,
+                    arrowOffsetY: 26
+                )
+            }
+            .padding(.horizontal, 8)
 
             VStack(spacing: 10) {
                 Text("Welcome to The Kitchen")
