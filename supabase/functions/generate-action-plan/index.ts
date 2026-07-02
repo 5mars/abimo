@@ -112,11 +112,12 @@ ORDERING:
 
 Generate exactly 5-7 actions. Spread across quadrants.
 
-STRATEGY BY VIABILITY:
-0-35: Help founder pivot. Find the real problem.
-36-60: Validate the problem exists. Don't build yet.
-61-80: Test demand. Would people pay?
-81-100: Find first users. Move fast.
+STRATEGY BY VIABILITY (scores are harsh by design — 20-45 is a normal starting point):
+0-19: The idea as described doesn't survive. Actions should hunt for a pivot or the real problem underneath.
+20-39: Something's there but unproven. Actions should find out if the problem actually exists.
+40-59: Real problem, unproven demand. Actions should test whether anyone cares enough to act.
+60-79: Promising. Actions should test willingness to pay.
+80-100: Rare. Actions should get real users fast.
 
 Each action must take 5-30 min, cost nothing, require no coding.
 The template is what makes the user actually DO it — make it so easy they just copy, paste, and send.
@@ -176,6 +177,7 @@ Generate 5-7 micro-actions with copy-paste templates.`;
       },
       body: JSON.stringify({
         model: "gpt-4o",
+        temperature: 0.4,
         response_format: {
           type: "json_schema",
           json_schema: {
