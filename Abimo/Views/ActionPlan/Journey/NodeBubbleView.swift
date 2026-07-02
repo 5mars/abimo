@@ -34,11 +34,15 @@ struct NodeBubbleView: View {
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 16)
-        .frame(width: 300, alignment: .leading)
+        .frame(maxWidth: .infinity, alignment: .leading)  // width set by the parent (JourneyLayout-derived)
         .background(
             TopArrowBubbleShape(arrowOffset: arrowOffset)
                 .fill(Color.white)
                 .shadow(color: Color.textPri.opacity(0.12), radius: 12, x: 0, y: 4)
+        )
+        .overlay(
+            TopArrowBubbleShape(arrowOffset: arrowOffset)
+                .stroke(Color.cardEdge, lineWidth: 2)
         )
         .scaleEffect(isVisible ? 1.0 : 0.01, anchor: .top)
         .opacity(isVisible ? 1.0 : 0.0)
