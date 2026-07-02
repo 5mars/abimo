@@ -48,134 +48,63 @@ struct NoteDetailView: View {
         ScrollView(.vertical, showsIndicators: false) {
             VStack(spacing: 16) {
 
-                    // Note header card
-                    HStack(spacing: 14) {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 16)
-                                .fill(LinearGradient.brand)
-                                .frame(width: 60, height: 60)
-                            Image(systemName: "waveform.circle.fill")
-                                .font(.system(size: 26, weight: .semibold))
-                                .foregroundColor(.white)
-                        }
-
-                        if isEditingTitle {
-                            VStack(alignment: .leading, spacing: 8) {
-                                TextField("Idea name", text: $editedTitle)
-                                    .font(.system(size: 18, weight: .bold))
-                                    .foregroundColor(.textPri)
-                                    .tint(.brand)
-                                    .submitLabel(.done)
-                                    .onSubmit { Task { await saveTitleEdit() } }
-
-                                HStack {
-                                    Button("Cancel") {
-                                        isEditingTitle = false
-                                    }
-                                    .font(.system(size: 13, weight: .medium))
-                                    .foregroundColor(.textSec)
-
-                                    Spacer()
-
-                                    Button {
-                                        Task { await saveTitleEdit() }
-                                    } label: {
-                                        Text("Save")
-                                            .font(.system(size: 13, weight: .semibold))
-                                            .foregroundColor(.white)
-                                            .padding(.horizontal, 14)
-                                            .padding(.vertical, 6)
-                                            .background(editedTitle.trimmingCharacters(in: .whitespaces).isEmpty ? Color.gray.opacity(0.3) : Color.brand)
-                                            .cornerRadius(10)
-                                    }
-                                    .disabled(editedTitle.trimmingCharacters(in: .whitespaces).isEmpty)
-                                }
-                            }
-                            Spacer()
-                        } else {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(noteTitle)
-                                    .font(.system(size: 18, weight: .bold))
-                                    .foregroundColor(.textPri)
-                                    .lineLimit(2)
-
-                                HStack(spacing: 12) {
-                                    Label(formatDuration(note.duration), systemImage: "clock")
-                                        .font(.system(size: 13, weight: .medium))
-                                        .foregroundColor(.brand.opacity(0.8))
-
-                                    Text(note.createdAt, style: .date)
-                                        .font(.system(size: 13))
-                                        .foregroundColor(.textSec)
-                                }
-                            }
-                            Spacer()
+                    // Plain header — no card, native alert for rename
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack(alignment: .top, spacing: 10) {
+                            Text(noteTitle)
+                                .font(.system(size: 24, weight: .heavy, design: .rounded))
+                                .foregroundColor(.textPri)
+                                .frame(maxWidth: .infinity, alignment: .leading)
 
                             Button {
                                 editedTitle = noteTitle
                                 isEditingTitle = true
                             } label: {
                                 Image(systemName: "pencil")
-                                    .font(.system(size: 13, weight: .medium))
+                                    .font(.system(size: 15, weight: .semibold))
                                     .foregroundColor(.brand)
-                                    .padding(8)
-                                    .background(Color.brand.opacity(0.08))
-                                    .clipShape(Circle())
+                                    .padding(10)
+                                    .background(Circle().fill(Color.brand.opacity(0.1)))
                             }
+                            .buttonStyle(DuoPressStyle())
                         }
+
+                        HStack(spacing: 8) {
+                            Label(formatDuration(note.duration), systemImage: "clock")
+                            Text("·")
+                            Text(note.createdAt, style: .date)
+                        }
+                        .font(.duoCaption)
+                        .foregroundColor(.textSec)
                     }
-                    .heroCard(color: .cardDarkMint)
+                    .padding(.top, 4)
                     .cardEntrance(delay: 0.0)
 
                     // What You Said — collapsible card with audio player + transcription
                     VStack(alignment: .leading, spacing: 16) {
-                        // Header with collapse toggle
-                        Button {
-                            withAnimation(.spring(response: 0.38, dampingFraction: 0.75)) {
-                                isTranscriptionExpanded.toggle()
-                            }
-                        } label: {
-                            HStack(spacing: 8) {
-                                ZStack {
-                                    Circle()
-                                        .fill(Color.brand.opacity(0.1))
-                                        .frame(width: 32, height: 32)
-                                    Image(systemName: "text.bubble.fill")
-                                        .font(.system(size: 13, weight: .semibold))
-                                        .foregroundColor(.brand)
-                                }
-                                Text("What You Said")
-                                    .font(.system(size: 15, weight: .semibold))
-                                    .foregroundColor(.textPri)
-
-                                Spacer()
-
-                                if transcription != nil && !isEditingTranscript && isTranscriptionExpanded {
-                                    Button {
-                                        withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
-                                            isEditingTranscript = true
-                                            editedTranscriptionText = transcription?.text ?? ""
-                                        }
-                                    } label: {
-                                        Label("Edit", systemImage: "pencil")
-                                            .font(.system(size: 13, weight: .medium))
-                                            .foregroundColor(.brand)
-                                            .padding(.horizontal, 12)
-                                            .padding(.vertical, 6)
-                                            .background(Color.brand.opacity(0.08))
-                                            .cornerRadius(20)
+                        DuoDisclosureHeader(
+                            icon: "text.bubble.fill",
+                            title: "What You Said",
+                            isExpanded: $isTranscriptionExpanded
+                        ) {
+                            if transcription != nil && !isEditingTranscript && isTranscriptionExpanded {
+                                Button {
+                                    withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+                                        isEditingTranscript = true
+                                        editedTranscriptionText = transcription?.text ?? ""
                                     }
-                                    .buttonStyle(PlayfulButtonStyle())
+                                } label: {
+                                    Label("Edit", systemImage: "pencil")
+                                        .font(.duoCaption)
+                                        .foregroundColor(.brand)
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 6)
+                                        .background(Color.brand.opacity(0.08))
+                                        .cornerRadius(20)
                                 }
-
-                                Image(systemName: "chevron.down")
-                                    .font(.system(size: 13, weight: .semibold))
-                                    .foregroundColor(.textSec)
-                                    .rotationEffect(.degrees(isTranscriptionExpanded ? 180 : 0))
-                                    .animation(.spring(response: 0.35, dampingFraction: 0.7), value: isTranscriptionExpanded)
+                                .buttonStyle(DuoPressStyle())
                             }
                         }
-                        .buttonStyle(.plain)
 
                         if isTranscriptionExpanded {
                             // Audio player
@@ -183,11 +112,7 @@ struct NoteDetailView: View {
                                 Button {
                                     Task { await togglePlayback() }
                                 } label: {
-                                    ZStack {
-                                        Circle()
-                                            .fill(LinearGradient.brand)
-                                            .frame(width: 48, height: 48)
-
+                                    Group {
                                         if audioPlayer.isLoading {
                                             ProgressView().tint(.white).scaleEffect(0.8)
                                         } else {
@@ -198,15 +123,16 @@ struct NoteDetailView: View {
                                                 .animation(.spring(response: 0.3, dampingFraction: 0.6), value: audioPlayer.isPlaying)
                                         }
                                     }
+                                    .frame(width: 48, height: 48)
                                 }
-                                .buttonStyle(PlayfulButtonStyle())
+                                .buttonStyle(Duo3DCircleButtonStyle(fill: .brand, edge: .brandDark, edgeHeight: 4))
                                 .disabled(audioPlayer.isLoading)
 
                                 VStack(spacing: 8) {
                                     GeometryReader { geo in
                                         ZStack(alignment: .leading) {
                                             Capsule()
-                                                .fill(Color.black.opacity(0.08))
+                                                .fill(Color.cardEdge)
                                                 .frame(height: 5)
 
                                             Capsule()
@@ -248,21 +174,19 @@ struct NoteDetailView: View {
                                 if isEditingTranscript {
                                     TextEditor(text: $editedTranscriptionText)
                                         .frame(minHeight: 150)
-                                        .padding(12)
-                                        .background(Color.black.opacity(0.04))
-                                        .cornerRadius(12)
+                                        .duoInset()
                                         .overlay(
-                                            RoundedRectangle(cornerRadius: 12)
-                                                .stroke(Color.brand.opacity(0.35), lineWidth: 1.5)
+                                            RoundedRectangle(cornerRadius: DuoTokens.Radius.inset)
+                                                .strokeBorder(Color.brand.opacity(0.4), lineWidth: 2)
                                         )
-                                        .font(.system(size: 15))
+                                        .font(.duoBody)
                                         .tint(.brand)
                                         .onChange(of: editedTranscriptionText) { oldValue, newValue in
                                             hasUnsavedChanges = newValue != transcription.text
                                         }
                                         .transition(.opacity.combined(with: .move(edge: .top)))
 
-                                    HStack {
+                                    HStack(spacing: 12) {
                                         Button("Cancel") {
                                             withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
                                                 isEditingTranscript = false
@@ -270,36 +194,25 @@ struct NoteDetailView: View {
                                                 editedTranscriptionText = transcription.text
                                             }
                                         }
-                                        .font(.system(size: 15, weight: .medium))
+                                        .font(.duoLabel)
                                         .foregroundColor(.textSec)
-                                        .buttonStyle(PlayfulButtonStyle())
+                                        .buttonStyle(DuoPressStyle())
 
-                                        Spacer()
-
-                                        Button {
+                                        GradientButton(
+                                            title: "Save",
+                                            isDisabled: !hasUnsavedChanges,
+                                            size: .compact
+                                        ) {
                                             Task { await saveTranscriptionEdit() }
-                                        } label: {
-                                            Text("Save Changes")
-                                                .font(.system(size: 15, weight: .semibold))
-                                                .foregroundColor(.white)
-                                                .padding(.horizontal, 16)
-                                                .padding(.vertical, 9)
-                                                .background(hasUnsavedChanges ? Color.brand : Color.gray.opacity(0.3))
-                                                .cornerRadius(12)
-                                                .animation(.spring(response: 0.3, dampingFraction: 0.7), value: hasUnsavedChanges)
                                         }
-                                        .buttonStyle(PlayfulButtonStyle())
-                                        .disabled(!hasUnsavedChanges)
                                     }
                                 } else {
                                     Text(transcription.text)
-                                        .font(.system(size: 15))
+                                        .font(.duoBody)
                                         .foregroundColor(.textPri)
                                         .lineSpacing(4)
-                                        .padding(14)
                                         .frame(maxWidth: .infinity, alignment: .leading)
-                                        .background(Color.black.opacity(0.04))
-                                        .cornerRadius(12)
+                                        .duoInset(padding: 14)
                                         .transition(.opacity)
                                 }
                             } else {
@@ -316,7 +229,7 @@ struct NoteDetailView: View {
                             }
                         }
                     }
-                    .cardStyle()
+                    .duoPanel()
                     .cardEntrance(delay: 0.09)
                     .animation(.spring(response: 0.38, dampingFraction: 0.75), value: isTranscriptionExpanded)
                     .animation(.spring(response: 0.4, dampingFraction: 0.8), value: isEditingTranscript)
@@ -357,6 +270,11 @@ struct NoteDetailView: View {
         .navigationTitle("The Pitch")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(Color.appBg, for: .navigationBar)
+        .alert("Name this idea", isPresented: $isEditingTitle) {
+            TextField("Title", text: $editedTitle)
+            Button("Save") { Task { await saveTitleEdit() } }
+            Button("Cancel", role: .cancel) {}
+        }
         .sheet(isPresented: $showingSWOTAnalysis, onDismiss: {
             // Refresh analysis state — user may have generated a new SWOT
             if let t = transcription {
@@ -396,29 +314,12 @@ struct NoteDetailView: View {
 
     @ViewBuilder
     private var transcribingPlaceholderCard: some View {
-        VStack(spacing: 18) {
-            ZStack {
-                Circle()
-                    .fill(Color.brand.opacity(0.1))
-                    .frame(width: 64, height: 64)
-                ProgressView()
-                    .tint(.brand)
-                    .scaleEffect(1.2)
-            }
-
-            VStack(spacing: 6) {
-                Text("Transcribing your idea...")
-                    .font(.system(size: 19, weight: .bold, design: .rounded))
-                    .foregroundColor(.textPri)
-                Text("We're turning your recording\ninto text right now")
-                    .font(.system(size: 14))
-                    .foregroundColor(.textSec)
-                    .multilineTextAlignment(.center)
-                    .lineSpacing(3)
-            }
-        }
-        .frame(maxWidth: .infinity)
-        .cardStyle()
+        GenerateCTACard(
+            icon: "waveform",
+            title: "Transcribing your idea...",
+            subtitle: "We're turning your recording\ninto text right now",
+            isLoading: true
+        )
     }
 
     // MARK: - Analysis Action Card
@@ -433,11 +334,10 @@ struct NoteDetailView: View {
                     .foregroundColor(.textSec)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .cardStyle(padding: 20)
+            .duoPanel()
         } else if let analysis = swotAnalysis {
-            // Analysis exists — prominent CTA card
-            VStack(spacing: 20) {
-                // Header row
+            // Analysis exists — score, verdict, summary, breakdown button
+            VStack(spacing: 18) {
                 HStack(spacing: 12) {
                     ZStack {
                         Circle()
@@ -449,10 +349,10 @@ struct NoteDetailView: View {
                     }
                     VStack(alignment: .leading, spacing: 2) {
                         Text("The Taste Test")
-                            .font(.system(size: 17, weight: .bold))
+                            .font(.duoCardTitle)
                             .foregroundColor(.textPri)
                         Text("The critic has spoken")
-                            .font(.system(size: 12))
+                            .font(.duoCaption)
                             .foregroundColor(.textSec)
                     }
                     Spacer()
@@ -475,18 +375,8 @@ struct NoteDetailView: View {
                         .font(.system(size: 14))
                         .foregroundColor(.textSec)
                         .lineSpacing(3)
-                        .padding(14)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Color.black.opacity(0.04))
-                        .cornerRadius(12)
-                }
-
-                // S W O T count pills
-                HStack(spacing: 8) {
-                    quadrantPill("S", count: analysis.resolvedStrengths.count, color: .brandGreen)
-                    quadrantPill("W", count: analysis.resolvedWeaknesses.count, color: .brandRed)
-                    quadrantPill("O", count: analysis.resolvedOpportunities.count, color: .brandBlue)
-                    quadrantPill("T", count: analysis.resolvedThreats.count, color: .brandOrange)
+                        .duoInset(padding: 14)
                 }
 
                 // Big CTA button
@@ -505,54 +395,17 @@ struct NoteDetailView: View {
                 }
                 .buttonStyle(Duo3DGradientButtonStyle(fill: .brand))
             }
-            .cardStyle()
+            .duoPanel()
         } else {
-            // No analysis yet — playful generate CTA
-            VStack(spacing: 18) {
-                ZStack {
-                    Circle()
-                        .fill(Color.brand.opacity(0.1))
-                        .frame(width: 64, height: 64)
-                    Image(systemName: "sparkles")
-                        .font(.system(size: 26, weight: .semibold))
-                        .foregroundColor(.brand)
-                        .symbolEffect(.pulse)
-                }
-
-                VStack(spacing: 6) {
-                    Text("Put it to the test")
-                        .font(.system(size: 19, weight: .bold, design: .rounded))
-                        .foregroundColor(.textPri)
-                    Text("Send it to the critic and we'll\nbreak it down for you")
-                        .font(.system(size: 14))
-                        .foregroundColor(.textSec)
-                        .multilineTextAlignment(.center)
-                        .lineSpacing(3)
-                }
-
-                GradientButton(title: "👨‍🍳  Send it to the critic") {
-                    showingSWOTAnalysis = true
-                }
+            GenerateCTACard(
+                icon: "sparkles",
+                title: "Put it to the test",
+                subtitle: "Send it to the critic and we'll\nbreak it down for you",
+                buttonTitle: "👨‍🍳  Send it to the critic"
+            ) {
+                showingSWOTAnalysis = true
             }
-            .frame(maxWidth: .infinity)
-            .cardStyle()
         }
-    }
-
-    private func quadrantPill(_ letter: String, count: Int, color: Color) -> some View {
-        VStack(spacing: 4) {
-            Text("\(count)")
-                .font(.system(size: 20, weight: .black, design: .rounded))
-                .foregroundColor(color)
-                .contentTransition(.numericText())
-            Text(letter)
-                .font(.system(size: 12, weight: .bold))
-                .foregroundColor(color.opacity(0.7))
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 12)
-        .background(color.opacity(0.1))
-        .cornerRadius(16)
     }
 
     // MARK: - Action Plan Card
@@ -567,7 +420,7 @@ struct NoteDetailView: View {
                     .foregroundColor(.textSec)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .cardStyle(padding: 20)
+            .duoPanel()
         } else if let plan = actionPlan, let progress = actionPlanProgress {
             // Existing plan — show progress
             VStack(spacing: 14) {
@@ -615,30 +468,16 @@ struct NoteDetailView: View {
                 }
                 .buttonStyle(Duo3DGradientButtonStyle(fill: .record))
             }
-            .cardStyle()
+            .duoPanel()
         } else {
-            // No plan yet — generate CTA
-            VStack(spacing: 14) {
-                HStack(spacing: 10) {
-                    Image(systemName: "bolt.fill")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(.brand)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Ready to act?")
-                            .font(.system(size: 16, weight: .bold, design: .rounded))
-                            .foregroundColor(.textPri)
-                        Text("Get a step-by-step plan you can start right now")
-                            .font(.system(size: 13))
-                            .foregroundColor(.textSec)
-                    }
-                    Spacer()
-                }
-
-                GradientButton(title: "Get your action plan", gradient: .record) {
-                    Task { await generateActionPlan() }
-                }
+            GenerateCTACard(
+                icon: "bolt.fill",
+                title: "Ready to act?",
+                subtitle: "Get a step-by-step plan\nyou can start right now",
+                buttonTitle: "Get your action plan"
+            ) {
+                Task { await generateActionPlan() }
             }
-            .cardStyle()
         }
     }
 

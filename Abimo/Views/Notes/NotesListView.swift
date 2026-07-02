@@ -124,7 +124,7 @@ struct NotesListView: View {
                     .cardEntrance(delay: 0.0)
             }
 
-            // Ideas section
+            // Ideas — cards are self-evident, no section header needed
             Section {
                 ForEach(viewModel.notes) { note in
                     NavigationLink(destination: NoteDetailView(note: note)) {
@@ -141,20 +141,6 @@ struct NotesListView: View {
                         }
                     }
                 }
-            } header: {
-                HStack {
-                    Text("Your Ideas")
-                        .font(.system(size: 13, weight: .bold, design: .rounded))
-                        .foregroundColor(.textSec)
-                        .textCase(nil)
-                    Spacer()
-                    Text("\(viewModel.notes.count) idea\(viewModel.notes.count == 1 ? "" : "s")")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(.textSec.opacity(0.7))
-                }
-                .padding(.horizontal, 20)
-                .padding(.top, 4)
-                .padding(.bottom, 2)
             }
         }
         .listStyle(.plain)
@@ -169,29 +155,26 @@ struct LabHeaderView: View {
     let count: Int
 
     private var tagline: String {
+        let ideas = "\(count) idea\(count == 1 ? "" : "s") · "
         let hour = Calendar.current.component(.hour, from: Date())
-        if hour < 12 { return "morning grind, let's get it" }
-        if hour < 17 { return "ideas don't cook themselves" }
-        return "late night cooking hits different"
+        if hour < 12 { return ideas + "morning grind, let's get it" }
+        if hour < 17 { return ideas + "ideas don't cook themselves" }
+        return ideas + "late night cooking hits different"
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("The Kitchen")
-                .font(.system(size: 36, weight: .black, design: .rounded))
+                .font(.duoScreenTitle)
                 .foregroundColor(.textPri)
             Text(tagline)
                 .font(.system(size: 14, weight: .medium))
                 .foregroundColor(.textSec)
-            Text("Your ideas, one tap away")
-                .font(.system(size: 13))
-                .foregroundColor(.textSec.opacity(0.6))
-                .padding(.top, 2)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 20)
         .padding(.top, 12)
-        .padding(.bottom, 16)
+        .padding(.bottom, 12)
     }
 }
 
@@ -224,7 +207,7 @@ struct IdeaCardView: View {
             // Title row
             HStack(alignment: .top, spacing: 12) {
                 Text(note.title)
-                    .font(.system(size: 17, weight: .bold, design: .rounded))
+                    .font(.duoCardTitle)
                     .foregroundColor(.textPri)
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
