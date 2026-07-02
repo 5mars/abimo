@@ -54,18 +54,6 @@ extension Color {
     static let lockedFace      = Color(hex: "EBEBEB")  // locked node face / disabled button
     static let lockedEdge      = Color(hex: "CDCDCD")  // locked node edge
 
-    // MARK: Deprecated aliases — accent consolidation in progress.
-    // Each screen pass replaces these; the final sweep deletes them so the
-    // compiler enforces completion. Do not use in new code.
-    static let brandPink      = brandBlue
-    static let brandRed       = brand
-    static let brandOrange    = brandAmber
-    static let brandRedDark   = brandDark
-    static let brandOrangeDark = brandAmberDark
-    static let accentBlue     = brandBlue
-    static let accentTeal     = brandGreen
-    static let accentCoral    = brandBlue
-    static let cardDarkPurple = cardDarkBlue
 }
 
 // MARK: - Brand Gradients
@@ -96,34 +84,6 @@ extension LinearGradient {
         colors: [Color(hex: "FFB800"), Color(hex: "FFCB3D")],
         startPoint: .topLeading, endPoint: .bottomTrailing
     )
-}
-
-// MARK: - Card Style Modifiers
-
-extension View {
-    /// Standard card — pure white, fully flat
-    func cardStyle(padding: CGFloat = 20) -> some View {
-        self
-            .padding(padding)
-            .background(Color.white)
-            .cornerRadius(24)
-    }
-
-    /// Tinted card — solid tint color, fully flat
-    func tintedCard(color: Color, padding: CGFloat = 16) -> some View {
-        self
-            .padding(padding)
-            .background(color)
-            .cornerRadius(24)
-    }
-
-    /// Hero card — solid tinted background, larger padding, fully flat
-    func heroCard(color: Color = .cardDarkPurple, padding: CGFloat = 24) -> some View {
-        self
-            .padding(padding)
-            .background(color)
-            .cornerRadius(24)
-    }
 }
 
 // MARK: - AppTextField
@@ -186,16 +146,6 @@ struct CardEntranceModifier: ViewModifier {
 extension View {
     func cardEntrance(delay: Double = 0) -> some View {
         modifier(CardEntranceModifier(delay: delay))
-    }
-}
-
-// MARK: - PlayfulButtonStyle
-
-struct PlayfulButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .scaleEffect(configuration.isPressed ? 0.94 : 1.0)
-            .animation(.spring(response: 0.22, dampingFraction: 0.55), value: configuration.isPressed)
     }
 }
 

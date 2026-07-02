@@ -19,7 +19,7 @@ struct MomentumDashboard: View {
                     HStack(spacing: 6) {
                         Image(systemName: streak > 0 ? "flame.fill" : "flame")
                             .font(.system(size: 22, weight: .semibold))
-                            .foregroundColor(streak > 0 ? .brandOrange : .textSec)
+                            .foregroundColor(streak > 0 ? .brandAmber : .textSec)
                             .symbolEffect(.bounce, value: streak)
                         Text("\(streak)")
                             .font(.system(size: 28, weight: .bold, design: .rounded))

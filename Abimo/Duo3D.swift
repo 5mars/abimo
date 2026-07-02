@@ -124,7 +124,7 @@ struct Duo3DSecondaryButtonStyle: ButtonStyle {
 // MARK: - duoCard (tappable cards)
 
 /// White card with a 2pt warm-grey border and a solid 3pt bottom edge.
-/// For TAPPABLE cards only — informational cards keep the flat cardStyle().
+/// For TAPPABLE cards only — informational cards use duoPanel().
 /// Pair with DuoCardButtonStyle on the wrapping Button for the depress.
 struct DuoCardModifier: ViewModifier {
     var padding: CGFloat = 20

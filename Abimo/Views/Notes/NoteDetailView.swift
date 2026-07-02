@@ -256,7 +256,7 @@ struct NoteDetailView: View {
                             Text(error)
                                 .font(.system(size: 13))
                         }
-                        .foregroundColor(.brandRed)
+                        .foregroundColor(.brand)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.horizontal, 4)
                         .transition(.opacity.combined(with: .move(edge: .top)))

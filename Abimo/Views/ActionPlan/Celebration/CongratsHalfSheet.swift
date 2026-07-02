@@ -92,7 +92,7 @@ struct PostCompletionSheetContent: View {
     }
 
     private func advance() {
-        // 0.3s delay lets PlayfulButtonStyle scale animation complete
+        // 0.3s delay lets the press animation complete
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
             // Set detent first — SwiftUI animates it automatically
             selectedDetent = .large

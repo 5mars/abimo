@@ -33,7 +33,7 @@ struct ActionPlanDetailView: View {
                         .foregroundColor(.white)
                         .padding(.horizontal, 18)
                         .padding(.vertical, 12)
-                        .background(Color.brandRed.opacity(0.92))
+                        .background(Color.brand.opacity(0.92))
                         .clipShape(Capsule())
                         .padding(.bottom, 24)
                         .onTapGesture { viewModel.errorMessage = nil }

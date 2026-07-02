@@ -20,7 +20,7 @@ struct NudgeBanner: View {
     private var tintColor: Color {
         switch nudge.type {
         case .inactivity:    return .brandAmber
-        case .commitmentDue: return .brandPink
+        case .commitmentDue: return .brandBlue
         case .milestone:     return .brandGreen
         case .nextAction:    return .brand
         }

@@ -56,7 +56,7 @@ struct PipelineProgressView: View {
                 if case .failed(_, let message) = pipeline.stage {
                     Text(message)
                         .font(.system(size: 13))
-                        .foregroundColor(.brandRed)
+                        .foregroundColor(.brand)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 32)
                         .padding(.top, 16)

@@ -90,7 +90,7 @@ struct JourneyPathView: View {
                         .background(Color.white.opacity(0.2))
                         .clipShape(Circle())
                 }
-                .buttonStyle(PlayfulButtonStyle())
+                .buttonStyle(DuoPressStyle())
             }
 
             // Progress bar
