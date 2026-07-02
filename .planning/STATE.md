@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.9
 milestone_name: Settings & Profile
-status: Phase complete — ready for verification
-stopped_at: Completed 29-02-PLAN.md
-last_updated: "2026-04-07T15:12:45.809Z"
+status: Milestone shipped
+stopped_at: v1.9 milestone complete and archived
+last_updated: "2026-04-07T16:00:00.000Z"
 progress:
-  total_phases: 15
-  completed_phases: 7
-  total_plans: 18
-  completed_plans: 12
+  total_phases: 3
+  completed_phases: 3
+  total_plans: 4
+  completed_plans: 4
 ---
 
 # Project State
@@ -19,44 +19,33 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-07)
 
 **Core value:** Users actually complete their micro-actions because the experience is engaging, rewarding, and fun
-**Current focus:** Phase 27 — Settings Screen & Profile Stats
+**Current focus:** Planning next milestone
 
 ## Current Position
 
-Phase: 27 (Settings Screen & Profile Stats) — READY TO PLAN
-Plan: 0 of 0
+Milestone v1.9 shipped and tagged. Ready for `/gsd:new-milestone`.
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 0 (this milestone)
-- Average duration: —
-- Total execution time: —
+- Total plans completed: 4 (this milestone)
+- Average duration: 3.25 min
+- Total execution time: 13 min
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| - | - | - | - |
-
-*Updated after each plan completion*
-| Phase 27 P01 | 4min | 2 tasks | 3 files |
-| Phase 28 P01 | 2min | 2 tasks | 3 files |
-| Phase 29 P01 | 2min | 2 tasks | 3 files |
-| Phase 29 P02 | 5min | 1 tasks | 2 files |
+| 27 | 1 | 4min | 4min |
+| 28 | 1 | 2min | 2min |
+| 29 | 2 | 7min | 3.5min |
 
 ## Accumulated Context
 
 ### Decisions
 
 Decisions are logged in PROJECT.md Key Decisions table.
-
-- [Phase 27]: SettingsView has no NavigationStack (parent provides it); count queries use select-id-only pattern; stats refresh on tab switch
-- [Phase 28]: Used @AppStorage directly in SettingsView instead of dedicated NotificationPreferences class
-- [Phase 29]: Clear local auth state after RPC deletion instead of signOut (Supabase Issue #358)
-- [Phase 29]: Use removePersistentDomain for UserDefaults reset instead of individual keys
-- [Phase 29]: Used @Environment(requestReview) over SKStoreReviewController for iOS 17+ target
 
 ### Pending Todos
 
@@ -71,6 +60,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-07T15:12:45.806Z
-Stopped at: Completed 29-02-PLAN.md
+Last session: 2026-04-07
+Stopped at: v1.9 milestone shipped
 Resume file: None

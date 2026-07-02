@@ -11,7 +11,7 @@
 - ✅ **v1.6 Bug Fixes & Polish** - Phases 17-19 (shipped 2026-03-27)
 - ✅ **v1.7 UX Clarity** - Phases 20-23 (shipped 2026-03-29)
 - ✅ **v1.8 Notifications** - Phases 24-26 (shipped 2026-03-30)
-- 🚧 **v1.9 Settings & Profile** - Phases 27-29
+- ✅ **v1.9 Settings & Profile** - Phases 27-29 (shipped 2026-04-07)
 
 ## Phases
 
@@ -95,13 +95,14 @@
 
 </details>
 
-### 🚧 v1.9 Settings & Profile (In Progress)
+<details>
+<summary>✅ v1.9 Settings & Profile (Phases 27-29) - SHIPPED 2026-04-07</summary>
 
-**Milestone Goal:** Transform the bare Profile tab into a proper settings experience with notification controls, data & privacy management, app info, and real profile stats.
+- [x] Phase 27: Settings Screen & Profile Stats (1/1 plan) — completed 2026-04-07
+- [x] Phase 28: Notification Preferences (1/1 plan) — completed 2026-04-07
+- [x] Phase 29: Data, Privacy & App Info (2/2 plans) — completed 2026-04-07
 
-- [x] **Phase 27: Settings Screen & Profile Stats** - Dedicated settings screen with gear icon navigation, wire up real idea/analysis counts (completed 2026-04-07)
-- [x] **Phase 28: Notification Preferences** - Per-type notification toggles with UserDefaults persistence, wire into NotificationScheduler (completed 2026-04-07)
-- [x] **Phase 29: Data, Privacy & App Info** - Delete account, clear local data, privacy policy link, version, rate app, feedback, about (completed 2026-04-07)
+</details>
 
 ## Phase Details
 
