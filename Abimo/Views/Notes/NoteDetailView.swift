@@ -451,9 +451,9 @@ struct NoteDetailView: View {
                         VStack(spacing: 0) {
                             Text("\(score)")
                                 .font(.system(size: 28, weight: .black, design: .rounded))
-                                .foregroundColor(viabilityColor(score))
+                                .foregroundColor(ScoreVerdict(score: score).color)
                                 .contentTransition(.numericText())
-                            Text("/ 100")
+                            Text(ScoreVerdict(score: score).label)
                                 .font(.system(size: 11, weight: .medium))
                                 .foregroundColor(.textSec)
                         }
@@ -546,15 +546,6 @@ struct NoteDetailView: View {
         .padding(.vertical, 12)
         .background(color.opacity(0.1))
         .cornerRadius(16)
-    }
-
-    private func viabilityColor(_ score: Int) -> Color {
-        switch score {
-        case 0..<40:  return .brandRed
-        case 40..<60: return .brandOrange
-        case 60..<80: return .brandAmber
-        default:      return .brandGreen
-        }
     }
 
     // MARK: - Action Plan Card

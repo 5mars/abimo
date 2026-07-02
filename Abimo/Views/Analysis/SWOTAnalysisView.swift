@@ -274,23 +274,7 @@ struct ViabilityGaugeView: View {
     let score: Int
     @State private var animatedScore: Double = 0
 
-    private var scoreColor: Color {
-        switch score {
-        case 0..<40:  return .brandRed
-        case 40..<60: return .brandOrange
-        case 60..<80: return .brandAmber
-        default:      return .brandGreen
-        }
-    }
-
-    private var scoreLabel: String {
-        switch score {
-        case 0..<40:  return "Challenging"
-        case 40..<60: return "Moderate"
-        case 60..<80: return "Promising"
-        default:      return "Strong"
-        }
-    }
+    private var verdict: ScoreVerdict { ScoreVerdict(score: score) }
 
     var body: some View {
         VStack(spacing: 16) {
@@ -298,7 +282,7 @@ struct ViabilityGaugeView: View {
                 Image(systemName: "gauge.with.needle")
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(.brand)
-                Text("Survival Score")
+                Text("Critic's Score")
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundColor(.textPri)
                 Spacer()
@@ -311,14 +295,14 @@ struct ViabilityGaugeView: View {
 
                 // Value arc
                 GaugeArc(progress: animatedScore / 100)
-                    .stroke(scoreColor, style: StrokeStyle(lineWidth: 14, lineCap: .round))
+                    .stroke(verdict.color, style: StrokeStyle(lineWidth: 14, lineCap: .round))
 
                 // Center label
                 VStack(spacing: 4) {
                     Text("\(score)")
                         .font(.system(size: 44, weight: .bold, design: .rounded))
-                        .foregroundColor(scoreColor)
-                    Text(scoreLabel)
+                        .foregroundColor(verdict.color)
+                    Text(verdict.label)
                         .font(.system(size: 13, weight: .medium))
                         .foregroundColor(.textSec)
                 }
@@ -329,16 +313,35 @@ struct ViabilityGaugeView: View {
                 withAnimation(.easeOut(duration: 1.2)) {
                     animatedScore = Double(score)
                 }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                    switch verdict {
+                    case .burnt, .halfBaked: HapticEngine.impact(style: .rigid)
+                    case .simmering, .chefsKiss: HapticEngine.success()
+                    case .needsSeasoning: break
+                    }
+                }
             }
 
-            // Score pill badge
-            Text(scoreLabel)
+            // Verdict pill badge
+            Text("\(verdict.emoji) \(verdict.label)")
                 .font(.system(size: 13, weight: .semibold))
-                .foregroundColor(scoreColor)
+                .foregroundColor(verdict.color)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 6)
-                .background(scoreColor.opacity(0.15))
+                .background(verdict.color.opacity(0.15))
                 .clipShape(Capsule())
+
+            Text(verdict.caption)
+                .font(.system(size: 13))
+                .foregroundColor(.textSec)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 12)
+
+            Text("Most fresh ideas score 20-45. The plan below is the recipe to raise it.")
+                .font(.system(size: 11, weight: .medium))
+                .foregroundColor(.textSec.opacity(0.7))
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 12)
         }
         .heroCard(color: Color(hex: "F0FAFA"))
     }
