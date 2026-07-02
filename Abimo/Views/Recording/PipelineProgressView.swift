@@ -50,9 +50,7 @@ struct PipelineProgressView: View {
                         stageRow(step)
                     }
                 }
-                .padding(20)
-                .background(Color.cardSurface)
-                .cornerRadius(24)
+                .duoPanel()
                 .padding(.horizontal, 24)
 
                 if case .failed(_, let message) = pipeline.stage {
@@ -110,40 +108,54 @@ struct PipelineProgressView: View {
     private func stageRow(_ step: IdeaPipelineService.Step) -> some View {
         let state = rowState(for: step)
 
+        // Single state encoding: the leading circle carries the whole story;
+        // trailing shows only the live spinner.
         HStack(spacing: 14) {
             ZStack {
                 Circle()
-                    .fill(state == .completed ? Color.brandGreen.opacity(0.15) : Color.brand.opacity(state == .active ? 0.12 : 0.05))
+                    .fill(leadingFill(for: state))
                     .frame(width: 38, height: 38)
-                Image(systemName: step.icon)
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundColor(state == .completed ? .brandGreen : (state == .pending ? .textSec.opacity(0.4) : .brand))
+                Image(systemName: leadingGlyph(for: state, step: step))
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundColor(leadingTint(for: state))
             }
 
             Text(step.title)
-                .font(.system(size: 15, weight: state == .active ? .semibold : .medium))
+                .font(.system(size: 15, weight: state == .active ? .bold : .medium, design: .rounded))
                 .foregroundColor(state == .pending ? .textSec.opacity(0.5) : .textPri)
 
             Spacer()
 
-            switch state {
-            case .completed:
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 18))
-                    .foregroundColor(.brandGreen)
-            case .active:
+            if state == .active {
                 ProgressView().tint(.brand)
-            case .failed:
-                Image(systemName: "exclamationmark.circle.fill")
-                    .font(.system(size: 18))
-                    .foregroundColor(.brandRed)
-            case .pending:
-                Circle()
-                    .strokeBorder(Color.textSec.opacity(0.25), lineWidth: 1.5)
-                    .frame(width: 16, height: 16)
             }
         }
         .animation(.spring(response: 0.35, dampingFraction: 0.8), value: state)
+    }
+
+    private func leadingFill(for state: RowState) -> Color {
+        switch state {
+        case .completed: return .brandGreen
+        case .active:    return Color.brand.opacity(0.12)
+        case .failed:    return .brand
+        case .pending:   return .lockedFace
+        }
+    }
+
+    private func leadingGlyph(for state: RowState, step: IdeaPipelineService.Step) -> String {
+        switch state {
+        case .completed: return "checkmark"
+        case .failed:    return "exclamationmark"
+        default:         return step.icon
+        }
+    }
+
+    private func leadingTint(for state: RowState) -> Color {
+        switch state {
+        case .completed, .failed: return .white
+        case .active:             return .brand
+        case .pending:            return .textSec.opacity(0.5)
+        }
     }
 
     private enum RowState: Equatable { case pending, active, completed, failed }
@@ -172,34 +184,27 @@ struct PipelineProgressView: View {
             VStack(spacing: 12) {
                 GradientButton(title: "Try again") { onRetry() }
                 if step == .saving {
-                    Button {
-                        onDiscard()
-                    } label: {
-                        Text("Discard recording")
-                            .font(.system(size: 15, weight: .medium))
-                            .foregroundColor(.brandRed)
-                    }
-                    .frame(minHeight: 44)
+                    secondaryButton("Discard recording", tint: .brand) { onDiscard() }
                 } else {
-                    finishInBackgroundButton(label: "I'll come back later")
+                    secondaryButton("I'll come back later", tint: .textSec) { onBackground() }
                 }
             }
         case .running(let step) where step != .saving:
-            finishInBackgroundButton(label: "Finish in background")
+            secondaryButton("Finish in background", tint: .textSec) { onBackground() }
         default:
             EmptyView()
         }
     }
 
-    private func finishInBackgroundButton(label: String) -> some View {
-        Button {
-            onBackground()
-        } label: {
+    private func secondaryButton(_ label: String, tint: Color, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
             Text(label)
-                .font(.system(size: 15, weight: .medium))
-                .foregroundColor(.textSec)
+                .font(.duoLabel)
+                .foregroundColor(tint)
+                .frame(maxWidth: .infinity)
+                .frame(height: 40)
         }
-        .frame(minHeight: 44)
+        .buttonStyle(Duo3DSecondaryButtonStyle())
     }
 
     private func syncTastingTimer(for stage: IdeaPipelineService.Stage) {

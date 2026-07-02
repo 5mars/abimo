@@ -2,6 +2,9 @@
 //  RecordingView.swift
 //  Abimo
 //
+//  One giant irresistible mic. The mascot prompts you, you talk, the
+//  pipeline does the rest.
+//
 
 import SwiftUI
 
@@ -10,216 +13,41 @@ struct RecordingView: View {
     @StateObject private var viewModel = RecordingViewModel()
     @StateObject private var pipeline = IdeaPipelineService()
     @State private var showPipeline = false
-    @State private var appeared = false
+    @State private var prompt = MascotVoice.moment(for: .recordPrompt).line
+
+    private var saveFailed: Bool {
+        viewModel.recordingFileURL != nil && !viewModel.isRecording
+            && !viewModel.isSaving && viewModel.errorMessage != nil
+    }
 
     var body: some View {
         ZStack {
             Color.appBg.ignoresSafeArea()
 
             VStack(spacing: 0) {
-                // Status pill
-                HStack(spacing: 8) {
-                    Circle()
-                        .fill(statusDotColor)
-                        .frame(width: 8, height: 8)
-                        .shadow(color: statusDotColor.opacity(0.6), radius: 4, x: 0, y: 0)
-                    Text(statusLabel)
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundColor(.textPri)
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
-                .background(Color.cardSurface)
-                .clipShape(Capsule())
-                .padding(.top, 8)
-                .animation(.easeInOut(duration: 0.3), value: viewModel.isRecording)
-                .animation(.easeInOut(duration: 0.3), value: viewModel.recordingFileURL != nil)
-
                 Spacer()
 
-                // Visualization area
-                ZStack {
-                    if viewModel.isRecording {
-                        WaveformBarsView(level: viewModel.audioLevel)
-                            .transition(.opacity.combined(with: .scale(scale: 0.8)))
-                    } else {
-                        ZStack {
-                            Circle()
-                                .fill(Color.brand.opacity(0.07))
-                                .frame(width: 180, height: 180)
+                topZone
+                    .frame(height: 190)
 
-                            Circle()
-                                .fill(Color.brand.opacity(0.05))
-                                .frame(width: 130, height: 130)
+                Spacer().frame(height: 44)
 
-                            Image(systemName: "waveform.circle.fill")
-                                .font(.system(size: 72))
-                                .foregroundStyle(
-                                    LinearGradient(
-                                        colors: [Color.brand.opacity(0.4), Color.brandLight.opacity(0.3)],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
-                                )
-                        }
-                        .transition(.opacity.combined(with: .scale(scale: 0.9)))
-                    }
-                }
-                .animation(.spring(response: 0.4, dampingFraction: 0.7), value: viewModel.isRecording)
-                .frame(height: 160)
+                micButton
 
                 Spacer().frame(height: 32)
 
-                // Timer
-                Text(formatDuration(viewModel.recordingDuration))
-                    .font(.system(size: 52, weight: .light, design: .monospaced))
-                    .foregroundStyle(
-                        viewModel.isRecording
-                        ? AnyShapeStyle(LinearGradient.record)
-                        : AnyShapeStyle(Color.textSec)
-                    )
-                    .animation(.easeInOut(duration: 0.3), value: viewModel.isRecording)
-                    .contentTransition(.numericText())
+                bottomControls
+                    .frame(minHeight: 60)
 
                 Spacer()
-
-                // Record button section
-                ZStack {
-                    if viewModel.isRecording {
-                        // Pulse rings behind stop button
-                        PulseRing(color: .brand, delay: 0)
-                            .frame(width: 96, height: 96)
-                        PulseRing(color: .brand, delay: 0.6)
-                            .frame(width: 96, height: 96)
-
-                        // Stop button — saves and navigates immediately, no naming step
-                        Button {
-                            stopAndSave()
-                        } label: {
-                            ZStack {
-                                Circle()
-                                    .fill(LinearGradient.record)
-                                    .frame(width: 88, height: 88)
-                                    .shadow(color: Color.brand.opacity(0.5), radius: 20, x: 0, y: 8)
-
-                                RoundedRectangle(cornerRadius: 8)
-                                    .fill(Color.white)
-                                    .frame(width: 28, height: 28)
-                            }
-                        }
-                    } else if viewModel.recordingFileURL != nil {
-                        // Saving (or save failed — retry button shows below)
-                        Circle()
-                            .fill(Color.brand.opacity(0.12))
-                            .frame(width: 96, height: 96)
-
-                        ZStack {
-                            Circle()
-                                .fill(LinearGradient.brand)
-                                .frame(width: 88, height: 88)
-                                .shadow(color: Color.brand.opacity(0.4), radius: 18, x: 0, y: 6)
-
-                            if viewModel.isSaving {
-                                ProgressView()
-                                    .tint(.white)
-                            } else {
-                                Image(systemName: "checkmark")
-                                    .font(.system(size: 30, weight: .semibold))
-                                    .foregroundColor(.white)
-                            }
-                        }
-                    } else {
-                        // Idle record button
-                        Button {
-                            Task { await viewModel.startRecording() }
-                        } label: {
-                            ZStack {
-                                Circle()
-                                    .fill(LinearGradient.brand)
-                                    .frame(width: 88, height: 88)
-
-                                Image(systemName: "mic.fill")
-                                    .font(.system(size: 32, weight: .semibold))
-                                    .foregroundColor(.white)
-                            }
-                        }
-                        .buttonStyle(PlayfulButtonStyle())
-                        .disabled(viewModel.isSaving)
-                    }
-                }
-                .frame(height: 120)
-                .animation(.spring(response: 0.45, dampingFraction: 0.65), value: viewModel.isRecording)
-                .animation(.spring(response: 0.45, dampingFraction: 0.65), value: viewModel.recordingFileURL != nil)
-
-                Spacer().frame(height: 24)
-
-                // Action controls below button
-                VStack(spacing: 14) {
-                    // Retry CTA: only when an auto-save failed and the file is still local
-                    if viewModel.recordingFileURL != nil && !viewModel.isRecording
-                        && !viewModel.isSaving && viewModel.errorMessage != nil {
-                        GradientButton(
-                            title: "Try saving again",
-                            isLoading: viewModel.isSaving
-                        ) {
-                            saveAndNavigate()
-                        }
-                        .padding(.horizontal, 32)
-                    }
-
-                    // Discard pill: visible whenever any recording state is active (D-06/D-07/D-08)
-                    if viewModel.isRecording || viewModel.recordingFileURL != nil {
-                        Button {
-                            viewModel.cancelRecording()
-                        } label: {
-                            Text("Discard")
-                                .font(.system(size: 15, weight: .medium))
-                                .foregroundColor(.brandRed)
-                                .padding(.horizontal, 24)
-                                .padding(.vertical, 12)
-                                .background(Color.brandRed.opacity(0.08))
-                                .clipShape(Capsule())
-                        }
-                        .buttonStyle(PlayfulButtonStyle())
-                        .disabled(viewModel.isSaving)
-                        .frame(minHeight: 44)
-                    }
-
-                    // Idle hint
-                    if !viewModel.isRecording && viewModel.recordingFileURL == nil {
-                        Text("Tap the mic, start talking")
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundColor(Color.textSec.opacity(0.6))
-                    }
-                }
-                .frame(minHeight: 60)
-
-                if viewModel.micDenied {
-                    micDeniedCard
-                } else if let error = viewModel.errorMessage {
-                    Text(error)
-                        .font(.caption)
-                        .foregroundColor(.brandRed)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal)
-                        .padding(.top, 4)
-                }
-
-                if viewModel.isSaving {
-                    HStack(spacing: 8) {
-                        ProgressView().tint(.brand).scaleEffect(0.8)
-                        Text("Locking it in...")
-                            .font(.system(size: 14))
-                            .foregroundColor(.textSec)
-                    }
-                }
-
-                Spacer().frame(height: 48)
             }
+            .padding(.horizontal, 24)
         }
         .navigationTitle("Drop an Idea")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarColorScheme(.light, for: .navigationBar)
+        .animation(.spring(response: 0.4, dampingFraction: 0.75), value: viewModel.isRecording)
+        .animation(.spring(response: 0.4, dampingFraction: 0.75), value: saveFailed)
         .fullScreenCover(isPresented: $showPipeline) {
             PipelineProgressView(
                 pipeline: pipeline,
@@ -246,34 +74,124 @@ struct RecordingView: View {
         }
     }
 
-    private var micDeniedCard: some View {
-        VStack(spacing: 10) {
-            Text("Abimo needs your mic to catch ideas")
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundColor(.textPri)
-            Text("Turn on microphone access in Settings and come back.")
-                .font(.system(size: 12))
-                .foregroundColor(.textSec)
-                .multilineTextAlignment(.center)
-            Button {
-                viewModel.openSettings()
-            } label: {
-                Text("Open Settings")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 10)
-                    .background(LinearGradient.brand)
-                    .clipShape(Capsule())
+    // MARK: - Top zone (mascot prompt / live recording readout / failure)
+
+    @ViewBuilder
+    private var topZone: some View {
+        if viewModel.micDenied {
+            mascotSays(
+                "No mic, no magic. Let me hear you.",
+                mood: .grumpy
+            )
+        } else if viewModel.isRecording {
+            VStack(spacing: 20) {
+                Text(formatDuration(viewModel.recordingDuration))
+                    .font(.system(size: 52, weight: .semibold, design: .monospaced))
+                    .foregroundColor(.brand)
+                    .contentTransition(.numericText())
+                WaveformBarsView(level: viewModel.audioLevel)
             }
-            .buttonStyle(PlayfulButtonStyle())
+            .transition(.opacity.combined(with: .scale(scale: 0.9)))
+        } else if saveFailed {
+            mascotSays(
+                "That one slipped off the counter. Try again?",
+                mood: .grumpy
+            )
+        } else {
+            mascotSays(prompt, mood: .neutral)
+                .transition(.opacity.combined(with: .scale(scale: 0.95)))
         }
-        .padding(16)
-        .background(Color.cardSurface)
-        .cornerRadius(16)
-        .padding(.horizontal, 32)
-        .padding(.top, 4)
     }
+
+    private func mascotSays(_ line: String, mood: MascotMood) -> some View {
+        HStack(alignment: .center, spacing: 4) {
+            Image(mood.assetName)
+                .resizable()
+                .scaledToFit()
+                .frame(width: 120, height: 120)
+            MascotSpeechLine(line: line, arrowOffsetY: 26)
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 8)
+    }
+
+    // MARK: - The giant mic
+
+    private var micButton: some View {
+        ZStack {
+            if viewModel.isRecording {
+                PulseRing(color: .brand)
+                    .frame(width: 150, height: 150)
+            }
+
+            Button {
+                if viewModel.isRecording {
+                    stopAndSave()
+                } else if !saveFailed {
+                    Task { await viewModel.startRecording() }
+                }
+            } label: {
+                Group {
+                    if viewModel.isSaving {
+                        ProgressView().tint(.white).scaleEffect(1.4)
+                    } else if viewModel.isRecording {
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(Color.white)
+                            .frame(width: 44, height: 44)
+                    } else {
+                        Image(systemName: "mic.fill")
+                            .font(.system(size: 56, weight: .semibold))
+                            .foregroundColor(.white)
+                    }
+                }
+                .frame(width: 140, height: 140)
+            }
+            .buttonStyle(Duo3DCircleButtonStyle(
+                fill: saveFailed ? .lockedFace : .brand,
+                edge: saveFailed ? .lockedEdge : .brandDark,
+                edgeHeight: 8
+            ))
+            .disabled(viewModel.isSaving || viewModel.micDenied || saveFailed)
+        }
+    }
+
+    // MARK: - Bottom controls
+
+    @ViewBuilder
+    private var bottomControls: some View {
+        if viewModel.micDenied {
+            GradientButton(title: "Open Settings", size: .compact) {
+                viewModel.openSettings()
+            }
+            .frame(width: 220)
+        } else if saveFailed {
+            VStack(spacing: 12) {
+                GradientButton(title: "Try saving again", isLoading: viewModel.isSaving) {
+                    saveAndNavigate()
+                }
+                .padding(.horizontal, 16)
+                discardButton
+            }
+        } else if viewModel.isRecording {
+            discardButton
+        }
+    }
+
+    private var discardButton: some View {
+        Button {
+            viewModel.cancelRecording()
+        } label: {
+            Text("Discard")
+                .font(.duoLabel)
+                .foregroundColor(.brand)
+                .frame(width: 160)
+                .frame(height: 40)
+        }
+        .buttonStyle(Duo3DSecondaryButtonStyle())
+        .disabled(viewModel.isSaving)
+    }
+
+    // MARK: - Actions
 
     /// Stop → full pipeline (save, transcribe, analyze, plan) with a staged
     /// progress cover. Zero taps between stopping and seeing results.
@@ -281,24 +199,12 @@ struct RecordingView: View {
         viewModel.stopRecording()
         showPipeline = true
         pipeline.start(recordingVM: viewModel, coordinator: coordinator)
+        prompt = MascotVoice.moment(for: .recordPrompt).line
     }
 
     private func saveAndNavigate() {
         showPipeline = true
         pipeline.retry(recordingVM: viewModel, coordinator: coordinator)
-    }
-
-    private var statusLabel: String {
-        if viewModel.isRecording { return "Catching your thoughts..." }
-        if viewModel.isSaving { return "Locking it in..." }
-        if viewModel.recordingFileURL != nil { return "Hmm, that didn't save" }
-        return "Mic check"
-    }
-
-    private var statusDotColor: Color {
-        if viewModel.isRecording { return .brand }
-        if viewModel.recordingFileURL != nil { return .brand }
-        return .textSec
     }
 
     private func formatDuration(_ duration: TimeInterval) -> String {

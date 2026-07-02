@@ -19,6 +19,7 @@ enum MascotMomentTrigger: Equatable {
     case emptyKitchen
     case plansIdle
     case randomJab
+    case recordPrompt   // static line beside the record button, not a popup
 
     /// Stable key for per-trigger throttle timestamps.
     var throttleKey: String {
@@ -31,6 +32,7 @@ enum MascotMomentTrigger: Equatable {
         case .emptyKitchen:         return "emptyKitchen"
         case .plansIdle:            return "plansIdle"
         case .randomJab:            return "randomJab"
+        case .recordPrompt:         return "recordPrompt"
         }
     }
 
@@ -154,6 +156,14 @@ enum MascotVoice {
                 "I critique because I care. Mostly critique.",
                 "Still here. Still skeptical.",
             ], .sassy)
+
+        case .recordPrompt:
+            return ([
+                "Got an idea? Spill it.",
+                "Talk to me. I'm listening. Reluctantly.",
+                "The kitchen's open. What are we making?",
+                "One tap. One idea. Go.",
+            ], .neutral)
         }
     }
 }
