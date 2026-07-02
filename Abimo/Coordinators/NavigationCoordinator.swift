@@ -33,14 +33,47 @@ extension AppTab {
     }
 }
 
+/// Everything needed to re-run a failed action-plan generation from the Actions tab.
+struct PlanGenerationRetryContext {
+    let analysis: SWOTAnalysis
+    let transcriptionText: String
+    let noteTitle: String
+}
+
 @MainActor
 final class NavigationCoordinator: ObservableObject {
     @Published var selectedTab: AppTab = .ideas
     @Published var pendingNote: VoiceNote? = nil
     @Published var pendingPlanGeneration: Bool = false
+    @Published var planGenerationRetry: PlanGenerationRetryContext? = nil
 
     func navigateToNote(_ note: VoiceNote) {
         selectedTab = .ideas
         pendingNote = note
+    }
+
+    /// Fire-and-forget plan generation that survives sheet dismissal.
+    /// On failure the context is kept so the Actions tab can offer a retry
+    /// instead of silently never showing the plan.
+    func startPlanGeneration(analysis: SWOTAnalysis, transcriptionText: String, noteTitle: String) {
+        pendingPlanGeneration = true
+        planGenerationRetry = nil
+        Task { @MainActor in
+            let service = AIAnalysisService()
+            do {
+                _ = try await service.generateAndSaveActionPlan(
+                    analysis: analysis,
+                    transcriptionText: transcriptionText,
+                    noteTitle: noteTitle
+                )
+            } catch {
+                planGenerationRetry = PlanGenerationRetryContext(
+                    analysis: analysis,
+                    transcriptionText: transcriptionText,
+                    noteTitle: noteTitle
+                )
+            }
+            pendingPlanGeneration = false
+        }
     }
 }

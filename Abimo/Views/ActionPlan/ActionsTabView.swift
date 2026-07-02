@@ -19,11 +19,21 @@ struct ActionsTabView: View {
                 VStack(spacing: 24) {
                     Spacer().frame(height: 4)
 
+                    if let retry = coordinator.planGenerationRetry {
+                        planRetryCard(retry)
+                            .padding(.horizontal, 16)
+                    }
+
                     if viewModel.isLoading {
                         MascotLoadingView(mode: .inline, text: "Loading your actions...")
-                    } else if viewModel.plans.isEmpty && !coordinator.pendingPlanGeneration {
-                        emptyState
+                    } else if viewModel.plans.isEmpty && viewModel.errorMessage != nil {
+                        loadErrorState
                             .cardEntrance(delay: 0.1)
+                    } else if viewModel.plans.isEmpty && !coordinator.pendingPlanGeneration {
+                        if coordinator.planGenerationRetry == nil {
+                            emptyState
+                                .cardEntrance(delay: 0.1)
+                        }
                     } else if viewModel.plans.isEmpty && coordinator.pendingPlanGeneration {
                         // First plan being generated
                         VStack(spacing: 16) {
@@ -180,6 +190,73 @@ struct ActionsTabView: View {
             .buttonStyle(PlayfulButtonStyle())
         }
         .cardStyle()
+    }
+
+    // MARK: - Error States
+
+    private func planRetryCard(_ retry: PlanGenerationRetryContext) -> some View {
+        VStack(spacing: 12) {
+            HStack(spacing: 10) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(.brandOrange)
+                Text("The kitchen hiccuped")
+                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                    .foregroundColor(.textPri)
+                Spacer()
+            }
+            Text("Your action plan for \"\(retry.noteTitle.isEmpty ? "your idea" : retry.noteTitle)\" didn't come out. Fire it up again?")
+                .font(.system(size: 13))
+                .foregroundColor(.textSec)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            Button {
+                coordinator.startPlanGeneration(
+                    analysis: retry.analysis,
+                    transcriptionText: retry.transcriptionText,
+                    noteTitle: retry.noteTitle
+                )
+            } label: {
+                Text("Try again")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 10)
+                    .background(LinearGradient.brand)
+                    .clipShape(Capsule())
+            }
+            .buttonStyle(PlayfulButtonStyle())
+        }
+        .padding(16)
+        .background(Color.brandOrange.opacity(0.08))
+        .cornerRadius(16)
+    }
+
+    private var loadErrorState: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "wifi.exclamationmark")
+                .font(.system(size: 36))
+                .foregroundColor(.brandOrange)
+            Text("Couldn't load your plans")
+                .font(.system(size: 17, weight: .bold, design: .rounded))
+                .foregroundColor(.textPri)
+            Text("Check your connection and give it another go.")
+                .font(.system(size: 13))
+                .foregroundColor(.textSec)
+            Button {
+                Task { await viewModel.loadAllPlans() }
+            } label: {
+                Text("Retry")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 10)
+                    .background(LinearGradient.brand)
+                    .clipShape(Capsule())
+            }
+            .buttonStyle(PlayfulButtonStyle())
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, 60)
     }
 
     // MARK: - Empty State

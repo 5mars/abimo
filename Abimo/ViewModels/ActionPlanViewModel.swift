@@ -196,6 +196,13 @@ class ActionPlanViewModel: ObservableObject {
                 microActions[idx].completionOutcome = nil
                 microActions[idx].completionNote = nil
             }
+            // The optimistic checkmark just vanished — tell the user why
+            celebrationState = .idle
+            HapticEngine.impact(style: .heavy)
+            errorMessage = "That didn't save — check your connection and try again"
+            DispatchQueue.main.asyncAfter(deadline: .now() + 4) { [weak self] in
+                if self?.errorMessage != nil { self?.errorMessage = nil }
+            }
         }
     }
 
@@ -416,6 +423,7 @@ class ActionsTabViewModel: ObservableObject {
     @Published var microActionsByPlan: [UUID: [MicroAction]] = [:]
     @Published var activeCommitment: Commitment?
     @Published var isLoading = false
+    @Published var errorMessage: String?
 
     private let supabase = SupabaseService.shared
 
@@ -462,7 +470,12 @@ class ActionsTabViewModel: ObservableObject {
         if isFirstLoad { isLoading = true }
         defer { if isFirstLoad { isLoading = false } }
 
-        guard let userId = try? await supabase.getCurrentUser()?.id else { return }
+        errorMessage = nil
+
+        guard let userId = try? await supabase.getCurrentUser()?.id else {
+            errorMessage = "Couldn't load your plans"
+            return
+        }
 
         do {
             let fetchedPlans = try await supabase.fetchAllActionPlans(userId: userId)
@@ -475,7 +488,7 @@ class ActionsTabViewModel: ObservableObject {
             microActionsByPlan = fetchedActions
             activeCommitment = try? await supabase.fetchActiveCommitment(userId: userId)
         } catch {
-            // Silent failure — tab just shows empty state
+            errorMessage = "Couldn't load your plans: \(error.localizedDescription)"
         }
     }
 
