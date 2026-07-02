@@ -115,21 +115,16 @@ struct ActionPickerSheet: View {
                 } label: {
                     Text("Let's go")
                         .font(.system(size: 16, weight: .bold))
-                        .foregroundColor(.white)
+                        .foregroundColor(selectedActionId != nil ? .white : .textSec)
                         .frame(maxWidth: .infinity)
                         .frame(height: 52)
-                        .background(
-                            selectedActionId != nil
-                                ? LinearGradient.record
-                                : LinearGradient(
-                                    colors: [Color.textSec.opacity(0.3), Color.textSec.opacity(0.3)],
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                )
-                        )
-                        .cornerRadius(18)
                 }
-                .buttonStyle(PlayfulButtonStyle())
+                .buttonStyle(Duo3DGradientButtonStyle(
+                    fill: selectedActionId != nil
+                        ? LinearGradient.record
+                        : LinearGradient(colors: [.lockedFace, .lockedFace], startPoint: .top, endPoint: .bottom),
+                    edge: selectedActionId != nil ? .brandDark : .lockedFace
+                ))
                 .disabled(selectedActionId == nil)
                 .padding(.horizontal, 16)
                 .padding(.bottom, 20)
@@ -296,10 +291,8 @@ struct ActionPickerSheet: View {
                                 .foregroundColor(.white)
                                 .frame(maxWidth: .infinity)
                                 .frame(height: 44)
-                                .background(LinearGradient.record)
-                                .cornerRadius(14)
                         }
-                        .buttonStyle(PlayfulButtonStyle())
+                        .buttonStyle(Duo3DGradientButtonStyle(fill: .record))
                         .padding(.horizontal, 16)
                     }
                 }

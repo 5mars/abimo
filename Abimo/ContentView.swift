@@ -193,32 +193,59 @@ struct PlayfulButtonStyle: ButtonStyle {
 // MARK: - GradientButton
 
 struct GradientButton: View {
+    enum Size {
+        case regular  // 58pt face + 4pt edge = 62 total (previous flat height)
+        case compact  // 44pt face + 4pt edge
+
+        var faceHeight: CGFloat {
+            switch self {
+            case .regular: return 58
+            case .compact: return 44
+            }
+        }
+
+        var fontSize: CGFloat {
+            switch self {
+            case .regular: return 18
+            case .compact: return 15
+            }
+        }
+    }
+
     let title: String
     var gradient: LinearGradient = .brand
     var isLoading: Bool = false
     var isDisabled: Bool = false
-    var cornerRadius: CGFloat = 20
+    var cornerRadius: CGFloat = DuoTokens.Radius.button
+    var size: Size = .regular
+    var edge: Color = .brandDark
     let action: () -> Void
+
+    private var inactive: Bool { isDisabled || isLoading }
 
     var body: some View {
         Button(action: action) {
             ZStack {
                 if isLoading {
-                    ProgressView().tint(.white).scaleEffect(0.9)
+                    ProgressView().tint(inactive ? Color.textSec : .white).scaleEffect(0.9)
                 } else {
                     Text(title)
-                        .font(.system(size: 18, weight: .bold))
-                        .foregroundColor(.white)
+                        .font(.system(size: size.fontSize, weight: .bold))
+                        .foregroundColor(isDisabled ? .textSec : .white)
                 }
             }
             .frame(maxWidth: .infinity)
-            .frame(height: 62)
-            .background(gradient.opacity(isDisabled ? 0.45 : 1.0))
-            .cornerRadius(cornerRadius)
+            .frame(height: size.faceHeight)
         }
-        .buttonStyle(PlayfulButtonStyle())
-        .disabled(isDisabled || isLoading)
-        .animation(.spring(response: 0.3, dampingFraction: 0.65), value: isDisabled)
+        .buttonStyle(Duo3DGradientButtonStyle(
+            fill: isDisabled
+                ? LinearGradient(colors: [.lockedFace, .lockedFace], startPoint: .top, endPoint: .bottom)
+                : gradient,
+            edge: isDisabled ? .lockedFace : edge,  // disabled = flat look (edge matches face), height stays stable
+            cornerRadius: cornerRadius
+        ))
+        .disabled(inactive)
+        .animation(.easeOut(duration: 0.2), value: isDisabled)
     }
 }
 

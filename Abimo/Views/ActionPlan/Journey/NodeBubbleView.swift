@@ -122,10 +122,11 @@ struct NodeBubbleView: View {
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
                         .frame(height: 44)
-                        .background(LinearGradient.record)
-                        .cornerRadius(14)
                 }
-                .buttonStyle(PlayfulButtonStyle())
+                .buttonStyle(Duo3DGradientButtonStyle(
+                    fill: LinearGradient(colors: [.brandGreen, .brandGreen], startPoint: .top, endPoint: .bottom),
+                    edge: .brandGreenDark
+                ))
             }
 
         case .completed:

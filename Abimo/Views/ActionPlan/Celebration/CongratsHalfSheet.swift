@@ -58,7 +58,6 @@ struct CongratsHalfSheet: View {
                 .foregroundColor(.textPri)
 
             Button {
-                HapticEngine.selection()
                 onAdvance()
             } label: {
                 Text("Keep the momentum?")
@@ -66,10 +65,8 @@ struct CongratsHalfSheet: View {
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
                     .frame(height: 52)
-                    .background(LinearGradient.brand)
-                    .cornerRadius(18)
             }
-            .buttonStyle(PlayfulButtonStyle())
+            .buttonStyle(Duo3DGradientButtonStyle(fill: .brand))
         }
         .padding(.horizontal, 16)
         .background(Color.appBg)

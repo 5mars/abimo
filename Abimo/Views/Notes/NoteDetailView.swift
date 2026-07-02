@@ -502,10 +502,8 @@ struct NoteDetailView: View {
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
                     .frame(height: 58)
-                    .background(LinearGradient.brand)
-                    .cornerRadius(20)
                 }
-                .buttonStyle(PlayfulButtonStyle())
+                .buttonStyle(Duo3DGradientButtonStyle(fill: .brand))
             }
             .cardStyle()
         } else {
@@ -613,11 +611,9 @@ struct NoteDetailView: View {
                     }
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
-                    .frame(height: 48)
-                    .background(LinearGradient.record)
-                    .cornerRadius(16)
+                    .frame(height: 44)
                 }
-                .buttonStyle(PlayfulButtonStyle())
+                .buttonStyle(Duo3DGradientButtonStyle(fill: .record))
             }
             .cardStyle()
         } else {

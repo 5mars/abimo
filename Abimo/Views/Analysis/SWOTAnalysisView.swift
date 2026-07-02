@@ -238,10 +238,8 @@ struct SWOTAnalysisView: View {
                 .foregroundColor(.white)
                 .frame(maxWidth: .infinity)
                 .frame(height: 54)
-                .background(LinearGradient.record)
-                .cornerRadius(18)
             }
-            .buttonStyle(PlayfulButtonStyle())
+            .buttonStyle(Duo3DGradientButtonStyle(fill: .record))
         }
         .cardStyle()
     }
