@@ -124,7 +124,7 @@ struct NoteDetailView: View {
                             }
                         }
                     }
-                    .heroCard(color: Color(hex: "F0FAFA"))
+                    .heroCard(color: .cardDarkMint)
                     .cardEntrance(delay: 0.0)
 
                     // What You Said — collapsible card with audio player + transcription

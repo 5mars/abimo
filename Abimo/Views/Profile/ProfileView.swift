@@ -98,7 +98,7 @@ struct ProfileView: View {
             }
         }
         .frame(maxWidth: .infinity)
-        .heroCard(color: Color(hex: "F0FAFA"))
+        .heroCard(color: .cardDarkMint)
     }
 
     private var statsRow: some View {

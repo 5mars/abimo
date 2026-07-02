@@ -330,7 +330,7 @@ struct ViabilityGaugeView: View {
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 12)
         }
-        .heroCard(color: Color(hex: "F0FAFA"))
+        .heroCard(color: .cardDarkMint)
     }
 }
 

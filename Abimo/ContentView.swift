@@ -52,6 +52,18 @@ extension Color {
     static let accentBlue   = Color(hex: "60A5FA")  // Sky blue — charts, data viz
     static let accentTeal   = Color(hex: "34D399")  // Emerald — positive indicators
     static let accentCoral  = Color(hex: "A855F7")  // Purple — warnings, threats
+
+    // Duo3D darker-edge variants (bottom edges of 3D buttons/nodes/cards)
+    static let brandDark       = Color(hex: "E14F4F")  // edge for brand FF6B6B
+    static let brandGreenDark  = Color(hex: "1FAE7E")  // edge for brandGreen 34D399
+    static let brandAmberDark  = Color(hex: "D99E0B")  // edge for brandAmber FBBF24
+    static let brandBlueDark   = Color(hex: "3B82F6")  // edge for brandBlue 60A5FA
+    static let brandOrangeDark = Color(hex: "E2761F")  // edge for brandOrange FB923C
+    static let brandRedDark    = Color(hex: "DC4C4C")  // edge for brandRed F87171
+    static let cardEdge        = Color(hex: "E8E2E0")  // warm grey — white-card borders/edges
+    static let lockedFace      = Color(hex: "E5E5E5")  // locked node face / disabled button
+    static let lockedEdge      = Color(hex: "CFCFCF")  // locked node edge
+    static let cardDarkMint    = Color(hex: "F0FAFA")  // pale mint hero surface
 }
 
 // MARK: - Brand Gradients
