@@ -5,63 +5,8 @@
 
 import SwiftUI
 
-// MARK: - BubbleShape (arrow at bottom — pointing down)
-
-/// Rounded rectangle with a downward-pointing triangle arrow at bottom center.
-struct BubbleShape: Shape {
-    var arrowOffset: CGFloat
-
-    func path(in rect: CGRect) -> Path {
-        let cornerRadius: CGFloat = 12
-        let arrowWidth: CGFloat = 12
-        let arrowHeight: CGFloat = 8
-
-        let bodyRect = CGRect(
-            x: rect.minX, y: rect.minY,
-            width: rect.width, height: rect.height - arrowHeight
-        )
-
-        var path = Path()
-        path.addRoundedRect(in: bodyRect, cornerSize: CGSize(width: cornerRadius, height: cornerRadius))
-
-        let arrowTipX = max(arrowWidth / 2 + cornerRadius, min(rect.width - arrowWidth / 2 - cornerRadius, arrowOffset))
-        path.move(to: CGPoint(x: arrowTipX - arrowWidth / 2, y: bodyRect.maxY))
-        path.addLine(to: CGPoint(x: arrowTipX + arrowWidth / 2, y: bodyRect.maxY))
-        path.addLine(to: CGPoint(x: arrowTipX, y: rect.maxY))
-        path.closeSubpath()
-
-        return path
-    }
-}
-
-// MARK: - TopArrowBubbleShape (arrow at top — pointing up)
-
-/// Rounded rectangle with an upward-pointing triangle arrow at top center.
-struct TopArrowBubbleShape: Shape {
-    var arrowOffset: CGFloat
-
-    func path(in rect: CGRect) -> Path {
-        let cornerRadius: CGFloat = 12
-        let arrowWidth: CGFloat = 12
-        let arrowHeight: CGFloat = 8
-
-        let bodyRect = CGRect(
-            x: rect.minX, y: rect.minY + arrowHeight,
-            width: rect.width, height: rect.height - arrowHeight
-        )
-
-        var path = Path()
-        path.addRoundedRect(in: bodyRect, cornerSize: CGSize(width: cornerRadius, height: cornerRadius))
-
-        let arrowTipX = max(arrowWidth / 2 + cornerRadius, min(rect.width - arrowWidth / 2 - cornerRadius, arrowOffset))
-        path.move(to: CGPoint(x: arrowTipX - arrowWidth / 2, y: bodyRect.minY))
-        path.addLine(to: CGPoint(x: arrowTipX + arrowWidth / 2, y: bodyRect.minY))
-        path.addLine(to: CGPoint(x: arrowTipX, y: rect.minY))
-        path.closeSubpath()
-
-        return path
-    }
-}
+// Bubble shapes live in Views/Components/BubbleShapes.swift (shared with
+// the mascot speech bubble).
 
 // MARK: - NodeBubbleView
 

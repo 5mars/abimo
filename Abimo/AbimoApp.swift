@@ -34,6 +34,7 @@ struct AbimoApp: App {
                         NotificationScheduler.shared.onBackground()
                     case .active:
                         NotificationScheduler.shared.onForeground()
+                        MascotDirector.shared.appBecameActive()
                     default:
                         break
                     }

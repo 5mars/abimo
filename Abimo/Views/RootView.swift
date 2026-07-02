@@ -42,6 +42,7 @@ struct RootView: View {
 struct MainContentView: View {
     @EnvironmentObject var authViewModel: AuthViewModel
     @EnvironmentObject var coordinator: NavigationCoordinator
+    @StateObject private var mascot = MascotDirector.shared
 
     var body: some View {
         ZStack {
@@ -61,6 +62,20 @@ struct MainContentView: View {
                 .allowsHitTesting(coordinator.selectedTab == .profile)
         }
         .animation(nil, value: coordinator.selectedTab) // Disable animation on content — prevents flash
+        .overlay(alignment: .bottom) {
+            // Global mascot popup — floats just above the tab bar
+            if let moment = mascot.currentMoment {
+                MascotSpeechBubble(moment: moment) { mascot.dismiss() }
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 8)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
+        .animation(.spring(response: 0.4, dampingFraction: 0.72), value: mascot.currentMoment)
+        .onChange(of: coordinator.selectedTab) { _, _ in
+            // Kept-alive tabs never refire onAppear — jab rolls live here
+            mascot.maybeJab()
+        }
         .safeAreaInset(edge: .bottom) {
             CustomTabBar(selectedTab: $coordinator.selectedTab)
         }
