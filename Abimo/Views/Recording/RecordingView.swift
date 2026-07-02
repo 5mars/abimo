@@ -8,8 +8,6 @@ import SwiftUI
 struct RecordingView: View {
     @EnvironmentObject var coordinator: NavigationCoordinator
     @StateObject private var viewModel = RecordingViewModel()
-    @State private var showingSaveDialog = false
-    @State private var recordingTitle = ""
     @State private var appeared = false
 
     var body: some View {
@@ -92,10 +90,9 @@ struct RecordingView: View {
                         PulseRing(color: .brand, delay: 0.6)
                             .frame(width: 96, height: 96)
 
-                        // Stop button
+                        // Stop button — saves and navigates immediately, no naming step
                         Button {
-                            viewModel.stopRecording()
-                            showingSaveDialog = true
+                            stopAndSave()
                         } label: {
                             ZStack {
                                 Circle()
@@ -109,7 +106,7 @@ struct RecordingView: View {
                             }
                         }
                     } else if viewModel.recordingFileURL != nil {
-                        // Has recording — show save UI below
+                        // Saving (or save failed — retry button shows below)
                         Circle()
                             .fill(Color.brand.opacity(0.12))
                             .frame(width: 96, height: 96)
@@ -120,9 +117,14 @@ struct RecordingView: View {
                                 .frame(width: 88, height: 88)
                                 .shadow(color: Color.brand.opacity(0.4), radius: 18, x: 0, y: 6)
 
-                            Image(systemName: "checkmark")
-                                .font(.system(size: 30, weight: .semibold))
-                                .foregroundColor(.white)
+                            if viewModel.isSaving {
+                                ProgressView()
+                                    .tint(.white)
+                            } else {
+                                Image(systemName: "checkmark")
+                                    .font(.system(size: 30, weight: .semibold))
+                                    .foregroundColor(.white)
+                            }
                         }
                     } else {
                         // Idle record button
@@ -151,13 +153,14 @@ struct RecordingView: View {
 
                 // Action controls below button
                 VStack(spacing: 14) {
-                    // Primary CTA: only shown when recording is stopped and file exists
-                    if viewModel.recordingFileURL != nil && !viewModel.isRecording {
+                    // Retry CTA: only when an auto-save failed and the file is still local
+                    if viewModel.recordingFileURL != nil && !viewModel.isRecording
+                        && !viewModel.isSaving && viewModel.errorMessage != nil {
                         GradientButton(
-                            title: "Lock it in",
+                            title: "Try saving again",
                             isLoading: viewModel.isSaving
                         ) {
-                            showingSaveDialog = true
+                            saveAndNavigate()
                         }
                         .padding(.horizontal, 32)
                     }
@@ -189,7 +192,9 @@ struct RecordingView: View {
                 }
                 .frame(minHeight: 60)
 
-                if let error = viewModel.errorMessage {
+                if viewModel.micDenied {
+                    micDeniedCard
+                } else if let error = viewModel.errorMessage {
                     Text(error)
                         .font(.caption)
                         .foregroundColor(.brandRed)
@@ -213,27 +218,56 @@ struct RecordingView: View {
         .navigationTitle("Drop an Idea")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarColorScheme(.light, for: .navigationBar)
-        .alert("Name Your Idea", isPresented: $showingSaveDialog) {
-            TextField("Title", text: $recordingTitle)
-            Button("Save Idea") {
-                Task {
-                    if let note = await viewModel.saveRecording(
-                        title: recordingTitle.isEmpty ? "Untitled Recording" : recordingTitle
-                    ) {
-                        recordingTitle = ""
-                        coordinator.navigateToNote(note)
-                    }
-                }
+    }
+
+    private var micDeniedCard: some View {
+        VStack(spacing: 10) {
+            Text("Abimo needs your mic to catch ideas")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(.textPri)
+            Text("Turn on microphone access in Settings and come back.")
+                .font(.system(size: 12))
+                .foregroundColor(.textSec)
+                .multilineTextAlignment(.center)
+            Button {
+                viewModel.openSettings()
+            } label: {
+                Text("Open Settings")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 10)
+                    .background(LinearGradient.brand)
+                    .clipShape(Capsule())
             }
-            Button("Keep Editing", role: .cancel) { recordingTitle = "" }
-        } message: {
-            Text("What are we calling this one?")
+            .buttonStyle(PlayfulButtonStyle())
+        }
+        .padding(16)
+        .background(Color.cardSurface)
+        .cornerRadius(16)
+        .padding(.horizontal, 32)
+        .padding(.top, 4)
+    }
+
+    /// Stop → save → navigate, no naming step. The note gets a timestamp
+    /// placeholder title that transcription/analysis upgrades later.
+    private func stopAndSave() {
+        viewModel.stopRecording()
+        saveAndNavigate()
+    }
+
+    private func saveAndNavigate() {
+        Task {
+            if let note = await viewModel.saveRecording(title: VoiceNote.makeAutoTitle()) {
+                coordinator.navigateToNote(note)
+            }
         }
     }
 
     private var statusLabel: String {
         if viewModel.isRecording { return "Catching your thoughts..." }
-        if viewModel.recordingFileURL != nil { return "Locked in!" }
+        if viewModel.isSaving { return "Locking it in..." }
+        if viewModel.recordingFileURL != nil { return "Hmm, that didn't save" }
         return "Mic check"
     }
 

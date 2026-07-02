@@ -34,7 +34,7 @@ class AnalysisViewModel: ObservableObject {
         }
     }
 
-    func generateAnalysis(transcription: Transcription) async {
+    func generateAnalysis(transcription: Transcription, noteTitle: String? = nil) async {
         isLoading = true
         errorMessage = nil
         defer { isLoading = false }
@@ -42,7 +42,9 @@ class AnalysisViewModel: ObservableObject {
         do {
             analysis = try await aiService.generateAndSaveSWOTAnalysis(
                 transcriptionId: transcription.id,
-                transcriptionText: transcription.text
+                transcriptionText: transcription.text,
+                noteId: transcription.noteId,
+                currentNoteTitle: noteTitle
             )
         } catch {
             errorMessage = "Failed to generate analysis: \(error.localizedDescription)"

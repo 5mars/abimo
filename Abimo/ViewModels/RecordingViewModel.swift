@@ -26,6 +26,11 @@ class RecordingViewModel: ObservableObject {
         audioService.objectWillChange
             .sink { [weak self] _ in self?.objectWillChange.send() }
             .store(in: &cancellables)
+
+        // Forward permission changes so the denied-mic card appears/disappears live
+        permissionsManager.objectWillChange
+            .sink { [weak self] _ in self?.objectWillChange.send() }
+            .store(in: &cancellables)
     }
 
     var recordingDuration: TimeInterval {
@@ -36,11 +41,19 @@ class RecordingViewModel: ObservableObject {
         audioService.audioLevel
     }
 
+    var micDenied: Bool {
+        permissionsManager.microphoneDenied
+    }
+
     func checkAndRequestPermissions() async -> Bool {
-        if !permissionsManager.microphoneAuthorized || !permissionsManager.speechRecognitionAuthorized {
-            return await permissionsManager.requestAllPermissions()
+        if !permissionsManager.microphoneAuthorized {
+            return await permissionsManager.requestMicrophonePermission()
         }
         return true
+    }
+
+    func openSettings() {
+        PermissionsManager.openAppSettings()
     }
 
     func startRecording() async {
@@ -48,7 +61,7 @@ class RecordingViewModel: ObservableObject {
 
         // Check permissions
         guard await checkAndRequestPermissions() else {
-            errorMessage = "Microphone and speech recognition permissions are required"
+            errorMessage = nil // denied state is rendered as a dedicated card, not an error string
             return
         }
 

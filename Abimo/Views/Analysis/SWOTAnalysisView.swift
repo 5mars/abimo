@@ -69,7 +69,7 @@ struct SWOTAnalysisView: View {
             .task {
                 await viewModel.loadAnalysis(transcriptionId: transcription.id)
                 if Self.shouldAutoGenerate(analysis: viewModel.analysis, errorMessage: viewModel.errorMessage) {
-                    await viewModel.generateAnalysis(transcription: transcription)
+                    await viewModel.generateAnalysis(transcription: transcription, noteTitle: noteTitle)
                 }
             }
         }
@@ -190,7 +190,7 @@ struct SWOTAnalysisView: View {
                     startPoint: .leading, endPoint: .trailing
                 )
             ) {
-                Task { await viewModel.generateAnalysis(transcription: transcription) }
+                Task { await viewModel.generateAnalysis(transcription: transcription, noteTitle: noteTitle) }
             }
             .padding(.horizontal, 40)
 

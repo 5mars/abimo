@@ -94,6 +94,18 @@ class SupabaseService {
         return response
     }
 
+    func fetchVoiceNote(id: UUID) async throws -> VoiceNote? {
+        let response: [VoiceNote] = try await client
+            .from("voice_notes")
+            .select()
+            .eq("id", value: id)
+            .limit(1)
+            .execute()
+            .value
+
+        return response.first
+    }
+
     func deleteVoiceNote(id: UUID) async throws {
         try await client
             .from("voice_notes")

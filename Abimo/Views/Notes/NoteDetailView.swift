@@ -364,6 +364,7 @@ struct NoteDetailView: View {
                     if let analysis = swotAnalysis {
                         await loadActionPlan(analysisId: analysis.id)
                     }
+                    await refreshAutoTitle()
                 }
             }
         }) {
@@ -725,6 +726,15 @@ struct NoteDetailView: View {
         // Sync analysis_id back to voice_notes so the list shows correct status
         if let analysis = result {
             try? await supabase.updateVoiceNoteAnalysisId(noteId: note.id, analysisId: analysis.id)
+        }
+    }
+
+    /// Analysis may have replaced the timestamp auto-title with the AI's idea
+    /// name — pick it up so the header doesn't keep showing the stale one.
+    private func refreshAutoTitle() async {
+        guard VoiceNote.isAutoTitle(noteTitle) else { return }
+        if let fresh = try? await supabase.fetchVoiceNote(id: note.id), fresh.title != noteTitle {
+            noteTitle = fresh.title
         }
     }
 

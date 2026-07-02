@@ -30,7 +30,12 @@ class AIAnalysisService: ObservableObject {
         return response
     }
 
-    func generateAndSaveSWOTAnalysis(transcriptionId: UUID, transcriptionText: String) async throws -> SWOTAnalysis {
+    func generateAndSaveSWOTAnalysis(
+        transcriptionId: UUID,
+        transcriptionText: String,
+        noteId: UUID? = nil,
+        currentNoteTitle: String? = nil
+    ) async throws -> SWOTAnalysis {
         let response = try await analyzeTranscription(transcriptionText)
 
         let analysis = SWOTAnalysis(
@@ -52,6 +57,16 @@ class AIAnalysisService: ObservableObject {
         )
 
         try await supabase.createSWOTAnalysis(analysis)
+
+        // Upgrade an auto-generated recording title to the AI's idea name.
+        // User-chosen titles (no auto prefix) are never touched; a failed
+        // title update shouldn't fail the analysis.
+        if let noteId,
+           let ideaTitle = response.ideaTitle?.trimmingCharacters(in: .whitespaces),
+           !ideaTitle.isEmpty,
+           let currentNoteTitle, VoiceNote.isAutoTitle(currentNoteTitle) {
+            try? await supabase.updateVoiceNoteTitle(id: noteId, title: ideaTitle)
+        }
 
         return analysis
     }
@@ -162,4 +177,7 @@ struct SWOTAnalysisResponse: Codable {
     let marketContext: String
     let marketInsights: MarketInsights
     let summary: String?
+    let ideaTitle: String?
+    let scoreRationale: String?
+    let fatalFlaw: Bool?
 }

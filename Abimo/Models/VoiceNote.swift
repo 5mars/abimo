@@ -30,3 +30,18 @@ struct VoiceNote: Identifiable, Codable {
         case analysisId = "analysis_id"
     }
 }
+
+extension VoiceNote {
+    /// Prefix used for titles the app generated itself (recording auto-save).
+    /// Titles carrying it are safe to overwrite with the AI-generated idea name;
+    /// anything else is treated as user-chosen and left alone.
+    static let autoTitlePrefix = "Idea — "
+
+    static func isAutoTitle(_ title: String) -> Bool {
+        title.hasPrefix(autoTitlePrefix)
+    }
+
+    static func makeAutoTitle(date: Date = Date()) -> String {
+        autoTitlePrefix + date.formatted(.dateTime.month(.abbreviated).day().hour().minute())
+    }
+}

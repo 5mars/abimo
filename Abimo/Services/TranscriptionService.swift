@@ -6,7 +6,6 @@
 //
 
 import Foundation
-import Speech
 import Combine
 import Supabase
 
@@ -48,52 +47,4 @@ class TranscriptionService: ObservableObject {
         return response.text
     }
 
-    // For local Speech Recognition: pass a local file URL
-    func transcribe(audioURL: URL, useWhisper: Bool = true) async throws -> String {
-        isTranscribing = true
-        transcriptionText = ""
-        progress = 0.0
-        defer { isTranscribing = false }
-
-        return try await transcribeWithSpeechRecognizer(audioURL: audioURL)
-    }
-
-    private func transcribeWithSpeechRecognizer(audioURL: URL) async throws -> String {
-        guard let recognizer = SFSpeechRecognizer(locale: Locale(identifier: "en-US")) else {
-            throw NSError(domain: "TranscriptionService", code: -1,
-                         userInfo: [NSLocalizedDescriptionKey: "Speech recognizer not available"])
-        }
-
-        guard recognizer.isAvailable else {
-            throw NSError(domain: "TranscriptionService", code: -2,
-                         userInfo: [NSLocalizedDescriptionKey: "Speech recognizer not available"])
-        }
-
-        let request = SFSpeechURLRecognitionRequest(url: audioURL)
-        request.shouldReportPartialResults = true
-        request.requiresOnDeviceRecognition = false
-
-        return try await withCheckedThrowingContinuation { continuation in
-            var finalTranscription: String?
-
-            recognizer.recognitionTask(with: request) { [weak self] result, error in
-                if let error = error {
-                    continuation.resume(throwing: error)
-                    return
-                }
-
-                guard let result = result else { return }
-
-                Task { @MainActor in
-                    self?.transcriptionText = result.bestTranscription.formattedString
-                    self?.progress = result.isFinal ? 1.0 : 0.5
-                }
-
-                if result.isFinal {
-                    finalTranscription = result.bestTranscription.formattedString
-                    continuation.resume(returning: finalTranscription!)
-                }
-            }
-        }
-    }
 }
