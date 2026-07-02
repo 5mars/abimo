@@ -65,13 +65,15 @@ struct JourneyRouteCanvas: View {
                 return path
             }
 
-            let baseStyle = StrokeStyle(lineWidth: 7, lineCap: .round)
+            // Short rounded dashes (Duolingo-style trail marks), not a full line
+            let dashStyle = StrokeStyle(lineWidth: 6, lineCap: .round, dash: [10, 14])
 
             for i in 0..<(points.count - 1) {
                 let path = segment(from: points[i], to: points[i + 1])
-                context.stroke(path, with: .color(Color.textSec.opacity(0.22)), style: baseStyle)
                 if actions[i].isCompleted {
-                    context.stroke(path, with: .color(.brandGreen), style: baseStyle)
+                    context.stroke(path, with: .color(.brandGreen), style: dashStyle)
+                } else {
+                    context.stroke(path, with: .color(Color.textSec.opacity(0.25)), style: dashStyle)
                 }
             }
         }

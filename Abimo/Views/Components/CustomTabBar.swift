@@ -29,7 +29,11 @@ struct CustomTabBar: View {
         .padding(.horizontal, 16)
         .padding(.top, 10)
         .padding(.bottom, 8)
-        .background(Color.white)
+        .background(
+            // Extend under the home indicator so scrolled content can't
+            // peek through beneath the bar
+            Color.white.ignoresSafeArea(edges: .bottom)
+        )
         .overlay(alignment: .top) {
             Rectangle()
                 .fill(Color.black.opacity(0.06))
