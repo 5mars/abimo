@@ -150,8 +150,14 @@ struct AppTextField: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 14)
-        .background(isFocused ? Color.white : Color(hex: "EDEBE8"))
-        .cornerRadius(14)
+        .background(
+            RoundedRectangle(cornerRadius: DuoTokens.Radius.button, style: .continuous)
+                .fill(Color.white)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: DuoTokens.Radius.button, style: .continuous)
+                .strokeBorder(isFocused ? Color.brand : Color.cardEdge, lineWidth: 2)
+        )
         .animation(.easeInOut(duration: 0.2), value: isFocused)
         .font(.system(size: 16))
         .foregroundColor(.textPri)

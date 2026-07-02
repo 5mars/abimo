@@ -170,4 +170,45 @@ extension View {
     func duoCard(padding: CGFloat = 20) -> some View {
         modifier(DuoCardModifier(padding: padding))
     }
+
+    /// Informational card: fill + 2pt border, NO bottom edge. The default
+    /// for non-tappable content — depth stays reserved for things you press.
+    func duoPanel(fill: Color = .white, padding: CGFloat = 20) -> some View {
+        let shape = RoundedRectangle(cornerRadius: DuoTokens.Radius.card, style: .continuous)
+        return self
+            .padding(padding)
+            .background(shape.fill(fill))
+            .overlay(shape.strokeBorder(Color.cardEdge, lineWidth: 2))
+    }
+
+    /// Inset content block inside a card (transcripts, summaries, tracks).
+    func duoInset(padding: CGFloat = 12) -> some View {
+        self
+            .padding(padding)
+            .background(Color(hex: "F7F7F7"))
+            .cornerRadius(DuoTokens.Radius.inset)
+    }
+}
+
+// MARK: - DuoPressStyle (bare icon/text buttons)
+
+/// Light scale-press + haptic for buttons with no chrome of their own
+/// (icon buttons, text links, chevrons). Replaces PlayfulButtonStyle.
+struct DuoPressStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.92 : 1.0)
+            .animation(.spring(response: 0.22, dampingFraction: 0.55), value: configuration.isPressed)
+            .modifier(PressHaptic(isPressed: configuration.isPressed))
+    }
+}
+
+// MARK: - Typography scale
+
+extension Font {
+    static let duoScreenTitle = Font.system(size: 28, weight: .heavy, design: .rounded)
+    static let duoCardTitle   = Font.system(size: 17, weight: .bold, design: .rounded)
+    static let duoBody        = Font.system(size: 15)
+    static let duoLabel       = Font.system(size: 13, weight: .bold)
+    static let duoCaption     = Font.system(size: 12, weight: .semibold)
 }
