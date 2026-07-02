@@ -251,6 +251,7 @@ struct SWOTAnalysisView: View {
 struct ViabilityGaugeView: View {
     let score: Int
     @State private var animatedScore: Double = 0
+    @State private var criticLine: String?
 
     private var verdict: ScoreVerdict { ScoreVerdict(score: score) }
 
@@ -297,6 +298,9 @@ struct ViabilityGaugeView: View {
                     case .simmering, .chefsKiss: HapticEngine.success()
                     case .needsSeasoning: break
                     }
+                    AnimationPolicy.animate(.spring(response: 0.42, dampingFraction: 0.72)) {
+                        criticLine = MascotVoice.moment(for: .scoreRevealed(verdict: verdict)).line
+                    }
                 }
             }
 
@@ -309,18 +313,24 @@ struct ViabilityGaugeView: View {
                 .background(verdict.color.opacity(0.15))
                 .clipShape(Capsule())
 
-            // The critic delivers the verdict in person
-            HStack(alignment: .center, spacing: 10) {
+            // The critic delivers the verdict in person, ~a beat after the gauge lands
+            HStack(alignment: .center, spacing: 6) {
                 Image(MascotMood.forVerdict(verdict).assetName)
                     .resizable()
                     .scaledToFit()
                     .frame(width: 54, height: 54)
-                Text(verdict.caption)
-                    .font(.system(size: 13))
-                    .foregroundColor(.textSec)
-                    .multilineTextAlignment(.leading)
+                if let criticLine {
+                    MascotSpeechLine(line: criticLine, arrowOffsetY: 20)
+                        .transition(.scale(scale: 0.85, anchor: .leading).combined(with: .opacity))
+                } else {
+                    Text(verdict.caption)
+                        .font(.system(size: 13))
+                        .foregroundColor(.textSec)
+                        .multilineTextAlignment(.leading)
+                }
+                Spacer(minLength: 0)
             }
-            .padding(.horizontal, 12)
+            .padding(.horizontal, 8)
 
             Text("Most fresh ideas score 20-45. The plan below is the recipe to raise it.")
                 .font(.system(size: 11, weight: .medium))

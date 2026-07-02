@@ -10,20 +10,25 @@ import SwiftUI
 struct StreakBannerView: View {
     let days: Int
     @State private var appeared = false
+    @State private var moment: MascotMoment?
 
     var body: some View {
         VStack {
             HStack(spacing: 8) {
+                Image((moment?.mood ?? .playful).assetName)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 40, height: 40)
                 Image(systemName: "flame.fill")
                     .font(.system(size: 15, weight: .bold))
                     .foregroundColor(.white)
                     .scaleEffect(appeared ? 1 : 0.4)
-                Text("\(days)-day streak — the kitchen stays hot!")
-                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                Text(moment?.line ?? "\(days)-day streak!")
+                    .font(.system(size: 15, weight: .bold, design: .rounded))
                     .foregroundColor(.white)
             }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 12)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
             .background(Color.brandOrange)
             .cornerRadius(24)
             .shadow(color: Color.brandOrange.opacity(0.4), radius: 8, y: 4)
@@ -32,6 +37,7 @@ struct StreakBannerView: View {
         }
         .offset(y: appeared ? 0 : -120)
         .onAppear {
+            moment = MascotVoice.moment(for: .streakExtended(days: days))
             AnimationPolicy.animate(.spring(response: 0.5, dampingFraction: 0.7)) {
                 appeared = true
             }

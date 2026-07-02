@@ -9,20 +9,30 @@ import XCTest
 @MainActor
 final class CongratsHalfSheetTests: XCTestCase {
 
-    func testMessagePoolIsNotEmpty() {
-        XCTAssertFalse(CongratsHalfSheet.messages.isEmpty,
-                       "Message pool must contain at least one message")
+    // The congrats copy moved from a static pool on the sheet to MascotVoice
+    // (the in-app critic voice). These verify the same guarantees there.
+
+    func testActionCompletedMomentsAreNeverEmpty() {
+        for count in [1, 3, 5, 7] {
+            let moment = MascotVoice.moment(for: .actionCompleted(count: count))
+            XCTAssertFalse(moment.line.isEmpty,
+                           "actionCompleted moment must always produce a line")
+        }
     }
 
-    func testMessagePoolHasExpectedCount() {
-        XCTAssertEqual(CongratsHalfSheet.messages.count, 7,
-                       "Message pool must contain exactly 7 messages")
+    func testActionCompletedCountTemplateIsFilled() {
+        for _ in 0..<20 {
+            let moment = MascotVoice.moment(for: .actionCompleted(count: 4))
+            XCTAssertFalse(moment.line.contains("{count}"),
+                           "Templated {count} must be substituted: '\(moment.line)'")
+        }
     }
 
-    func testAllMessagesContainEmoji() {
-        for msg in CongratsHalfSheet.messages {
-            XCTAssertTrue(msg.unicodeScalars.contains(where: { $0.properties.isEmoji && $0.value > 0x238C }),
-                          "Each message must contain at least one emoji: '\(msg)'")
+    func testEveryVerdictHasAScoreRevealLine() {
+        for verdict in ScoreVerdict.allCases {
+            let moment = MascotVoice.moment(for: .scoreRevealed(verdict: verdict))
+            XCTAssertFalse(moment.line.isEmpty,
+                           "scoreRevealed moment must produce a line for \(verdict)")
         }
     }
 

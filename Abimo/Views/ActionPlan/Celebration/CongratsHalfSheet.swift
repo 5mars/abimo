@@ -19,18 +19,7 @@ struct CongratsHalfSheet: View {
     @ObservedObject var viewModel: ActionPlanViewModel
     let onAdvance: () -> Void
 
-    // Static message pool — 7 rotating congrats messages
-    static let messages = [
-        "Crushed it! \u{1F4AA}",
-        "Nice work! \u{2728}",
-        "Boom! Done! \u{1F4A5}",
-        "You're on fire! \u{1F525}",
-        "Nailed it! \u{1F3AF}",
-        "Keep going! \u{26A1}",
-        "One step closer! \u{1F680}"
-    ]
-
-    @State private var message: String = messages.randomElement()!
+    @State private var moment: MascotMoment?
     @State private var playbackMode: LottiePlaybackMode = .paused
 
     var body: some View {
@@ -53,9 +42,15 @@ struct CongratsHalfSheet: View {
             }
             .frame(width: 200, height: 200)
 
-            Text(message)
-                .font(.system(size: 20, weight: .bold, design: .rounded))
-                .foregroundColor(.textPri)
+            // The critic weighs in
+            HStack(alignment: .center, spacing: 6) {
+                Image((moment?.mood ?? .playful).assetName)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 56, height: 56)
+                MascotSpeechLine(line: moment?.line ?? "Nice work! \u{2728}", arrowOffsetY: 22)
+            }
+            .padding(.horizontal, 8)
 
             Button {
                 onAdvance()
@@ -71,6 +66,7 @@ struct CongratsHalfSheet: View {
         .padding(.horizontal, 16)
         .background(Color.appBg)
         .onAppear {
+            moment = MascotVoice.moment(for: .actionCompleted(count: viewModel.completedCount))
             HapticEngine.impact(style: .light)
             if AnimationPolicy.reduceMotion {
                 playbackMode = .paused(at: .progress(1))

@@ -13,6 +13,7 @@ struct PlanCompletionView: View {
 
     @State private var playbackMode: LottiePlaybackMode = .paused
     @State private var appeared = false
+    @State private var moment: MascotMoment?
 
     var body: some View {
         ZStack {
@@ -57,8 +58,16 @@ struct PlanCompletionView: View {
                         .padding(.horizontal, 24)
                 }
 
-                // Placeholder for future "What's next" feature (CELB-04 deferred)
-                Color.clear.frame(height: 48)
+                // The critic's closing remarks
+                HStack(alignment: .center, spacing: 6) {
+                    Image((moment?.mood ?? .playful).assetName)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 56, height: 56)
+                    MascotSpeechLine(line: moment?.line ?? "No complaints. This is new.", arrowOffsetY: 22)
+                }
+                .padding(.horizontal, 24)
+                .padding(.top, 8)
 
                 // Done button
                 GradientButton(title: "Done") {
@@ -72,6 +81,7 @@ struct PlanCompletionView: View {
             .scaleEffect(appeared ? 1 : 0.8)
         }
         .onAppear {
+            moment = MascotVoice.moment(for: .planComplete)
             AnimationPolicy.animate(.spring(response: 0.6, dampingFraction: 0.8)) {
                 appeared = true
             }

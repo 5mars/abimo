@@ -8,33 +8,30 @@ import SwiftUI
 struct MilestoneBannerView: View {
     let count: Int
     @State private var appeared = false
-
-    private var message: String {
-        switch count {
-        case 3: return "You're on a roll! \u{1F525}"
-        case 5: return "Halfway hero! \u{1F4AA}"
-        case 7: return "Almost there! \u{26A1}"
-        default: return "Keep going! \u{1F389}"
-        }
-    }
+    @State private var moment: MascotMoment?
 
     var body: some View {
         VStack {
-            HStack {
-                Text(message)
-                    .font(.system(size: 16, weight: .bold, design: .rounded))
+            HStack(spacing: 8) {
+                Image((moment?.mood ?? .playful).assetName)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 40, height: 40)
+                Text(moment?.line ?? "Keep going! \u{1F389}")
+                    .font(.system(size: 15, weight: .bold, design: .rounded))
                     .foregroundColor(.white)
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 12)
-                    .background(Color.brand)
-                    .cornerRadius(24)
-                    .shadow(color: Color.brand.opacity(0.4), radius: 8, y: 4)
             }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .background(Color.brand)
+            .cornerRadius(24)
+            .shadow(color: Color.brand.opacity(0.4), radius: 8, y: 4)
             .padding(.top, 60)
             Spacer()
         }
         .offset(y: appeared ? 0 : -120)
         .onAppear {
+            moment = MascotVoice.moment(for: .actionCompleted(count: count))
             AnimationPolicy.animate(.spring(response: 0.5, dampingFraction: 0.7)) {
                 appeared = true
             }
