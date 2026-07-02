@@ -311,11 +311,18 @@ struct ViabilityGaugeView: View {
                 .background(verdict.color.opacity(0.15))
                 .clipShape(Capsule())
 
-            Text(verdict.caption)
-                .font(.system(size: 13))
-                .foregroundColor(.textSec)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 12)
+            // The critic delivers the verdict in person
+            HStack(alignment: .center, spacing: 10) {
+                Image(MascotMood.forVerdict(verdict).assetName)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 54, height: 54)
+                Text(verdict.caption)
+                    .font(.system(size: 13))
+                    .foregroundColor(.textSec)
+                    .multilineTextAlignment(.leading)
+            }
+            .padding(.horizontal, 12)
 
             Text("Most fresh ideas score 20-45. The plan below is the recipe to raise it.")
                 .font(.system(size: 11, weight: .medium))

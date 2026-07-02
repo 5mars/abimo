@@ -30,7 +30,7 @@ struct PipelineProgressView: View {
             VStack(spacing: 0) {
                 Spacer()
 
-                Image("MascotNeutral")
+                Image(stageMood.assetName)
                     .resizable()
                     .scaledToFit()
                     .frame(width: 140, height: 140)
@@ -85,6 +85,15 @@ struct PipelineProgressView: View {
             tastingTimer = nil
         }
         .interactiveDismissDisabled()
+    }
+
+    private var stageMood: MascotMood {
+        switch pipeline.stage {
+        case .idle, .running(.saving), .running(.transcribing): return .neutral
+        case .running(.analyzing):                              return .sassy
+        case .running(.planning), .done:                        return .playful
+        case .failed:                                           return .grumpy
+        }
     }
 
     private var headline: String {

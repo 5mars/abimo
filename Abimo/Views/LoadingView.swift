@@ -17,6 +17,7 @@ struct MascotLoadingView: View {
     var text: String = "abimo"
     var rotatingMessages: [String] = []
     var subtitle: String? = nil
+    var mood: MascotMood = .neutral
 
     @State private var appeared = false
     @State private var spinning = false
@@ -55,7 +56,7 @@ struct MascotLoadingView: View {
                 .animation(.linear(duration: 0.8).repeatForever(autoreverses: false), value: spinning)
 
             // Mascot
-            Image("MascotNeutral")
+            Image(mood.assetName)
                 .resizable()
                 .scaledToFit()
                 .frame(width: 180, height: 180)
