@@ -14,7 +14,6 @@ struct NodeBubbleView: View {
     let action: MicroAction
     let state: NodeState
     let arrowOffset: CGFloat
-    let activeActionName: String
     let onComplete: () -> Void
     let onDismiss: () -> Void
 
@@ -22,18 +21,34 @@ struct NodeBubbleView: View {
     @State private var copied = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 12) {
             // Action name — primary element
             Text(action.text)
-                .font(.system(size: 17, weight: .semibold, design: .rounded))
+                .font(.system(size: 17, weight: .bold, design: .rounded))
                 .foregroundColor(state == .locked ? .textSec : .textPri)
                 .fixedSize(horizontal: false, vertical: true)
+
+            // Meta line: time estimate + done criteria
+            if state == .active {
+                HStack(spacing: 6) {
+                    Image(systemName: "clock")
+                        .font(.system(size: 11, weight: .semibold))
+                    Text("\(action.timeEstimateMinutes) min")
+                        .font(.system(size: 12, weight: .semibold))
+                    Text("·")
+                    Text(action.doneCriteria)
+                        .font(.system(size: 12))
+                        .lineLimit(1)
+                }
+                .foregroundColor(.textSec)
+            }
 
             // State-driven content
             stateContent
         }
         .padding(.horizontal, 20)
-        .padding(.vertical, 16)
+        .padding(.top, 18)
+        .padding(.bottom, 16)
         .frame(maxWidth: .infinity, alignment: .leading)  // width set by the parent (JourneyLayout-derived)
         .background(
             TopArrowBubbleShape(arrowOffset: arrowOffset)
@@ -60,23 +75,66 @@ struct NodeBubbleView: View {
     private var stateContent: some View {
         switch state {
         case .active:
-            VStack(alignment: .leading, spacing: 10) {
-                // Deep link / template buttons
-                deepLinkSection
-
-                // Mark Complete CTA
-                Button(action: onComplete) {
-                    Text("Mark Complete")
-                        .font(.system(size: 15, weight: .bold))
+            // Duolingo-style: consistent full-width stacked buttons,
+            // clear hierarchy — do the thing, grab the template, check it off.
+            VStack(spacing: 10) {
+                if let url = buildDeepLink() {
+                    Button {
+                        UIApplication.shared.open(url)
+                    } label: {
+                        HStack(spacing: 7) {
+                            Image(systemName: deepLinkIcon)
+                                .font(.system(size: 14, weight: .semibold))
+                            Text(deepLinkLabel)
+                                .font(.system(size: 15, weight: .bold))
+                        }
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
                         .frame(height: 44)
+                    }
+                    .buttonStyle(Duo3DGradientButtonStyle(fill: .record))
+                }
+
+                if let template = action.template, !template.isEmpty {
+                    Button {
+                        UIPasteboard.general.string = template
+                        withAnimation(.spring(response: 0.25, dampingFraction: 0.7)) {
+                            copied = true
+                        }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                            withAnimation { copied = false }
+                        }
+                    } label: {
+                        HStack(spacing: 7) {
+                            Image(systemName: copied ? "checkmark" : "doc.on.doc")
+                                .font(.system(size: 13, weight: .semibold))
+                            Text(copied ? "Copied!" : "Copy template")
+                                .font(.system(size: 15, weight: .bold))
+                        }
+                        .foregroundColor(copied ? .brandGreen : .brand)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 40)
+                    }
+                    .buttonStyle(Duo3DSecondaryButtonStyle())
+                }
+
+                Button(action: onComplete) {
+                    HStack(spacing: 7) {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 14, weight: .bold))
+                        Text("Mark Complete")
+                            .font(.system(size: 15, weight: .bold))
+                    }
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 44)
                 }
                 .buttonStyle(Duo3DGradientButtonStyle(
                     fill: LinearGradient(colors: [.brandGreen, .brandGreen], startPoint: .top, endPoint: .bottom),
                     edge: .brandGreenDark
                 ))
             }
+            .padding(.top, 4)
 
         case .completed:
             HStack(spacing: 6) {
@@ -90,62 +148,16 @@ struct NodeBubbleView: View {
             .padding(.top, 2)
 
         case .locked:
-            Text("Complete \(activeActionName) to unlock")
-                .font(.system(size: 13))
-                .foregroundColor(.textSec)
-                .lineLimit(2)
-                .padding(.top, 2)
-        }
-    }
-
-    // MARK: - Deep Link Section
-
-    @ViewBuilder
-    private var deepLinkSection: some View {
-        if let template = action.template, !template.isEmpty {
-            HStack(spacing: 8) {
-                if let url = buildDeepLink() {
-                    Button {
-                        UIApplication.shared.open(url)
-                    } label: {
-                        HStack(spacing: 5) {
-                            Image(systemName: deepLinkIcon)
-                                .font(.system(size: 11, weight: .medium))
-                            Text(deepLinkLabel)
-                                .font(.system(size: 12, weight: .semibold))
-                        }
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 7)
-                        .background(LinearGradient.record)
-                        .cornerRadius(8)
-                    }
-                    .buttonStyle(PlayfulButtonStyle())
-                }
-
-                Button {
-                    UIPasteboard.general.string = template
-                    withAnimation(.spring(response: 0.25, dampingFraction: 0.7)) {
-                        copied = true
-                    }
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                        withAnimation { copied = false }
-                    }
-                } label: {
-                    HStack(spacing: 5) {
-                        Image(systemName: copied ? "checkmark" : "doc.on.doc")
-                            .font(.system(size: 11, weight: .medium))
-                        Text(copied ? "Copied!" : "Copy")
-                            .font(.system(size: 12, weight: .semibold))
-                    }
-                    .foregroundColor(copied ? .brandGreen : .brand)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 7)
-                    .background(copied ? Color.brandGreen.opacity(0.1) : Color.brand.opacity(0.08))
-                    .cornerRadius(8)
-                }
-                .buttonStyle(PlayfulButtonStyle())
+            HStack(spacing: 6) {
+                Image(systemName: "lock.fill")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(.textSec.opacity(0.6))
+                Text("Finish the current step to unlock")
+                    .font(.system(size: 13))
+                    .foregroundColor(.textSec)
+                    .lineLimit(2)
             }
+            .padding(.top, 2)
         }
     }
 
@@ -255,11 +267,11 @@ struct NodeBubbleView: View {
 
     VStack(spacing: 24) {
         NodeBubbleView(action: activeAction, state: .active, arrowOffset: 150,
-                       activeActionName: "Review proposal", onComplete: {}, onDismiss: {})
+                       onComplete: {}, onDismiss: {})
         NodeBubbleView(action: completedAction, state: .completed, arrowOffset: 150,
-                       activeActionName: "", onComplete: {}, onDismiss: {})
+                       onComplete: {}, onDismiss: {})
         NodeBubbleView(action: lockedAction, state: .locked, arrowOffset: 150,
-                       activeActionName: "Review proposal", onComplete: {}, onDismiss: {})
+                       onComplete: {}, onDismiss: {})
     }
     .padding()
     .background(Color.appBg)
