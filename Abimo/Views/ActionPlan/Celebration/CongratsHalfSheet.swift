@@ -4,7 +4,6 @@
 //
 
 import SwiftUI
-import Lottie
 
 // MARK: - SheetPhase
 
@@ -20,37 +19,25 @@ struct CongratsHalfSheet: View {
     let onAdvance: () -> Void
 
     @State private var moment: MascotMoment?
-    @State private var playbackMode: LottiePlaybackMode = .paused
+    @State private var mascotAppeared = false
 
     var body: some View {
         VStack(spacing: 24) {
-            Group {
-                if let animation = LottieAnimation.named("starburst") {
-                    LottieView(animation: animation)
-                        .playbackMode(playbackMode)
-                } else {
-                    Image(systemName: "trophy.fill")
-                        .font(.system(size: 80))
-                        .foregroundStyle(
-                            LinearGradient(
-                                colors: [.yellow, .orange],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            )
-                        )
-                }
-            }
-            .frame(width: 200, height: 200)
-
-            // The critic weighs in
-            HStack(alignment: .center, spacing: 6) {
+            // The mascot IS the celebration — big, with confetti behind it
+            ZStack {
+                InlineConfettiView()
+                    .allowsHitTesting(false)
                 Image((moment?.mood ?? .playful).assetName)
                     .resizable()
                     .scaledToFit()
-                    .frame(width: 56, height: 56)
-                MascotSpeechLine(line: moment?.line ?? "Nice work! \u{2728}", arrowOffsetY: 22)
+                    .frame(width: 160, height: 160)
+                    .scaleEffect(mascotAppeared ? 1 : 0.5)
+                    .rotationEffect(.degrees(mascotAppeared ? 0 : -8))
             }
-            .padding(.horizontal, 8)
+            .frame(width: 200, height: 180)
+
+            MascotCalloutLine(line: moment?.line ?? "Nice work! \u{2728}")
+                .padding(.horizontal, 16)
 
             Button {
                 onAdvance()
@@ -68,10 +55,8 @@ struct CongratsHalfSheet: View {
         .onAppear {
             moment = MascotVoice.moment(for: .actionCompleted(count: viewModel.completedCount))
             HapticEngine.impact(style: .light)
-            if AnimationPolicy.reduceMotion {
-                playbackMode = .paused(at: .progress(1))
-            } else {
-                playbackMode = .playing(.fromProgress(0, toProgress: 1, loopMode: .playOnce))
+            AnimationPolicy.animate(.spring(response: 0.4, dampingFraction: 0.6)) {
+                mascotAppeared = true
             }
         }
     }

@@ -59,7 +59,10 @@ struct MascotLoadingView: View {
             Image(mood.assetName)
                 .resizable()
                 .scaledToFit()
-                .frame(width: 180, height: 180)
+                .frame(
+                    width: mode == .fullscreen ? 260 : 200,
+                    height: mode == .fullscreen ? 260 : 200
+                )
 
             // Text
             VStack(spacing: 8) {

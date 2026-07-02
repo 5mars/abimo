@@ -4,15 +4,14 @@
 //
 
 import SwiftUI
-import Lottie
 import Vortex
 
 struct PlanCompletionView: View {
     @ObservedObject var viewModel: ActionPlanViewModel
     let onDismiss: () -> Void
 
-    @State private var playbackMode: LottiePlaybackMode = .paused
     @State private var appeared = false
+    @State private var mascotBounce = false
     @State private var moment: MascotMoment?
 
     var body: some View {
@@ -37,14 +36,27 @@ struct PlanCompletionView: View {
             VStack(spacing: 24) {
                 Spacer()
 
-                // Lottie trophy animation
-                LottieView(animation: .named("trophy"))
-                    .playbackMode(playbackMode)
-                    .frame(width: 200, height: 200)
+                // The mascot takes the podium
+                Image((moment?.mood ?? .playful).assetName)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 220, height: 220)
+                    .rotationEffect(.degrees(mascotBounce ? 3 : -3))
+                    .onAppear {
+                        if !AnimationPolicy.reduceMotion {
+                            withAnimation(.easeInOut(duration: 0.7).repeatForever(autoreverses: true)) {
+                                mascotBounce = true
+                            }
+                        }
+                    }
+
+                // The critic's closing remarks
+                MascotCalloutLine(line: moment?.line ?? "No complaints. This is new.")
+                    .padding(.horizontal, 32)
 
                 // Champion message
-                Text("\u{1F3C6} Champion! All \(viewModel.completedCount) actions done in \(viewModel.completedMinutes) min \u{1F525}")
-                    .font(.system(size: 22, weight: .bold, design: .rounded))
+                Text("\u{1F3C6} All \(viewModel.completedCount) actions done in \(viewModel.completedMinutes) min \u{1F525}")
+                    .font(.system(size: 18, weight: .bold, design: .rounded))
                     .foregroundColor(.textPri)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 24)
@@ -57,17 +69,6 @@ struct PlanCompletionView: View {
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 24)
                 }
-
-                // The critic's closing remarks
-                HStack(alignment: .center, spacing: 6) {
-                    Image((moment?.mood ?? .playful).assetName)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 56, height: 56)
-                    MascotSpeechLine(line: moment?.line ?? "No complaints. This is new.", arrowOffsetY: 22)
-                }
-                .padding(.horizontal, 24)
-                .padding(.top, 8)
 
                 // Done button
                 GradientButton(title: "Done") {
@@ -84,9 +85,6 @@ struct PlanCompletionView: View {
             moment = MascotVoice.moment(for: .planComplete)
             AnimationPolicy.animate(.spring(response: 0.6, dampingFraction: 0.8)) {
                 appeared = true
-            }
-            if !AnimationPolicy.reduceMotion {
-                playbackMode = .playing(.fromProgress(0, toProgress: 1, loopMode: .playOnce))
             }
         }
     }

@@ -79,6 +79,31 @@ struct MascotSpeechLine: View {
     }
 }
 
+/// Centered variant with a top tail — for when the mascot sits ABOVE the
+/// line (celebration sheets, hero layouts).
+struct MascotCalloutLine: View {
+    let line: String
+
+    var body: some View {
+        Text(line)
+            .font(.system(size: 16, weight: .bold, design: .rounded))
+            .foregroundColor(.textPri)
+            .multilineTextAlignment(.center)
+            .padding(.top, 18)
+            .padding(.bottom, 12)
+            .padding(.horizontal, 18)
+            .frame(maxWidth: .infinity)
+            .background {
+                GeometryReader { geo in
+                    TopArrowBubbleShape(arrowOffset: geo.size.width / 2)
+                        .fill(Color.white)
+                    TopArrowBubbleShape(arrowOffset: geo.size.width / 2)
+                        .stroke(Color.cardEdge, lineWidth: 2)
+                }
+            }
+    }
+}
+
 #Preview {
     VStack {
         Spacer()
@@ -87,6 +112,8 @@ struct MascotSpeechLine: View {
             onDismiss: {}
         )
         .padding(16)
+        MascotCalloutLine(line: "Fine. It's good. Don't make it weird.")
+            .padding(16)
     }
     .background(Color.appBg)
 }

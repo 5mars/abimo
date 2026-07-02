@@ -33,15 +33,10 @@ struct SignUpView: View {
 
                     // Header
                     VStack(spacing: 12) {
-                        ZStack {
-                            Circle()
-                                .fill(LinearGradient.brand)
-                                .frame(width: 80, height: 80)
-
-                            Image(systemName: "person.fill")
-                                .font(.system(size: 30, weight: .semibold))
-                                .foregroundColor(.white)
-                        }
+                        Image(MascotMood.playful.assetName)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 130, height: 130)
 
                         Text("Create Account")
                             .font(.system(size: 28, weight: .bold, design: .rounded))

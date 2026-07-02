@@ -37,19 +37,14 @@ struct LoginView: View {
                 VStack(spacing: 0) {
                     Spacer().frame(height: 60)
 
-                    // Logo + title
-                    VStack(spacing: 16) {
-                        ZStack {
-                            Circle()
-                                .fill(LinearGradient.brand)
-                                .frame(width: 96, height: 96)
-
-                            Image(systemName: "mic.fill")
-                                .font(.system(size: 38, weight: .semibold))
-                                .foregroundColor(.white)
-                        }
-                        .scaleEffect(appeared ? 1 : 0.6)
-                        .opacity(appeared ? 1 : 0)
+                    // Mascot + title
+                    VStack(spacing: 12) {
+                        Image(MascotMood.playful.assetName)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 170, height: 170)
+                            .scaleEffect(appeared ? 1 : 0.6)
+                            .opacity(appeared ? 1 : 0)
 
                         Text("Abimo")
                             .font(.system(size: 34, weight: .bold, design: .rounded))
