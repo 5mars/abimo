@@ -152,6 +152,26 @@ class SupabaseService {
         return rows.count
     }
 
+    /// All of the user's viability scores keyed by analysis id (RLS scopes rows).
+    func fetchViabilityScores() async throws -> [UUID: Int] {
+        struct Row: Decodable {
+            let id: UUID
+            let viabilityScore: Int?
+            enum CodingKeys: String, CodingKey {
+                case id
+                case viabilityScore = "viability_score"
+            }
+        }
+        let rows: [Row] = try await client
+            .from("swot_analyses")
+            .select("id, viability_score")
+            .execute()
+            .value
+        return rows.reduce(into: [:]) { dict, row in
+            if let score = row.viabilityScore { dict[row.id] = score }
+        }
+    }
+
     // MARK: - Storage
 
     func uploadAudioFile(userId: UUID, fileURL: URL) async throws -> String {
