@@ -75,13 +75,7 @@ struct NudgeBanner: View {
                         .padding(6)
                 }
             }
-            .padding(14)
-            .background(bgColor)
-            .cornerRadius(DuoTokens.Radius.card)
-            .overlay(
-                RoundedRectangle(cornerRadius: DuoTokens.Radius.card, style: .continuous)
-                    .strokeBorder(tintColor.opacity(0.25), lineWidth: 1.5)
-            )
+            .duoPanel(fill: bgColor, padding: 14)
             .transition(.opacity.combined(with: .move(edge: .top)))
         }
     }

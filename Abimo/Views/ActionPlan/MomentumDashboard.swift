@@ -50,10 +50,6 @@ struct MomentumDashboard: View {
                 }
             }
         }
-        .cardStyle()
+        .duoPanel()
     }
 }
-
-// MARK: - Day labels
-
-private let dayLabels = ["M", "T", "W", "T", "F", "S", "S"]

@@ -75,7 +75,7 @@ struct ActionPickerSheet: View {
                         } else {
                             VStack(spacing: 10) {
                                 ForEach(allActions) { action in
-                                    browseCard(action)
+                                    pickerCard(action, role: action.isCompleted ? .done : .browse)
                                 }
                             }
                             .padding(.horizontal, 16)
@@ -91,12 +91,12 @@ struct ActionPickerSheet: View {
                                     emptyStateView
                                 } else {
                                     ForEach(incompleteActions) { action in
-                                        actionCard(action)
+                                        pickerCard(action, role: .pick)
                                     }
                                 }
 
                                 ForEach(completedActions) { action in
-                                    completedCard(action)
+                                    pickerCard(action, role: .done)
                                 }
                             }
                             .padding(.horizontal, 16)
@@ -159,17 +159,30 @@ struct ActionPickerSheet: View {
         .padding(.vertical, 32)
     }
 
-    // MARK: - Browse Card (expand/collapse)
+    // MARK: - Picker Card (one renderer for browse / pick / done)
 
-    private func browseCard(_ action: MicroAction) -> some View {
+    enum PickerCardRole {
+        case browse  // tap to expand details
+        case pick    // tap to select as next
+        case done    // static, completed
+    }
+
+    @ViewBuilder
+    private func pickerCard(_ action: MicroAction, role: PickerCardRole) -> some View {
         let isExpanded = expandedActionId == action.id
-        let isCopied = copiedActionId == action.id
+        let isSelected = selectedActionId == action.id
 
-        return VStack(spacing: 0) {
-            // Collapsed row (always visible)
+        VStack(spacing: 0) {
             Button {
-                AnimationPolicy.animate(.spring(response: 0.3, dampingFraction: 0.7)) {
-                    expandedActionId = isExpanded ? nil : action.id
+                switch role {
+                case .browse, .done:
+                    AnimationPolicy.animate(.spring(response: 0.3, dampingFraction: 0.7)) {
+                        expandedActionId = isExpanded ? nil : action.id
+                    }
+                case .pick:
+                    AnimationPolicy.animate(.spring(response: 0.3, dampingFraction: 0.7)) {
+                        selectedActionId = action.id
+                    }
                 }
             } label: {
                 HStack(spacing: 12) {
@@ -179,16 +192,23 @@ struct ActionPickerSheet: View {
                     Text(action.text)
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundColor(action.isCompleted ? .textSec : .textPri)
-                        .lineLimit(2)
+                        .lineLimit(isExpanded ? nil : 2)
                         .multilineTextAlignment(.leading)
 
                     Spacer()
 
-                    if action.isCompleted {
+                    switch role {
+                    case .done:
                         Image(systemName: "checkmark.circle.fill")
                             .foregroundColor(.brandGreen)
                             .font(.system(size: 20))
-                    } else {
+                    case .pick:
+                        if isSelected {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundColor(.brand)
+                                .font(.system(size: 20))
+                        }
+                    case .browse:
                         Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
                             .foregroundColor(.textSec)
                             .font(.system(size: 14, weight: .semibold))
@@ -196,187 +216,118 @@ struct ActionPickerSheet: View {
                 }
                 .padding(16)
             }
-            .buttonStyle(PlainButtonStyle())
+            .buttonStyle(.plain)
 
-            // Expanded detail section
-            if isExpanded {
-                VStack(alignment: .leading, spacing: 12) {
-                    Divider()
-                        .padding(.horizontal, 16)
-
-                    // Done criteria
-                    HStack(alignment: .top, spacing: 8) {
-                        Image(systemName: "checkmark.circle")
-                            .font(.system(size: 14))
-                            .foregroundColor(.textSec)
-                            .padding(.top, 2)
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Done when")
-                                .font(.system(size: 12, weight: .semibold))
-                                .foregroundColor(.textSec)
-                                .textCase(.uppercase)
-                            Text(action.doneCriteria)
-                                .font(.system(size: 15))
-                                .foregroundColor(.textPri)
-                        }
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, 16)
-
-                    // Template block
-                    if let template = action.template, !template.isEmpty {
-                        VStack(alignment: .leading, spacing: 10) {
-                            Text(template)
-                                .font(.system(size: 14))
-                                .foregroundColor(.textPri)
-                                .lineSpacing(3)
-                                .textSelection(.enabled)
-
-                            // Copy button
-                            Button {
-                                UIPasteboard.general.string = template
-                                AnimationPolicy.animate(.spring(response: 0.25, dampingFraction: 0.7)) {
-                                    copiedActionId = action.id
-                                }
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                                    AnimationPolicy.animate(.default) {
-                                        if copiedActionId == action.id {
-                                            copiedActionId = nil
-                                        }
-                                    }
-                                }
-                            } label: {
-                                HStack(spacing: 6) {
-                                    Image(systemName: isCopied ? "checkmark" : "doc.on.doc")
-                                        .font(.system(size: 12, weight: .medium))
-                                    Text(isCopied ? "Copied!" : "Copy")
-                                        .font(.system(size: 13, weight: .semibold))
-                                }
-                                .foregroundColor(isCopied ? .brandGreen : .brand)
-                                .padding(.horizontal, 14)
-                                .padding(.vertical, 8)
-                                .background(isCopied ? Color.brandGreen.opacity(0.1) : Color.brand.opacity(0.08))
-                                .cornerRadius(10)
-                            }
-                            .buttonStyle(PlayfulButtonStyle())
-                        }
-                        .padding(14)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Color.cardDarkBlue)
-                        .cornerRadius(14)
-                        .padding(.horizontal, 16)
-                    }
-
-                    // Action row: "Select as next" for incomplete, "Done" badge for completed
-                    if action.isCompleted {
-                        HStack(spacing: 8) {
-                            Image(systemName: "checkmark.circle.fill")
-                                .font(.system(size: 16))
-                            Text("Completed")
-                                .font(.system(size: 15, weight: .bold))
-                        }
-                        .foregroundColor(.brandGreen)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 44)
-                        .background(Color.brandGreen.opacity(0.1))
-                        .cornerRadius(14)
-                        .padding(.horizontal, 16)
-                    } else {
-                        Button {
-                            viewModel.pickAction(id: action.id)
-                            dismiss()
-                        } label: {
-                            Text("Select as next")
-                                .font(.system(size: 15, weight: .bold))
-                                .foregroundColor(.white)
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 44)
-                        }
-                        .buttonStyle(Duo3DGradientButtonStyle(fill: .record))
-                        .padding(.horizontal, 16)
-                    }
-                }
-                .padding(.bottom, 16)
-                .padding(.top, 4)
+            if isExpanded && role != .pick {
+                expandedDetail(action)
             }
         }
         .background(Color.white)
-        .cornerRadius(16)
+        .cornerRadius(DuoTokens.Radius.button)
         .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(Color.black.opacity(0.05), lineWidth: 1)
+            RoundedRectangle(cornerRadius: DuoTokens.Radius.button, style: .continuous)
+                .strokeBorder(isSelected ? Color.brand : Color.cardEdge, lineWidth: 2)
         )
         .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isExpanded)
     }
 
-    // MARK: - Incomplete Card (firstVisit / postCompletion)
+    @ViewBuilder
+    private func expandedDetail(_ action: MicroAction) -> some View {
+        let isCopied = copiedActionId == action.id
 
-    private func actionCard(_ action: MicroAction) -> some View {
-        let isSelected = selectedActionId == action.id
+        VStack(alignment: .leading, spacing: 12) {
+            Divider()
+                .overlay(Color.cardEdge)
+                .padding(.horizontal, 16)
 
-        return Button {
-            AnimationPolicy.animate(.spring(response: 0.3, dampingFraction: 0.7)) {
-                selectedActionId = action.id
-            }
-        } label: {
-            HStack(spacing: 12) {
-                Text(ActionIconMapper.icon(for: action.actionType).emoji)
-                    .font(.system(size: 24))
-
-                Text(action.text)
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundColor(.textPri)
-                    .lineLimit(3)
-                    .multilineTextAlignment(.leading)
-
-                Spacer()
-
-                if isSelected {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundColor(.brand)
-                        .font(.system(size: 20))
+            // Done criteria
+            HStack(alignment: .top, spacing: 8) {
+                Image(systemName: "checkmark.circle")
+                    .font(.system(size: 14))
+                    .foregroundColor(.textSec)
+                    .padding(.top, 2)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Done when")
+                        .font(.duoCaption)
+                        .foregroundColor(.textSec)
+                        .textCase(.uppercase)
+                    Text(action.doneCriteria)
+                        .font(.duoBody)
+                        .foregroundColor(.textPri)
                 }
             }
-            .padding(16)
-            .background(Color.white)
-            .cornerRadius(16)
-            .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .stroke(
-                        isSelected ? Color.brand.opacity(0.4) : Color.black.opacity(0.05),
-                        lineWidth: isSelected ? 2 : 1
-                    )
-            )
-        }
-        .buttonStyle(PlayfulButtonStyle())
-    }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 16)
 
-    // MARK: - Completed Card (firstVisit / postCompletion)
+            // Template block
+            if let template = action.template, !template.isEmpty {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text(template)
+                        .font(.system(size: 14))
+                        .foregroundColor(.textPri)
+                        .lineSpacing(3)
+                        .textSelection(.enabled)
 
-    private func completedCard(_ action: MicroAction) -> some View {
-        HStack(spacing: 12) {
-            Text(ActionIconMapper.icon(for: action.actionType).emoji)
-                .font(.system(size: 24))
+                    Button {
+                        UIPasteboard.general.string = template
+                        AnimationPolicy.animate(.spring(response: 0.25, dampingFraction: 0.7)) {
+                            copiedActionId = action.id
+                        }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                            AnimationPolicy.animate(.default) {
+                                if copiedActionId == action.id {
+                                    copiedActionId = nil
+                                }
+                            }
+                        }
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: isCopied ? "checkmark" : "doc.on.doc")
+                                .font(.system(size: 12, weight: .medium))
+                            Text(isCopied ? "Copied!" : "Copy")
+                                .font(.duoLabel)
+                        }
+                        .foregroundColor(isCopied ? .brandGreen : .brand)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
+                    }
+                    .buttonStyle(Duo3DSecondaryButtonStyle(cornerRadius: DuoTokens.Radius.chip, edgeHeight: 2))
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .duoInset(padding: 14)
+                .padding(.horizontal, 16)
+            }
 
-            Text(action.text)
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundColor(.textSec)
-                .lineLimit(3)
-                .multilineTextAlignment(.leading)
-
-            Spacer()
-
-            Image(systemName: "checkmark.circle.fill")
+            // Trailing affordance
+            if action.isCompleted {
+                HStack(spacing: 8) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 16))
+                    Text("Completed")
+                        .font(.system(size: 15, weight: .bold))
+                }
                 .foregroundColor(.brandGreen)
-                .font(.system(size: 20))
+                .frame(maxWidth: .infinity)
+                .frame(height: 44)
+                .background(Color.brandGreen.opacity(0.1))
+                .cornerRadius(14)
+                .padding(.horizontal, 16)
+            } else {
+                Button {
+                    viewModel.pickAction(id: action.id)
+                    dismiss()
+                } label: {
+                    Text("Select as next")
+                        .font(.system(size: 15, weight: .bold))
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 44)
+                }
+                .buttonStyle(Duo3DGradientButtonStyle(fill: .record))
+                .padding(.horizontal, 16)
+            }
         }
-        .padding(16)
-        .background(Color.white)
-        .cornerRadius(16)
-        .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(Color.black.opacity(0.05), lineWidth: 1)
-        )
-        .allowsHitTesting(false)
+        .padding(.bottom, 16)
+        .padding(.top, 4)
     }
 }

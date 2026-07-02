@@ -9,7 +9,6 @@ struct ActionsTabView: View {
     @StateObject private var viewModel = ActionsTabViewModel()
     @EnvironmentObject var coordinator: NavigationCoordinator
     @State private var expandedCommitmentPlanId: UUID? = nil
-    @AppStorage("hasSeenActionsOnboarding") private var hasSeenOnboarding = false
 
     var body: some View {
         ZStack {
@@ -19,32 +18,17 @@ struct ActionsTabView: View {
                 VStack(spacing: 24) {
                     Spacer().frame(height: 4)
 
-                    if let retry = coordinator.planGenerationRetry {
-                        planRetryCard(retry)
-                            .padding(.horizontal, 16)
-                    }
-
                     if viewModel.isLoading {
                         MascotLoadingView(mode: .inline, text: "Loading your actions...")
                     } else if viewModel.plans.isEmpty && viewModel.errorMessage != nil {
                         loadErrorState
                             .cardEntrance(delay: 0.1)
-                    } else if viewModel.plans.isEmpty && !coordinator.pendingPlanGeneration {
-                        if coordinator.planGenerationRetry == nil {
+                    } else if viewModel.plans.isEmpty {
+                        if coordinator.pendingPlanGeneration || coordinator.planGenerationRetry != nil {
+                            topBanner
+                        } else {
                             emptyState
                                 .cardEntrance(delay: 0.1)
-                        }
-                    } else if viewModel.plans.isEmpty && coordinator.pendingPlanGeneration {
-                        // First plan being generated
-                        VStack(spacing: 16) {
-                            Spacer().frame(height: 40)
-                            ProgressView()
-                                .tint(.brand)
-                                .scaleEffect(1.2)
-                            Text("Cooking up your action plan...")
-                                .font(.system(size: 17, weight: .medium, design: .rounded))
-                                .foregroundColor(.textSec)
-                            Spacer().frame(height: 40)
                         }
                     } else {
                         // Momentum Dashboard
@@ -58,33 +42,7 @@ struct ActionsTabView: View {
                             .cardEntrance(delay: 0)
                         }
 
-                        // Most relevant nudge (mascot does the nagging)
-                        if let nudge = viewModel.nudges.first,
-                           !NudgeBanner.isDismissedToday(type: nudge.type) {
-                            NudgeBanner(nudge: nudge)
-                                .padding(.horizontal, 16)
-                                .cardEntrance(delay: 0.04)
-                        }
-
-                        if !hasSeenOnboarding {
-                            onboardingCard
-                                .transition(.opacity.combined(with: .move(edge: .top)))
-                        }
-
-                        if coordinator.pendingPlanGeneration {
-                            HStack(spacing: 12) {
-                                ProgressView()
-                                    .tint(.brand)
-                                Text("Cooking up your action plan...")
-                                    .font(.system(size: 15, weight: .medium, design: .rounded))
-                                    .foregroundColor(.textSec)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 16)
-                            .background(Color.brand.opacity(0.06))
-                            .cornerRadius(16)
-                            .padding(.horizontal, 16)
-                        }
+                        topBanner
 
                         ForEach(Array(viewModel.plans.enumerated()), id: \.element.id) { index, plan in
                             ideaCard(plan)
@@ -115,6 +73,37 @@ struct ActionsTabView: View {
         }
     }
 
+    // MARK: - Top Banner (budget: at most ONE message surface)
+
+    /// Priority: generation failed > plan cooking > mascot nudge.
+    @ViewBuilder
+    private var topBanner: some View {
+        if let retry = coordinator.planGenerationRetry {
+            planRetryCard(retry)
+                .padding(.horizontal, 16)
+        } else if coordinator.pendingPlanGeneration {
+            planCookingRow
+                .padding(.horizontal, 16)
+        } else if let nudge = viewModel.nudges.first,
+                  !NudgeBanner.isDismissedToday(type: nudge.type) {
+            NudgeBanner(nudge: nudge)
+                .padding(.horizontal, 16)
+                .cardEntrance(delay: 0.04)
+        }
+    }
+
+    private var planCookingRow: some View {
+        HStack(spacing: 12) {
+            ProgressView()
+                .tint(.brand)
+            Text("Cooking up your action plan...")
+                .font(.system(size: 15, weight: .medium, design: .rounded))
+                .foregroundColor(.textPri)
+            Spacer()
+        }
+        .duoPanel(fill: .cardDarkRed, padding: 16)
+    }
+
     // MARK: - Idea Card
 
     private func ideaCard(_ plan: ActionPlan) -> some View {
@@ -137,7 +126,7 @@ struct ActionsTabView: View {
                     .contentTransition(.numericText())
             }
 
-            // Committed action (highlighted)
+            // Committed action — inset inside the card, not a card-in-card
             if let action = committedAction {
                 let isExpanded = expandedCommitmentPlanId == plan.id
 
@@ -177,7 +166,7 @@ struct ActionsTabView: View {
                     .padding(14)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .background(Color.cardDarkTeal)
-                    .cornerRadius(16)
+                    .cornerRadius(DuoTokens.Radius.inset)
                 }
                 .buttonStyle(.plain)
             }
@@ -195,7 +184,7 @@ struct ActionsTabView: View {
                         .foregroundColor(.brand)
                 }
             }
-            .buttonStyle(PlayfulButtonStyle())
+            .buttonStyle(DuoPressStyle())
         }
         .duoCard()
     }
@@ -207,7 +196,7 @@ struct ActionsTabView: View {
             HStack(spacing: 10) {
                 Image(systemName: "exclamationmark.triangle.fill")
                     .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(.brandOrange)
+                    .foregroundColor(.brandAmber)
                 Text("The kitchen hiccuped")
                     .font(.system(size: 15, weight: .bold, design: .rounded))
                     .foregroundColor(.textPri)
@@ -217,51 +206,32 @@ struct ActionsTabView: View {
                 .font(.system(size: 13))
                 .foregroundColor(.textSec)
                 .frame(maxWidth: .infinity, alignment: .leading)
-            Button {
+            GradientButton(title: "Try again", size: .compact) {
                 coordinator.startPlanGeneration(
                     analysis: retry.analysis,
                     transcriptionText: retry.transcriptionText,
                     noteTitle: retry.noteTitle
                 )
-            } label: {
-                Text("Try again")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 10)
-                    .background(LinearGradient.brand)
-                    .clipShape(Capsule())
             }
-            .buttonStyle(PlayfulButtonStyle())
         }
-        .padding(16)
-        .background(Color.brandOrange.opacity(0.08))
-        .cornerRadius(16)
+        .duoPanel(fill: .cardDarkOrange, padding: 16)
     }
 
     private var loadErrorState: some View {
         VStack(spacing: 16) {
             Image(systemName: "wifi.exclamationmark")
                 .font(.system(size: 36))
-                .foregroundColor(.brandOrange)
+                .foregroundColor(.brandAmber)
             Text("Couldn't load your plans")
-                .font(.system(size: 17, weight: .bold, design: .rounded))
+                .font(.duoCardTitle)
                 .foregroundColor(.textPri)
             Text("Check your connection and give it another go.")
                 .font(.system(size: 13))
                 .foregroundColor(.textSec)
-            Button {
+            GradientButton(title: "Retry", size: .compact) {
                 Task { await viewModel.loadAllPlans() }
-            } label: {
-                Text("Retry")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 24)
-                    .padding(.vertical, 10)
-                    .background(LinearGradient.brand)
-                    .clipShape(Capsule())
             }
-            .buttonStyle(PlayfulButtonStyle())
+            .frame(width: 160)
         }
         .frame(maxWidth: .infinity)
         .padding(.top, 60)
@@ -323,41 +293,5 @@ struct ActionsTabView: View {
                 .font(.system(size: 15, weight: .medium))
                 .foregroundColor(.textPri)
         }
-    }
-
-    // MARK: - Onboarding Card
-
-    private var onboardingCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Image(systemName: "lightbulb.fill")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(.brand)
-                Text("What are actions?")
-                    .font(.system(size: 15, weight: .bold, design: .rounded))
-                    .foregroundColor(.textPri)
-                Spacer()
-                Button {
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                        hasSeenOnboarding = true
-                    }
-                } label: {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundColor(.textSec)
-                        .padding(6)
-                        .background(Color.black.opacity(0.05))
-                        .clipShape(Circle())
-                }
-            }
-            Text("Actions are small, concrete steps generated from your ideas. Complete them one by one to turn your thoughts into real progress.")
-                .font(.system(size: 14))
-                .foregroundColor(.textSec)
-                .lineSpacing(3)
-        }
-        .padding(16)
-        .background(Color.brand.opacity(0.06))
-        .cornerRadius(16)
-        .padding(.horizontal, 16)
     }
 }
