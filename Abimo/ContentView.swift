@@ -23,47 +23,49 @@ extension Color {
         self.init(.sRGB, red: Double(r) / 255, green: Double(g) / 255, blue: Double(b) / 255)
     }
 
-    // Brand palette
-    static let brand        = Color(hex: "FF6B6B")  // Coral red
-    static let brandLight   = Color(hex: "FF9B9B")  // Light coral
-    static let brandPink    = Color(hex: "A855F7")  // Purple (accent)
-    static let brandAmber   = Color(hex: "FBBF24")  // Golden yellow
-    static let brandGreen   = Color(hex: "34D399")  // Emerald green
-    static let brandRed     = Color(hex: "F87171")  // Soft red
-    static let brandBlue    = Color(hex: "60A5FA")  // Sky blue
-    static let brandOrange  = Color(hex: "FB923C")  // Tangerine
+    // Brand palette — bold saturated colors on pure white (Duolingo-style)
+    static let brand        = Color(hex: "FF5252")  // Punchy coral
+    static let brandLight   = Color(hex: "FF7B70")  // Gradient endpoint
+    static let brandAmber   = Color(hex: "FFB800")  // Bold amber
+    static let brandGreen   = Color(hex: "2EC46F")  // Bold green
+    static let brandBlue    = Color(hex: "3B82F6")  // Bold blue
 
     // Surfaces
-    static let appBg               = Color(hex: "FFF5F5")  // Warm rose cream
+    static let appBg               = Color.white
     static let cardBg              = Color.white            // White card (alias)
     static let cardSurface         = Color.white            // White card
     static let cardSurfaceElevated = Color.white            // White elevated card
-    static let textPri             = Color(hex: "1C1C1E")  // Dark charcoal
-    static let textSec             = Color(hex: "8E8E93")  // Medium gray
+    static let textPri             = Color(hex: "3C3C43")  // Soft charcoal
+    static let textSec             = Color(hex: "AFAFB4")  // Medium gray
 
-    // Tinted light card surfaces
-    static let cardDarkBlue   = Color(hex: "EFF6FF")  // Light blue tint
-    static let cardDarkTeal   = Color(hex: "ECFDF5")  // Light green tint
-    static let cardDarkPurple = Color(hex: "FAF5FF")  // Light purple tint
-    static let cardDarkOrange = Color(hex: "FFF7ED")  // Light orange tint
-    static let cardDarkRed    = Color(hex: "FFF1F2")  // Light coral tint
-
-    // Accent colors
-    static let accentBlue   = Color(hex: "60A5FA")  // Sky blue — charts, data viz
-    static let accentTeal   = Color(hex: "34D399")  // Emerald — positive indicators
-    static let accentCoral  = Color(hex: "A855F7")  // Purple — warnings, threats
+    // Tinted light card surfaces (cooler, tuned for pure white)
+    static let cardDarkBlue   = Color(hex: "EDF4FE")  // Light blue tint
+    static let cardDarkTeal   = Color(hex: "EAF9F1")  // Light green tint
+    static let cardDarkOrange = Color(hex: "FFF6E3")  // Light amber tint
+    static let cardDarkRed    = Color(hex: "FFEFEF")  // Light coral tint
+    static let cardDarkMint   = Color(hex: "F2FBF7")  // Pale mint hero surface
 
     // Duo3D darker-edge variants (bottom edges of 3D buttons/nodes/cards)
-    static let brandDark       = Color(hex: "E14F4F")  // edge for brand FF6B6B
-    static let brandGreenDark  = Color(hex: "1FAE7E")  // edge for brandGreen 34D399
-    static let brandAmberDark  = Color(hex: "D99E0B")  // edge for brandAmber FBBF24
-    static let brandBlueDark   = Color(hex: "3B82F6")  // edge for brandBlue 60A5FA
-    static let brandOrangeDark = Color(hex: "E2761F")  // edge for brandOrange FB923C
-    static let brandRedDark    = Color(hex: "DC4C4C")  // edge for brandRed F87171
-    static let cardEdge        = Color(hex: "E8E2E0")  // warm grey — white-card borders/edges
-    static let lockedFace      = Color(hex: "E5E5E5")  // locked node face / disabled button
-    static let lockedEdge      = Color(hex: "CFCFCF")  // locked node edge
-    static let cardDarkMint    = Color(hex: "F0FAFA")  // pale mint hero surface
+    static let brandDark       = Color(hex: "E03E3E")  // edge for brand FF5252
+    static let brandGreenDark  = Color(hex: "25A65C")  // edge for brandGreen 2EC46F
+    static let brandAmberDark  = Color(hex: "DB9E00")  // edge for brandAmber FFB800
+    static let brandBlueDark   = Color(hex: "2563EB")  // edge for brandBlue 3B82F6
+    static let cardEdge        = Color(hex: "E5E5E5")  // grey — white-card borders/edges
+    static let lockedFace      = Color(hex: "EBEBEB")  // locked node face / disabled button
+    static let lockedEdge      = Color(hex: "CDCDCD")  // locked node edge
+
+    // MARK: Deprecated aliases — accent consolidation in progress.
+    // Each screen pass replaces these; the final sweep deletes them so the
+    // compiler enforces completion. Do not use in new code.
+    static let brandPink      = brandBlue
+    static let brandRed       = brand
+    static let brandOrange    = brandAmber
+    static let brandRedDark   = brandDark
+    static let brandOrangeDark = brandAmberDark
+    static let accentBlue     = brandBlue
+    static let accentTeal     = brandGreen
+    static let accentCoral    = brandBlue
+    static let cardDarkPurple = cardDarkBlue
 }
 
 // MARK: - Brand Gradients
@@ -77,20 +79,21 @@ extension LinearGradient {
         colors: [.brand, .brand],
         startPoint: .topLeading, endPoint: .bottomTrailing
     )
+    // SWOT quadrant gradients — S=green, W=coral, O=blue, T=amber
     static let swotStrength = LinearGradient(
-        colors: [Color(hex: "34D399"), Color(hex: "6EE7B7")],
+        colors: [Color(hex: "2EC46F"), Color(hex: "5AD68F")],
         startPoint: .topLeading, endPoint: .bottomTrailing
     )
     static let swotWeakness = LinearGradient(
-        colors: [Color(hex: "F87171"), Color(hex: "FF6B6B")],
+        colors: [Color(hex: "FF5252"), Color(hex: "FF7B70")],
         startPoint: .topLeading, endPoint: .bottomTrailing
     )
     static let swotOpportunity = LinearGradient(
-        colors: [Color(hex: "60A5FA"), Color(hex: "93C5FD")],
+        colors: [Color(hex: "3B82F6"), Color(hex: "6FA5F9")],
         startPoint: .topLeading, endPoint: .bottomTrailing
     )
     static let swotThreat = LinearGradient(
-        colors: [Color(hex: "FB923C"), Color(hex: "F87171")],
+        colors: [Color(hex: "FFB800"), Color(hex: "FFCB3D")],
         startPoint: .topLeading, endPoint: .bottomTrailing
     )
 }
