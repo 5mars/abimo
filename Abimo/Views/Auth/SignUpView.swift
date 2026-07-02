@@ -14,18 +14,16 @@ struct SignUpView: View {
 
     private var passwordsMatch: Bool { password == confirmPassword }
     private var canSubmit: Bool { !email.isEmpty && !password.isEmpty && passwordsMatch }
+    private var bothPasswordsEntered: Bool { !password.isEmpty && !confirmPassword.isEmpty }
+
+    /// One feedback line: server error wins, else the mismatch hint.
+    private var feedbackLine: String? {
+        authViewModel.errorMessage ?? (bothPasswordsEntered && !passwordsMatch ? "Passwords don't match" : nil)
+    }
 
     var body: some View {
         ZStack {
             Color.appBg.ignoresSafeArea()
-
-            // Decorative blob
-            Circle()
-                .fill(Color.brandLight.opacity(0.18))
-                .frame(width: 280, height: 280)
-                .offset(x: 140, y: -60)
-                .blur(radius: 80)
-                .ignoresSafeArea()
 
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 0) {
@@ -71,38 +69,24 @@ struct SignUpView: View {
                             isSecure: true
                         )
                         .textContentType(.newPassword)
-
-                        // Validation feedback
-                        if !password.isEmpty && !confirmPassword.isEmpty && !passwordsMatch {
-                            HStack(spacing: 6) {
-                                Image(systemName: "exclamationmark.circle.fill")
-                                    .font(.system(size: 13))
-                                Text("Passwords do not match")
-                                    .font(.system(size: 13))
-                            }
-                            .foregroundColor(.brandRed)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                        }
-
-                        if !password.isEmpty && !confirmPassword.isEmpty && passwordsMatch {
-                            HStack(spacing: 6) {
+                        .overlay(alignment: .trailing) {
+                            // Match confirmation lives inside the field, not as a text row
+                            if bothPasswordsEntered && passwordsMatch {
                                 Image(systemName: "checkmark.circle.fill")
-                                    .font(.system(size: 13))
-                                Text("Passwords match")
-                                    .font(.system(size: 13))
+                                    .font(.system(size: 16))
+                                    .foregroundColor(.brandGreen)
+                                    .padding(.trailing, 14)
                             }
-                            .foregroundColor(.brandGreen)
-                            .frame(maxWidth: .infinity, alignment: .leading)
                         }
 
-                        if let errorMessage = authViewModel.errorMessage {
+                        if let feedbackLine {
                             HStack(spacing: 6) {
                                 Image(systemName: "exclamationmark.circle.fill")
                                     .font(.system(size: 13))
-                                Text(errorMessage)
+                                Text(feedbackLine)
                                     .font(.system(size: 13))
                             }
-                            .foregroundColor(.brandRed)
+                            .foregroundColor(.brand)
                             .frame(maxWidth: .infinity, alignment: .leading)
                         }
 
@@ -118,7 +102,6 @@ struct SignUpView: View {
                         }
                         .padding(.top, 4)
                     }
-                    .cardStyle()
                     .padding(.horizontal, 24)
 
                     Spacer().frame(height: 24)

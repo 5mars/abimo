@@ -26,23 +26,10 @@ struct ProfileView: View {
                         heroCard
                             .padding(.horizontal, 16)
 
-                        // Momentum (streak + week) — same dashboard as the Actions tab
-                        if !actionsViewModel.allCompletionDates.isEmpty {
-                            MomentumDashboard(
-                                streak: actionsViewModel.currentStreak,
-                                weekActivity: actionsViewModel.weekActivity,
-                                totalCompletedThisWeek: actionsViewModel.totalCompletedThisWeek
-                            )
-                            .padding(.horizontal, 16)
-                        }
-
-                        statsRow
-                            .padding(.horizontal, 16)
-
                         AchievementGridView(context: achievementContext)
                             .padding(.horizontal, 16)
 
-                        actionsSection
+                        signOutButton
                             .padding(.horizontal, 16)
 
                         Spacer().frame(height: 24)
@@ -78,12 +65,13 @@ struct ProfileView: View {
 
     // MARK: - Sections
 
+    /// One panel: mascot + email + inline stats (ideas / actions / streak).
     private var heroCard: some View {
         VStack(spacing: 16) {
             Image(MascotMood.playful.assetName)
                 .resizable()
                 .scaledToFit()
-                .frame(width: 84, height: 84)
+                .frame(width: 100, height: 100)
 
             VStack(spacing: 6) {
                 Text("My Account")
@@ -96,79 +84,64 @@ struct ProfileView: View {
                         .lineLimit(1)
                 }
             }
+
+            Divider().overlay(Color.cardEdge)
+
+            HStack(spacing: 0) {
+                inlineStat(value: "\(ideaCount ?? 0)", label: "ideas", color: .brandBlue)
+                Divider().overlay(Color.cardEdge).frame(height: 36)
+                inlineStat(value: "\(completedActionCount)", label: "actions done", color: .brandGreen)
+                Divider().overlay(Color.cardEdge).frame(height: 36)
+                inlineStat(
+                    value: "\(actionsViewModel.currentStreak)",
+                    label: "day streak",
+                    color: .brandAmber,
+                    icon: actionsViewModel.currentStreak > 0 ? "flame.fill" : nil
+                )
+            }
         }
         .frame(maxWidth: .infinity)
-        .heroCard(color: .cardDarkMint)
+        .duoPanel(fill: .cardDarkMint, padding: 24)
     }
 
-    private var statsRow: some View {
-        HStack(spacing: 12) {
-            statCard(
-                icon: "note.text", color: .accentBlue, background: .cardDarkBlue,
-                value: "\(ideaCount ?? 0)", label: "ideas"
-            )
-            statCard(
-                icon: "checkmark.seal.fill", color: .brandGreen, background: .cardDarkTeal,
-                value: "\(completedActionCount)", label: "actions done"
-            )
-            statCard(
-                icon: "gauge.with.needle", color: .brandAmber, background: .cardDarkOrange,
-                value: bestScore.map { "\($0)" } ?? "—", label: "best score"
-            )
-        }
-    }
-
-    private func statCard(icon: String, color: Color, background: Color, value: String, label: String) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Image(systemName: icon)
-                .font(.system(size: 18, weight: .semibold))
-                .foregroundColor(color)
-            Text(value)
-                .font(.system(size: 24, weight: .bold, design: .rounded))
-                .foregroundColor(.textPri)
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
+    private func inlineStat(value: String, label: String, color: Color, icon: String? = nil) -> some View {
+        VStack(spacing: 3) {
+            HStack(spacing: 4) {
+                if let icon {
+                    Image(systemName: icon)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(color)
+                }
+                Text(value)
+                    .font(.system(size: 22, weight: .bold, design: .rounded))
+                    .foregroundColor(.textPri)
+                    .contentTransition(.numericText())
+            }
             Text(label)
-                .font(.system(size: 11))
+                .font(.duoCaption)
                 .foregroundColor(.textSec)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .tintedCard(color: background)
+        .frame(maxWidth: .infinity)
     }
 
-    private var actionsSection: some View {
-        VStack(spacing: 0) {
-            HStack {
-                Text("Actions")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundColor(.textSec)
-                    .textCase(.uppercase)
-                Spacer()
+    private var signOutButton: some View {
+        Button {
+            showSignOutAlert = true
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "rectangle.portrait.and.arrow.right")
+                    .font(.system(size: 14, weight: .semibold))
+                Text("Sign Out")
+                    .font(.duoLabel)
             }
-            .padding(.bottom, 8)
-
-            Button {
-                showSignOutAlert = true
-            } label: {
-                HStack {
-                    Image(systemName: "rectangle.portrait.and.arrow.right")
-                        .font(.system(size: 14))
-                        .foregroundColor(.brandRed)
-                        .frame(width: 28)
-                    Text("Sign Out")
-                        .font(.system(size: 15, weight: .medium))
-                        .foregroundColor(.brandRed)
-                    Spacer()
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 14)
-            }
-            .disabled(authViewModel.isLoading)
-            .background(Color.cardSurface)
-            .cornerRadius(16)
+            .foregroundColor(.brand)
+            .frame(maxWidth: .infinity)
+            .frame(height: 44)
         }
+        .buttonStyle(Duo3DSecondaryButtonStyle())
+        .disabled(authViewModel.isLoading)
     }
 
     // MARK: - Derived data

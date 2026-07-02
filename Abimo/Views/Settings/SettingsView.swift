@@ -36,13 +36,13 @@ struct SettingsView: View {
 
                     // Notifications section
                     settingsSection(title: "Notifications") {
-                        notificationToggle(icon: "moon.zzz", title: "Inactivity Reminders", color: .brandOrange, isOn: $inactivityEnabled)
-                        Divider().padding(.leading, 44)
-                        notificationToggle(icon: "checkmark.circle", title: "Action Nudges", color: .accentBlue, isOn: $actionNudgeEnabled)
-                        Divider().padding(.leading, 44)
-                        notificationToggle(icon: "lightbulb", title: "Idea Nudges", color: .brandAmber, isOn: $ideaNudgeEnabled)
-                        Divider().padding(.leading, 44)
-                        notificationToggle(icon: "flame", title: "Streak Alerts", color: .brandRed, isOn: $streakEnabled)
+                        notificationToggle(icon: "moon.zzz", title: "Inactivity Reminders", color: .brand, isOn: $inactivityEnabled)
+                        Divider().overlay(Color.cardEdge)
+                        notificationToggle(icon: "checkmark.circle", title: "Action Nudges", color: .brand, isOn: $actionNudgeEnabled)
+                        Divider().overlay(Color.cardEdge)
+                        notificationToggle(icon: "lightbulb", title: "Idea Nudges", color: .brand, isOn: $ideaNudgeEnabled)
+                        Divider().overlay(Color.cardEdge)
+                        notificationToggle(icon: "flame", title: "Streak Alerts", color: .brand, isOn: $streakEnabled)
                     }
 
                     // Sounds section
@@ -55,40 +55,36 @@ struct SettingsView: View {
                         Button {
                             showDeleteAlert = true
                         } label: {
-                            settingsRow(icon: "trash", title: "Delete Account", color: .brandRed)
+                            settingsRow(icon: "trash", title: "Delete Account", color: .brand)
                         }
-                        Divider().padding(.leading, 44)
+                        Divider().overlay(Color.cardEdge)
                         Button {
                             showClearDataAlert = true
                         } label: {
-                            settingsRow(icon: "arrow.clockwise", title: "Clear Local Data", color: .brandOrange)
+                            settingsRow(icon: "arrow.clockwise", title: "Clear Local Data", color: .brandAmber)
                         }
-                        Divider().padding(.leading, 44)
+                        Divider().overlay(Color.cardEdge)
                         Link(destination: URL(string: "https://abimo.app/privacy")!) {
-                            settingsRow(icon: "hand.raised", title: "Privacy Policy", color: .accentTeal)
+                            settingsRow(icon: "hand.raised", title: "Privacy Policy", color: .brandGreen)
                         }
                     }
 
                     // About section
                     settingsSection(title: "About") {
                         settingsRow(icon: "info.circle", title: "App Version", color: .textSec, detail: appVersion)
-                        Divider().padding(.leading, 44)
+                        Divider().overlay(Color.cardEdge)
                         Button {
                             requestReview()
                         } label: {
                             settingsRow(icon: "star", title: "Rate the App", color: .brandAmber)
                         }
-                        Divider().padding(.leading, 44)
+                        Divider().overlay(Color.cardEdge)
                         Button {
                             if let url = URL(string: "mailto:feedback@abimo.app?subject=Abimo%20Feedback") {
                                 UIApplication.shared.open(url)
                             }
                         } label: {
-                            settingsRow(icon: "envelope", title: "Send Feedback", color: .accentBlue)
-                        }
-                        Divider().padding(.leading, 44)
-                        NavigationLink(destination: AboutView()) {
-                            settingsRow(icon: "heart", title: "About", color: .brand)
+                            settingsRow(icon: "envelope", title: "Send Feedback", color: .brandBlue)
                         }
                     }
 
@@ -143,9 +139,8 @@ struct SettingsView: View {
         VStack(spacing: 0) {
             HStack {
                 Text(title)
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundColor(.textSec)
-                    .textCase(.uppercase)
+                    .font(.duoLabel)
+                    .foregroundColor(.textPri)
                 Spacer()
             }
             .padding(.bottom, 8)
@@ -153,8 +148,7 @@ struct SettingsView: View {
             VStack(spacing: 0) {
                 content()
             }
-            .background(Color.cardSurface)
-            .cornerRadius(16)
+            .duoPanel(padding: 0)
         }
         .padding(.horizontal, 16)
     }

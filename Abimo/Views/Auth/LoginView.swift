@@ -17,22 +17,6 @@ struct LoginView: View {
             // Background
             Color.appBg.ignoresSafeArea()
 
-            // Decorative blobs
-            GeometryReader { geo in
-                Circle()
-                    .fill(Color.brand.opacity(0.18))
-                    .frame(width: 300, height: 300)
-                    .offset(x: geo.size.width * 0.5, y: -80)
-                    .blur(radius: 80)
-
-                Circle()
-                    .fill(Color.brandPink.opacity(0.15))
-                    .frame(width: 240, height: 240)
-                    .offset(x: -60, y: geo.size.height * 0.65)
-                    .blur(radius: 80)
-            }
-            .ignoresSafeArea()
-
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 0) {
                     Spacer().frame(height: 60)
@@ -82,7 +66,7 @@ struct LoginView: View {
                                 Text(errorMessage)
                                     .font(.system(size: 13))
                             }
-                            .foregroundColor(.brandRed)
+                            .foregroundColor(.brand)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(.top, 2)
                         }
@@ -96,7 +80,6 @@ struct LoginView: View {
                         }
                         .padding(.top, 4)
                     }
-                    .cardStyle()
                     .padding(.horizontal, 24)
                     .offset(y: appeared ? 0 : 30)
                     .opacity(appeared ? 1 : 0)
