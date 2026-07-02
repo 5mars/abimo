@@ -20,12 +20,13 @@ struct MomentumDashboard: View {
                         Image(systemName: streak > 0 ? "flame.fill" : "flame")
                             .font(.system(size: 22, weight: .semibold))
                             .foregroundColor(streak > 0 ? .brandOrange : .textSec)
+                            .symbolEffect(.bounce, value: streak)
                         Text("\(streak)")
                             .font(.system(size: 28, weight: .bold, design: .rounded))
                             .foregroundColor(.textPri)
                             .contentTransition(.numericText())
                     }
-                    Text(streak == 1 ? "day streak" : "day streak")
+                    Text("day streak")
                         .font(.system(size: 13, weight: .medium))
                         .foregroundColor(.textSec)
                 }

@@ -15,6 +15,7 @@ enum CelebrationState: Equatable {
     case idle
     case inlineConfetti(actionId: UUID)   // per-action node burst, auto-clears after 1.5s
     case milestone(count: Int)            // 3, 5, or 7 — banner + heavier confetti, auto-clears after 2.5s
+    case streakExtended(days: Int)        // first completion of the day — flame banner, auto-clears after 2.5s
     case planComplete                     // full-screen overlay, user-dismissed via Done button
 }
 
@@ -189,6 +190,7 @@ class ActionPlanViewModel: ObservableObject {
             }
 
             computeNudges()
+            await evaluateStreakCelebration()
         } catch {
             if let idx = microActions.firstIndex(where: { $0.id == id }) {
                 microActions[idx].isCompleted = false
@@ -202,6 +204,64 @@ class ActionPlanViewModel: ObservableObject {
             errorMessage = "That didn't save — check your connection and try again"
             DispatchQueue.main.asyncAfter(deadline: .now() + 4) { [weak self] in
                 if self?.errorMessage != nil { self?.errorMessage = nil }
+            }
+        }
+    }
+
+    /// Streak across every plan the user has, plus how many completions landed
+    /// today — used to detect "first completion of the day" after a save.
+    static func streakInfo(completionDates: [Date], calendar: Calendar = .current, now: Date = Date()) -> (streak: Int, completionsToday: Int) {
+        let today = calendar.startOfDay(for: now)
+        let completionsToday = completionDates.filter { calendar.isDate($0, inSameDayAs: now) }.count
+        let days = Set(completionDates.map { calendar.startOfDay(for: $0) })
+        guard days.contains(today) else { return (0, completionsToday) }
+
+        var streak = 0
+        var check = today
+        while days.contains(check) {
+            streak += 1
+            guard let prev = calendar.date(byAdding: .day, value: -1, to: check) else { break }
+            check = prev
+        }
+        return (streak, completionsToday)
+    }
+
+    /// Fires the streak-extended flame banner (and the dormant streak-milestone
+    /// notification) on the first completion of the day. Queued behind whatever
+    /// celebration is already on screen; planComplete owns the screen alone.
+    private func evaluateStreakCelebration() async {
+        guard let userId = try? await supabase.getCurrentUser()?.id,
+              let allPlans = try? await supabase.fetchAllActionPlans(userId: userId) else { return }
+
+        var dates: [Date] = []
+        for plan in allPlans {
+            let actions = (try? await supabase.fetchMicroActions(actionPlanId: plan.id)) ?? []
+            dates.append(contentsOf: actions.compactMap(\.completedAt))
+        }
+
+        let info = Self.streakInfo(completionDates: dates)
+        guard info.completionsToday == 1 else { return }
+
+        if [3, 7, 14, 30].contains(info.streak) {
+            NotificationScheduler.shared.sendStreakMilestone(days: info.streak)
+        }
+
+        guard info.streak >= 2, celebrationState != .planComplete else { return }
+
+        let delay: TimeInterval
+        switch celebrationState {
+        case .milestone:       delay = 2.7
+        case .inlineConfetti:  delay = 1.7
+        default:               delay = 0.3
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+            guard let self, self.celebrationState == .idle else { return }
+            self.celebrationState = .streakExtended(days: info.streak)
+            HapticEngine.impact(style: .medium)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { [weak self] in
+                if case .streakExtended = self?.celebrationState ?? .idle {
+                    self?.celebrationState = .idle
+                }
             }
         }
     }

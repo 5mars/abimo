@@ -49,6 +49,13 @@ struct ActionPlanDetailView: View {
                     .zIndex(1)
             }
 
+            // Streak-extended banner (first completion of the day)
+            if case .streakExtended(let days) = viewModel.celebrationState {
+                StreakBannerView(days: days)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .zIndex(1)
+            }
+
             // Plan completion overlay
             if viewModel.celebrationState == .planComplete {
                 PlanCompletionView(viewModel: viewModel, onDismiss: {
