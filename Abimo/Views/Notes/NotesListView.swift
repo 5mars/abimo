@@ -72,7 +72,7 @@ struct NotesListView: View {
     // MARK: - Loading
 
     private var labLoadingView: some View {
-        MascotLoadingView(mode: .inline, text: "Setting up the lab...")
+        MascotLoadingView(mode: .inline, text: "Firing up the kitchen...")
     }
 
     // MARK: - Empty State
@@ -85,7 +85,7 @@ struct NotesListView: View {
                 .frame(width: 160, height: 160)
 
             VStack(spacing: 10) {
-                Text("Welcome to The Lab")
+                Text("Welcome to The Kitchen")
                     .font(.system(size: 22, weight: .bold, design: .rounded))
                     .foregroundColor(.textPri)
 
@@ -164,13 +164,13 @@ struct LabHeaderView: View {
     private var tagline: String {
         let hour = Calendar.current.component(.hour, from: Date())
         if hour < 12 { return "morning grind, let's get it" }
-        if hour < 17 { return "ideas don't test themselves" }
-        return "late night experiments hit different"
+        if hour < 17 { return "ideas don't cook themselves" }
+        return "late night cooking hits different"
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("The Lab")
+            Text("The Kitchen")
                 .font(.system(size: 36, weight: .black, design: .rounded))
                 .foregroundColor(.textPri)
             Text(tagline)

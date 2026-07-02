@@ -55,7 +55,7 @@ struct SWOTAnalysisView: View {
                 }
             }
             .background(Color.appBg, ignoresSafeAreaEdges: .all)
-            .navigationTitle("Lab Results")
+            .navigationTitle("The Taste Test")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(Color.appBg, for: .navigationBar)
             .toolbar {
@@ -153,12 +153,12 @@ struct SWOTAnalysisView: View {
         "Taste-testing your idea...",
         "Simmering your strategy...",
         "Mixing the formula...",
-        "Running the experiment...",
+        "The critic is tasting...",
         "Prepping the ingredients...",
         "Almost chef's kiss ready...",
         "Adding a pinch of market data...",
         "Let it marinate for a sec...",
-        "Stress-testing your thesis...",
+        "Checking the competition's menu...",
         "Nearly plated up...",
     ]
 

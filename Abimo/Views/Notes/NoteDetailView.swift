@@ -331,7 +331,7 @@ struct NoteDetailView: View {
                             actionPlanCard
                                 .transition(.opacity)
                         }
-                        // Lab Results card
+                        // Taste Test card
                         analysisActionCard
                             .transition(.opacity)
                     }
@@ -448,10 +448,10 @@ struct NoteDetailView: View {
                             .foregroundColor(.brand)
                     }
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Lab Results")
+                        Text("The Taste Test")
                             .font(.system(size: 17, weight: .bold))
                             .foregroundColor(.textPri)
-                        Text("Your idea's been stress-tested")
+                        Text("The critic has spoken")
                             .font(.system(size: 12))
                             .foregroundColor(.textSec)
                     }
@@ -525,14 +525,14 @@ struct NoteDetailView: View {
                     Text("Put it to the test")
                         .font(.system(size: 19, weight: .bold, design: .rounded))
                         .foregroundColor(.textPri)
-                    Text("Drop it in The Lab and we'll\nbreak it down for you")
+                    Text("Send it to the critic and we'll\nbreak it down for you")
                         .font(.system(size: 14))
                         .foregroundColor(.textSec)
                         .multilineTextAlignment(.center)
                         .lineSpacing(3)
                 }
 
-                GradientButton(title: "🔬  Run it through The Lab") {
+                GradientButton(title: "👨‍🍳  Send it to the critic") {
                     showingSWOTAnalysis = true
                 }
             }

@@ -280,7 +280,7 @@ struct ActionsTabView: View {
 
             VStack(alignment: .leading, spacing: 16) {
                 stepRow(number: 1, icon: "mic.fill", text: "Record an idea")
-                stepRow(number: 2, icon: "flask.fill", text: "Run it through the lab")
+                stepRow(number: 2, icon: "fork.knife", text: "Let the critic taste it")
                 stepRow(number: 3, icon: "bolt.fill", text: "Get your action plan")
             }
             .padding(.horizontal, 32)

@@ -124,15 +124,15 @@ struct NotificationCopy {
         switch sass {
         case .playful:
             return [
-                NotificationMessage(title: "Idea waiting", body: "\"{context}\" is ready for the lab. Abimo's got the beakers ready.", mood: .playful),
-                NotificationMessage(title: "Lab time?", body: "Your idea \"{context}\" wants to be analyzed. Abimo can help.", mood: .playful),
+                NotificationMessage(title: "Idea waiting", body: "\"{context}\" is ready for the kitchen. Abimo's got the pans hot.", mood: .playful),
+                NotificationMessage(title: "Kitchen time?", body: "Your idea \"{context}\" wants a taste test. Abimo can help.", mood: .playful),
                 NotificationMessage(title: "Raw potential", body: "\"{context}\" is sitting there unanalyzed. Let Abimo work some magic.", mood: .playful),
-                NotificationMessage(title: "Fresh idea alert", body: "You dropped \"{context}\" in the lab but never ran it. Abimo's curious.", mood: .playful),
+                NotificationMessage(title: "Fresh idea alert", body: "You dropped \"{context}\" in the kitchen but never cooked it. Abimo's curious.", mood: .playful),
                 NotificationMessage(title: "Don't leave it raw", body: "\"{context}\" has potential. Let Abimo cook.", mood: .playful),
             ]
         case .sassy:
             return [
-                NotificationMessage(title: "Just sitting there", body: "\"{context}\" is in the lab. Unanalyzed. Abimo's tapping its foot.", mood: .sassy),
+                NotificationMessage(title: "Just sitting there", body: "\"{context}\" is on the counter. Untasted. Abimo's tapping its foot.", mood: .sassy),
                 NotificationMessage(title: "Nice idea... I guess", body: "You had \"{context}\". Cool. Shame nobody analyzed it.", mood: .sassy),
                 NotificationMessage(title: "Wasted potential", body: "\"{context}\" could've been something. But it's just sitting there. — Abimo", mood: .sassy),
                 NotificationMessage(title: "You recorded it", body: "And then... nothing? \"{context}\" is wondering what it did wrong. — Abimo", mood: .sassy),
@@ -140,7 +140,7 @@ struct NotificationCopy {
             ]
         case .guiltTrip:
             return [
-                NotificationMessage(title: "Forgotten idea", body: "\"{context}\" is still in the lab. Alone. In the dark. Abimo's with it, but still.", mood: .grumpy),
+                NotificationMessage(title: "Forgotten idea", body: "\"{context}\" is still in the fridge. Alone. In the dark. Abimo's with it, but still.", mood: .grumpy),
                 NotificationMessage(title: "You had one job", body: "Record idea. Analyze idea. You got halfway. — Abimo", mood: .grumpy),
                 NotificationMessage(title: "Abimo remembers", body: "Even if you forgot \"{context}\", Abimo didn't. Run. The. Analysis.", mood: .grumpy),
                 NotificationMessage(title: "Collecting dust", body: "\"{context}\" had potential. Now it's just... there. Sad. — Abimo", mood: .grumpy),
