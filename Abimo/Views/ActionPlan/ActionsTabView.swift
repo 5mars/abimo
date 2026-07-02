@@ -189,7 +189,7 @@ struct ActionsTabView: View {
             }
             .buttonStyle(PlayfulButtonStyle())
         }
-        .cardStyle()
+        .duoCard()
     }
 
     // MARK: - Error States

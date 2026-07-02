@@ -29,7 +29,12 @@ struct CustomTabBar: View {
         .padding(.horizontal, 16)
         .padding(.top, 10)
         .padding(.bottom, 8)
-        .background(Color.appBg)
+        .background(Color.white)
+        .overlay(alignment: .top) {
+            Rectangle()
+                .fill(Color.black.opacity(0.06))
+                .frame(height: 0.5)
+        }
     }
 }
 
@@ -51,11 +56,15 @@ private struct TabBarButton: View {
             }
         }) {
             ZStack {
-                // Filled circle indicator behind selected icon
+                // Rounded-square highlight behind selected icon
                 if isSelected {
-                    Circle()
-                        .fill(Color.brand.opacity(0.15))
-                        .frame(width: 44, height: 44)
+                    RoundedRectangle(cornerRadius: DuoTokens.Radius.inset, style: .continuous)
+                        .fill(Color.brand.opacity(0.12))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: DuoTokens.Radius.inset, style: .continuous)
+                                .strokeBorder(Color.brand.opacity(0.25), lineWidth: 1.5)
+                        )
+                        .frame(width: 52, height: 40)
                 }
 
                 Image(systemName: isSelected ? tab.selectedIconName : tab.iconName)

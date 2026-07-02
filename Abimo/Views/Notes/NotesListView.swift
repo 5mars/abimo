@@ -257,8 +257,7 @@ struct IdeaCardView: View {
         }
         .padding(.horizontal, 18)
         .padding(.vertical, 16)
-        .background(Color.white)
-        .cornerRadius(20)
+        .duoCard(padding: 0)
     }
 }
 
