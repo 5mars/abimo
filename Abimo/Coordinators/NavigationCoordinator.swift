@@ -46,6 +46,9 @@ final class NavigationCoordinator: ObservableObject {
     @Published var pendingNote: VoiceNote? = nil
     @Published var pendingPlanGeneration: Bool = false
     @Published var planGenerationRetry: PlanGenerationRetryContext? = nil
+    /// Set by the recording pipeline so NoteDetailView opens the Taste Test
+    /// sheet immediately on arrival instead of requiring another tap.
+    @Published var pendingShowAnalysis: Bool = false
 
     func navigateToNote(_ note: VoiceNote) {
         selectedTab = .ideas

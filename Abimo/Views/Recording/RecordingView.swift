@@ -8,6 +8,8 @@ import SwiftUI
 struct RecordingView: View {
     @EnvironmentObject var coordinator: NavigationCoordinator
     @StateObject private var viewModel = RecordingViewModel()
+    @StateObject private var pipeline = IdeaPipelineService()
+    @State private var showPipeline = false
     @State private var appeared = false
 
     var body: some View {
@@ -218,6 +220,30 @@ struct RecordingView: View {
         .navigationTitle("Drop an Idea")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarColorScheme(.light, for: .navigationBar)
+        .fullScreenCover(isPresented: $showPipeline) {
+            PipelineProgressView(
+                pipeline: pipeline,
+                onFinished: {
+                    showPipeline = false
+                    if let note = pipeline.note {
+                        coordinator.pendingShowAnalysis = true
+                        coordinator.navigateToNote(note)
+                    }
+                },
+                onBackground: {
+                    // Pipeline keeps running; artifacts persist and the note
+                    // shows current progress when opened from The Kitchen.
+                    showPipeline = false
+                },
+                onDiscard: {
+                    viewModel.cancelRecording()
+                    showPipeline = false
+                },
+                onRetry: {
+                    pipeline.retry(recordingVM: viewModel, coordinator: coordinator)
+                }
+            )
+        }
     }
 
     private var micDeniedCard: some View {
@@ -249,19 +275,17 @@ struct RecordingView: View {
         .padding(.top, 4)
     }
 
-    /// Stop → save → navigate, no naming step. The note gets a timestamp
-    /// placeholder title that transcription/analysis upgrades later.
+    /// Stop → full pipeline (save, transcribe, analyze, plan) with a staged
+    /// progress cover. Zero taps between stopping and seeing results.
     private func stopAndSave() {
         viewModel.stopRecording()
-        saveAndNavigate()
+        showPipeline = true
+        pipeline.start(recordingVM: viewModel, coordinator: coordinator)
     }
 
     private func saveAndNavigate() {
-        Task {
-            if let note = await viewModel.saveRecording(title: VoiceNote.makeAutoTitle()) {
-                coordinator.navigateToNote(note)
-            }
-        }
+        showPipeline = true
+        pipeline.retry(recordingVM: viewModel, coordinator: coordinator)
     }
 
     private var statusLabel: String {

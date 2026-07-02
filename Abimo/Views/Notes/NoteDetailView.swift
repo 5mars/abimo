@@ -9,6 +9,7 @@ import AVFoundation
 struct NoteDetailView: View {
     let note: VoiceNote
 
+    @EnvironmentObject var coordinator: NavigationCoordinator
     @StateObject private var transcriptionService = TranscriptionService()
     @StateObject private var audioPlayer = AudioPlayerService()
     @State private var transcription: Transcription?
@@ -378,6 +379,13 @@ struct NoteDetailView: View {
                 await loadSWOTAnalysis(transcriptionId: t.id)
                 if let analysis = swotAnalysis {
                     await loadActionPlan(analysisId: analysis.id)
+                }
+            }
+            await refreshAutoTitle()
+            if coordinator.pendingShowAnalysis {
+                coordinator.pendingShowAnalysis = false
+                if swotAnalysis != nil {
+                    showingSWOTAnalysis = true
                 }
             }
         }
@@ -793,4 +801,5 @@ struct NoteDetailView: View {
             analysisId: nil
         ))
     }
+    .environmentObject(NavigationCoordinator())
 }
