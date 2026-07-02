@@ -95,10 +95,11 @@ class NotificationService: ObservableObject {
     }
 
     func cancelNotifications(withPrefix prefix: String) {
-        center.getPendingNotificationRequests { requests in
+        Task {
+            let requests = await center.pendingNotificationRequests()
             let ids = requests.filter { $0.identifier.hasPrefix(prefix) }.map { $0.identifier }
             if !ids.isEmpty {
-                self.center.removePendingNotificationRequests(withIdentifiers: ids)
+                center.removePendingNotificationRequests(withIdentifiers: ids)
             }
         }
     }

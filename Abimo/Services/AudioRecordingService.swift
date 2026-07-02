@@ -64,11 +64,11 @@ class AudioRecordingService: NSObject, ObservableObject {
         // Start level monitoring
         levelTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [weak self] _ in
             guard let self = self else { return }
-            self.audioRecorder?.updateMeters()
-            let averagePower = self.audioRecorder?.averagePower(forChannel: 0) ?? -160
-            // Convert to 0-1 range using calibrated normalization
-            let normalized = Self.normalizeAudioLevel(averagePower: averagePower)
             Task { @MainActor in
+                self.audioRecorder?.updateMeters()
+                let averagePower = self.audioRecorder?.averagePower(forChannel: 0) ?? -160
+                // Convert to 0-1 range using calibrated normalization
+                let normalized = Self.normalizeAudioLevel(averagePower: averagePower)
                 self.audioLevel = normalized
             }
         }
