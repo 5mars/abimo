@@ -83,6 +83,7 @@ struct ActionPlanDetailView: View {
             )
         }
         .task {
+            SoundEngine.prepare()
             await viewModel.loadActionPlan(analysisId: analysisId)
             pickerMode = viewModel.userOrderedIds.isEmpty ? .firstVisit : .browse
         }

@@ -258,6 +258,7 @@ class ActionPlanViewModel: ObservableObject {
             guard let self, self.celebrationState == .idle else { return }
             self.celebrationState = .streakExtended(days: info.streak)
             HapticEngine.impact(style: .medium)
+            SoundEngine.whoosh()
             DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { [weak self] in
                 if case .streakExtended = self?.celebrationState ?? .idle {
                     self?.celebrationState = .idle
@@ -277,9 +278,11 @@ class ActionPlanViewModel: ObservableObject {
             // planComplete takes priority — skip milestone even if count is 3, 5, or 7
             celebrationState = .planComplete
             HapticEngine.success()
+            SoundEngine.fanfare()
         } else if [3, 5, 7].contains(newCompletedCount) {
             celebrationState = .milestone(count: newCompletedCount)
             HapticEngine.impact(style: .medium)
+            SoundEngine.chime()
             // Auto-clear after 2.5s
             DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { [weak self] in
                 if self?.celebrationState == .milestone(count: newCompletedCount) {
@@ -289,6 +292,7 @@ class ActionPlanViewModel: ObservableObject {
         } else {
             celebrationState = .inlineConfetti(actionId: completedId)
             HapticEngine.success()
+            SoundEngine.pop()
             // Auto-clear after 1.5s
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
                 if self?.celebrationState == .inlineConfetti(actionId: completedId) {

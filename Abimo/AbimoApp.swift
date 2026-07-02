@@ -17,7 +17,8 @@ struct AbimoApp: App {
             "notif_inactivity": true,
             "notif_action_nudge": true,
             "notif_idea_nudge": true,
-            "notif_streak": true
+            "notif_streak": true,
+            "sound_enabled": true
         ])
     }
 

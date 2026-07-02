@@ -17,6 +17,7 @@ struct SettingsView: View {
     @AppStorage("notif_action_nudge") private var actionNudgeEnabled = true
     @AppStorage("notif_idea_nudge") private var ideaNudgeEnabled = true
     @AppStorage("notif_streak") private var streakEnabled = true
+    @AppStorage("sound_enabled") private var soundEnabled = true
 
     @Environment(\.requestReview) private var requestReview
     @EnvironmentObject var authViewModel: AuthViewModel
@@ -42,6 +43,11 @@ struct SettingsView: View {
                         notificationToggle(icon: "lightbulb", title: "Idea Nudges", color: .brandAmber, isOn: $ideaNudgeEnabled)
                         Divider().padding(.leading, 44)
                         notificationToggle(icon: "flame", title: "Streak Alerts", color: .brandRed, isOn: $streakEnabled)
+                    }
+
+                    // Sounds section
+                    settingsSection(title: "Sounds") {
+                        notificationToggle(icon: "speaker.wave.2", title: "Celebration Sounds", color: .brandGreen, isOn: $soundEnabled)
                     }
 
                     // Data & Privacy section
