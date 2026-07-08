@@ -2,8 +2,8 @@
 //  RecordingView.swift
 //  Abimo
 //
-//  One giant irresistible mic. The mascot prompts you, you talk, the
-//  pipeline does the rest.
+//  One giant irresistible mic. You talk, the pipeline does the rest.
+//  No mascot here — status lines only when something needs saying.
 //
 
 import SwiftUI
@@ -12,12 +12,20 @@ struct RecordingView: View {
     @EnvironmentObject var coordinator: NavigationCoordinator
     @StateObject private var viewModel = RecordingViewModel()
     @StateObject private var pipeline = IdeaPipelineService()
+    @ObservedObject private var entitlements = EntitlementService.shared
     @State private var showPipeline = false
-    @State private var prompt = MascotVoice.moment(for: .recordPrompt).line
+    @State private var showPaywall = false
+    @State private var capLine = MascotVoice.moment(for: .ideaCapReached).line
 
     private var saveFailed: Bool {
         viewModel.recordingFileURL != nil && !viewModel.isRecording
             && !viewModel.isSaving && viewModel.errorMessage != nil
+    }
+
+    /// Free cap reached — the mic becomes the door to the paywall. Never
+    /// blocks an in-flight recording or a failed save awaiting retry.
+    private var capBlocked: Bool {
+        viewModel.isAtFreeCap && !viewModel.isRecording && !saveFailed
     }
 
     var body: some View {
@@ -48,6 +56,20 @@ struct RecordingView: View {
         .toolbarColorScheme(.light, for: .navigationBar)
         .animation(.spring(response: 0.4, dampingFraction: 0.75), value: viewModel.isRecording)
         .animation(.spring(response: 0.4, dampingFraction: 0.75), value: saveFailed)
+        .animation(.spring(response: 0.4, dampingFraction: 0.75), value: capBlocked)
+        .task { await viewModel.refreshIdeaCount() }
+        .onChange(of: coordinator.selectedTab) { _, newTab in
+            // Kept-alive tabs never refire onAppear — refresh the quota here
+            if newTab == .record {
+                Task { await viewModel.refreshIdeaCount() }
+            }
+        }
+        .sheet(isPresented: $showPaywall, onDismiss: {
+            // A purchase or a deletion may have freed the gate
+            Task { await viewModel.refreshIdeaCount() }
+        }) {
+            PaywallView(context: .ideaCap)
+        }
         .fullScreenCover(isPresented: $showPipeline) {
             PipelineProgressView(
                 pipeline: pipeline,
@@ -74,15 +96,12 @@ struct RecordingView: View {
         }
     }
 
-    // MARK: - Top zone (mascot prompt / live recording readout / failure)
+    // MARK: - Top zone (live recording readout / status lines)
 
     @ViewBuilder
     private var topZone: some View {
         if viewModel.micDenied {
-            mascotSays(
-                "No mic, no magic. Let me hear you.",
-                mood: .grumpy
-            )
+            statusLine("No mic, no magic. Enable the microphone in Settings.")
         } else if viewModel.isRecording {
             VStack(spacing: 20) {
                 Text(formatDuration(viewModel.recordingDuration))
@@ -93,26 +112,25 @@ struct RecordingView: View {
             }
             .transition(.opacity.combined(with: .scale(scale: 0.9)))
         } else if saveFailed {
-            mascotSays(
-                "That one slipped off the counter. Try again?",
-                mood: .grumpy
-            )
-        } else {
-            mascotSays(prompt, mood: .neutral)
+            statusLine("That one slipped off the counter. Try again?")
+        } else if capBlocked {
+            statusLine(capLine)
                 .transition(.opacity.combined(with: .scale(scale: 0.95)))
+        } else {
+            // Idle: the mic speaks for itself.
+            Color.clear
         }
     }
 
-    private func mascotSays(_ line: String, mood: MascotMood) -> some View {
-        HStack(alignment: .center, spacing: 4) {
-            Image(mood.assetName)
-                .resizable()
-                .scaledToFit()
-                .frame(width: 120, height: 120)
-            MascotSpeechLine(line: line, arrowOffsetY: 26)
-            Spacer(minLength: 0)
+    private func statusLine(_ line: String) -> some View {
+        VStack {
+            Spacer()
+            Text(line)
+                .font(.system(size: 15, weight: .semibold, design: .rounded))
+                .foregroundColor(.textSec)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 16)
         }
-        .padding(.horizontal, 8)
     }
 
     // MARK: - The giant mic
@@ -127,6 +145,8 @@ struct RecordingView: View {
             Button {
                 if viewModel.isRecording {
                     stopAndSave()
+                } else if capBlocked {
+                    showPaywall = true
                 } else if !saveFailed {
                     Task { await viewModel.startRecording() }
                 }
@@ -138,6 +158,10 @@ struct RecordingView: View {
                         RoundedRectangle(cornerRadius: 10)
                             .fill(Color.white)
                             .frame(width: 44, height: 44)
+                    } else if capBlocked {
+                        Image(systemName: "lock.fill")
+                            .font(.system(size: 50, weight: .semibold))
+                            .foregroundColor(.textSec)
                     } else {
                         Image(systemName: "mic.fill")
                             .font(.system(size: 56, weight: .semibold))
@@ -147,10 +171,11 @@ struct RecordingView: View {
                 .frame(width: 140, height: 140)
             }
             .buttonStyle(Duo3DCircleButtonStyle(
-                fill: saveFailed ? .lockedFace : .brand,
-                edge: saveFailed ? .lockedEdge : .brandDark,
+                fill: (saveFailed || capBlocked) ? .lockedFace : .brand,
+                edge: (saveFailed || capBlocked) ? .lockedEdge : .brandDark,
                 edgeHeight: 8
             ))
+            // capBlocked stays pressable — the press opens the paywall
             .disabled(viewModel.isSaving || viewModel.micDenied || saveFailed)
         }
     }
@@ -174,6 +199,16 @@ struct RecordingView: View {
             }
         } else if viewModel.isRecording {
             discardButton
+        } else if capBlocked {
+            VStack(spacing: 10) {
+                GradientButton(title: "Unlock unlimited ideas", size: .compact) {
+                    showPaywall = true
+                }
+                .frame(width: 240)
+                Text("or delete an idea in The Kitchen")
+                    .font(.system(size: 13))
+                    .foregroundColor(.textSec)
+            }
         }
     }
 
@@ -199,7 +234,6 @@ struct RecordingView: View {
         viewModel.stopRecording()
         showPipeline = true
         pipeline.start(recordingVM: viewModel, coordinator: coordinator)
-        prompt = MascotVoice.moment(for: .recordPrompt).line
     }
 
     private func saveAndNavigate() {

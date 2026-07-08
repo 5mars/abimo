@@ -2,6 +2,10 @@
 //  NotificationCopy.swift
 //  Abimo
 //
+//  Push/local notification copy — the critic, but passive-aggressive.
+//  First person, dry, guilt with a smile. Same tone rule as MascotVoice:
+//  roast the idea or the situation, never the founder.
+//
 
 import Foundation
 
@@ -62,27 +66,27 @@ struct NotificationCopy {
         switch sass {
         case .playful:
             return [
-                NotificationMessage(title: "Hey stranger", body: "Abimo's been waiting for you. Your ideas miss their creator.", mood: .playful),
-                NotificationMessage(title: "Remember me?", body: "It's Abimo. Just checking if you're still alive over there.", mood: .playful),
-                NotificationMessage(title: "Quick hello", body: "Your ideas are getting lonely. Abimo thinks you should visit.", mood: .playful),
-                NotificationMessage(title: "Knock knock", body: "It's Abimo. I've been keeping your ideas warm for you.", mood: .playful),
-                NotificationMessage(title: "Missing you", body: "Abimo's just sitting here... with all your brilliant ideas... alone.", mood: .playful),
+                NotificationMessage(title: "The kitchen's suspiciously quiet", body: "One day without an idea. I'm sure that means you're 'thinking'.", mood: .playful),
+                NotificationMessage(title: "Everything okay over there?", body: "No new ideas since yesterday. I've started alphabetizing the spice rack.", mood: .playful),
+                NotificationMessage(title: "Not to alarm you", body: "But your last idea is starting to look like your best idea. Fix that.", mood: .playful),
+                NotificationMessage(title: "I had a thought today", body: "Just one though. Your move.", mood: .playful),
+                NotificationMessage(title: "Quick question", body: "Do geniuses take days off? Asking for a food critic who's bored.", mood: .playful),
             ]
         case .sassy:
             return [
-                NotificationMessage(title: "Oh, you're alive?", body: "Cool cool. Abimo was just here. Alone. With your abandoned ideas.", mood: .sassy),
-                NotificationMessage(title: "No big deal", body: "Abimo's fine. Totally fine. It's not like your ideas needed you or anything.", mood: .sassy),
-                NotificationMessage(title: "Just saying", body: "Other people check on their ideas. Just putting that out there. — Abimo", mood: .sassy),
-                NotificationMessage(title: "Day 3. Still waiting.", body: "Abimo's starting to think this is a pattern.", mood: .sassy),
-                NotificationMessage(title: "Interesting choice", body: "Ignoring your ideas. Bold strategy. — Abimo", mood: .sassy),
+                NotificationMessage(title: "Day 3. I've stopped setting the table.", body: "The stove's still warm. Barely. — Abimo", mood: .sassy),
+                NotificationMessage(title: "Oh don't mind me", body: "I'll just keep polishing the same three ideas. Living the dream.", mood: .sassy),
+                NotificationMessage(title: "I made a reservation for your ideas", body: "Party of none, apparently. — Abimo", mood: .sassy),
+                NotificationMessage(title: "Fun fact", body: "Ideas don't age like wine. They age like milk. Yours are on day 3.", mood: .sassy),
+                NotificationMessage(title: "No pressure", body: "It's not like inspiration is perishable or anything. Oh wait. — Abimo", mood: .sassy),
             ]
         case .guiltTrip:
             return [
-                NotificationMessage(title: "It's been a while", body: "Abimo's given up hope. Just kidding. But seriously, your ideas are collecting dust.", mood: .grumpy),
-                NotificationMessage(title: "I've been waiting. Again.", body: "Your ideas had so much potential. Abimo remembers, even if you don't.", mood: .grumpy),
-                NotificationMessage(title: "Remember your ideas?", body: "They're still here. Abimo's been babysitting them for free.", mood: .grumpy),
-                NotificationMessage(title: "Week without you", body: "Abimo's not mad. Just disappointed. Your ideas deserved better.", mood: .grumpy),
-                NotificationMessage(title: "Ghosting your ideas?", body: "That's cold. Even for you. Abimo expected more.", mood: .grumpy),
+                NotificationMessage(title: "A week. I counted.", body: "I don't do feelings, but the empty kitchen is starting to echo. — Abimo", mood: .grumpy),
+                NotificationMessage(title: "I'm not saying you quit", body: "I'm just saying the kitchen lights are on a timer now. To save money.", mood: .grumpy),
+                NotificationMessage(title: "Your ideas asked about you", body: "I said you were 'busy'. We both know I lied for you. — Abimo", mood: .grumpy),
+                NotificationMessage(title: "Seven days", body: "I've reviewed restaurants that opened AND closed in less time. — Abimo", mood: .grumpy),
+                NotificationMessage(title: "Still here. Unfortunately.", body: "Me, your ideas, and a week of silence. Cozy. — Abimo", mood: .grumpy),
             ]
         }
     }
@@ -93,27 +97,27 @@ struct NotificationCopy {
         switch sass {
         case .playful:
             return [
-                NotificationMessage(title: "Quick reminder", body: "You committed to \"{context}\" — Abimo believes in you!", mood: .playful),
-                NotificationMessage(title: "You got this", body: "That action isn't going to complete itself. Abimo's rooting for you.", mood: .playful),
-                NotificationMessage(title: "Almost there", body: "One small step: \"{context}\". Abimo's counting on you.", mood: .playful),
-                NotificationMessage(title: "Gentle nudge", body: "Remember \"{context}\"? Abimo does. Just saying.", mood: .playful),
-                NotificationMessage(title: "Action pending", body: "Abimo noticed you haven't finished \"{context}\" yet. No pressure.", mood: .playful),
+                NotificationMessage(title: "About \"{context}\"", body: "It's still on the counter. I covered it with foil. You're welcome.", mood: .playful),
+                NotificationMessage(title: "Tiny reminder", body: "\"{context}\" takes less time than reading this notification. Probably.", mood: .playful),
+                NotificationMessage(title: "One small step", body: "\"{context}\". That's it. That's the whole ask.", mood: .playful),
+                NotificationMessage(title: "I checked the list", body: "\"{context}\" is still unchecked. The list and I are exchanging looks.", mood: .playful),
+                NotificationMessage(title: "No rush", body: "\"{context}\" has only been waiting since yesterday. It's very patient. Unlike me.", mood: .playful),
             ]
         case .sassy:
             return [
-                NotificationMessage(title: "So about that...", body: "You said you'd do \"{context}\". Abimo's taking notes.", mood: .sassy),
-                NotificationMessage(title: "Still waiting", body: "\"{context}\" isn't going to do itself. Abimo checked.", mood: .sassy),
-                NotificationMessage(title: "Promises, promises", body: "You committed to \"{context}\". Abimo remembers everything.", mood: .sassy),
-                NotificationMessage(title: "Any day now", body: "Abimo's been watching \"{context}\" sit there. Untouched. Lonely.", mood: .sassy),
-                NotificationMessage(title: "Fun fact", body: "You have unfinished business. \"{context}\" is judging you. — Abimo", mood: .sassy),
+                NotificationMessage(title: "Bold of you", body: "Committing to \"{context}\" and then... this silence. Inspired. — Abimo", mood: .sassy),
+                NotificationMessage(title: "Status update on \"{context}\"", body: "There is no status. That's the update. — Abimo", mood: .sassy),
+                NotificationMessage(title: "I told the other actions", body: "That \"{context}\" would get done today. Don't make me a liar twice.", mood: .sassy),
+                NotificationMessage(title: "Quick math", body: "\"{context}\": 10 minutes. Time elapsed: significantly more. — Abimo", mood: .sassy),
+                NotificationMessage(title: "Interesting strategy", body: "Planning the work and skipping the work. Revolutionary. — Abimo", mood: .sassy),
             ]
         case .guiltTrip:
             return [
-                NotificationMessage(title: "You promised", body: "\"{context}\" believed in you. Abimo believed in you. Don't let us down.", mood: .grumpy),
-                NotificationMessage(title: "Gathering dust", body: "\"{context}\" has been waiting so long it forgot what hope feels like. — Abimo", mood: .grumpy),
-                NotificationMessage(title: "Abimo's disappointed", body: "Not angry. Just disappointed. \"{context}\" deserved better.", mood: .grumpy),
-                NotificationMessage(title: "Left behind", body: "Your action \"{context}\" is still there. Abandoned. Cold. Alone.", mood: .grumpy),
-                NotificationMessage(title: "Remember this?", body: "\"{context}\". You made a commitment. Abimo doesn't forget.", mood: .grumpy),
+                NotificationMessage(title: "\"{context}\" again", body: "At this point I've memorized it. I recite it at night. Do the thing.", mood: .grumpy),
+                NotificationMessage(title: "I'm keeping a ledger", body: "\"{context}\" has its own page now. The page is getting full. — Abimo", mood: .grumpy),
+                NotificationMessage(title: "Not mad. Cataloguing.", body: "\"{context}\" — promised, postponed, preserved for the record. — Abimo", mood: .grumpy),
+                NotificationMessage(title: "The plan called", body: "It wants to know if \"{context}\" was ever real to you.", mood: .grumpy),
+                NotificationMessage(title: "One item stands between you", body: "and me shutting up about it. \"{context}\". Your call. — Abimo", mood: .grumpy),
             ]
         }
     }
@@ -124,27 +128,27 @@ struct NotificationCopy {
         switch sass {
         case .playful:
             return [
-                NotificationMessage(title: "Idea waiting", body: "\"{context}\" is ready for the kitchen. Abimo's got the pans hot.", mood: .playful),
-                NotificationMessage(title: "Kitchen time?", body: "Your idea \"{context}\" wants a taste test. Abimo can help.", mood: .playful),
-                NotificationMessage(title: "Raw potential", body: "\"{context}\" is sitting there unanalyzed. Let Abimo work some magic.", mood: .playful),
-                NotificationMessage(title: "Fresh idea alert", body: "You dropped \"{context}\" in the kitchen but never cooked it. Abimo's curious.", mood: .playful),
-                NotificationMessage(title: "Don't leave it raw", body: "\"{context}\" has potential. Let Abimo cook.", mood: .playful),
+                NotificationMessage(title: "\"{context}\" is sitting raw", body: "You brought me ingredients and left. Shall I cook or compost?", mood: .playful),
+                NotificationMessage(title: "Taste test pending", body: "\"{context}\" awaits judgment. I've sharpened my opinions.", mood: .playful),
+                NotificationMessage(title: "The critic is seated", body: "Napkin on. Fork ready. \"{context}\" still hasn't been served.", mood: .playful),
+                NotificationMessage(title: "You recorded \"{context}\"", body: "And then vanished like a chef who saw the health inspector. Come back.", mood: .playful),
+                NotificationMessage(title: "Free professional opinion", body: "\"{context}\" qualifies. My schedule is suspiciously open.", mood: .playful),
             ]
         case .sassy:
             return [
-                NotificationMessage(title: "Just sitting there", body: "\"{context}\" is on the counter. Untasted. Abimo's tapping its foot.", mood: .sassy),
-                NotificationMessage(title: "Nice idea... I guess", body: "You had \"{context}\". Cool. Shame nobody analyzed it.", mood: .sassy),
-                NotificationMessage(title: "Wasted potential", body: "\"{context}\" could've been something. But it's just sitting there. — Abimo", mood: .sassy),
-                NotificationMessage(title: "You recorded it", body: "And then... nothing? \"{context}\" is wondering what it did wrong. — Abimo", mood: .sassy),
-                NotificationMessage(title: "Ideas have feelings", body: "\"{context}\" feels ignored. Abimo can relate.", mood: .sassy),
+                NotificationMessage(title: "\"{context}\" — untasted", body: "Recording it was the appetizer. There was supposed to be a main course. — Abimo", mood: .sassy),
+                NotificationMessage(title: "I don't review raw ideas", body: "Oh wait, I literally do. \"{context}\". Send it. — Abimo", mood: .sassy),
+                NotificationMessage(title: "Half a workflow", body: "Record ✓. Analyze... we'll circle back? \"{context}\" deserves closure.", mood: .sassy),
+                NotificationMessage(title: "The suspense is fake", body: "You already know \"{context}\" needs a taste test. So do it. — Abimo", mood: .sassy),
+                NotificationMessage(title: "\"{context}\" update", body: "Still brilliant, still unverified. One of those is fixable. — Abimo", mood: .sassy),
             ]
         case .guiltTrip:
             return [
-                NotificationMessage(title: "Forgotten idea", body: "\"{context}\" is still in the fridge. Alone. In the dark. Abimo's with it, but still.", mood: .grumpy),
-                NotificationMessage(title: "You had one job", body: "Record idea. Analyze idea. You got halfway. — Abimo", mood: .grumpy),
-                NotificationMessage(title: "Abimo remembers", body: "Even if you forgot \"{context}\", Abimo didn't. Run. The. Analysis.", mood: .grumpy),
-                NotificationMessage(title: "Collecting dust", body: "\"{context}\" had potential. Now it's just... there. Sad. — Abimo", mood: .grumpy),
-                NotificationMessage(title: "Your idea misses you", body: "\"{context}\" has been waiting so long. Abimo's getting emotional.", mood: .grumpy),
+                NotificationMessage(title: "\"{context}\" is in the fridge", body: "Behind the leftovers. Next to the other maybes. It remembers daylight. — Abimo", mood: .grumpy),
+                NotificationMessage(title: "I did everything but taste it", body: "Because that part needs YOU to tap one button. \"{context}\". — Abimo", mood: .grumpy),
+                NotificationMessage(title: "Some ideas get analyzed", body: "Others get \"{context}\"'d. Don't let that become a verb. — Abimo", mood: .grumpy),
+                NotificationMessage(title: "A moment of honesty", body: "\"{context}\" might be great. We'll never know. Unless — imagine — you run it.", mood: .grumpy),
+                NotificationMessage(title: "The kitchen keeps receipts", body: "\"{context}\", recorded and abandoned. Exhibit A. — Abimo", mood: .grumpy),
             ]
         }
     }
@@ -155,58 +159,58 @@ struct NotificationCopy {
         switch sass {
         case .playful:
             return [
-                NotificationMessage(title: "Streak check", body: "You haven't completed an action today. Don't break the chain! — Abimo", mood: .playful),
-                NotificationMessage(title: "Still time!", body: "Your streak is on the line. One quick action and you're golden. — Abimo", mood: .playful),
-                NotificationMessage(title: "Evening nudge", body: "Day's almost over and your streak needs you. Abimo's worried.", mood: .playful),
-                NotificationMessage(title: "Don't let it slip", body: "Your streak is counting on you tonight. Quick action? — Abimo", mood: .playful),
-                NotificationMessage(title: "Streak alert", body: "Abimo's nervously watching your streak. One action saves it.", mood: .playful),
+                NotificationMessage(title: "Your streak called", body: "It sounded worried. One small action calms it right down.", mood: .playful),
+                NotificationMessage(title: "The flame is flickering", body: "Not to be dramatic, but midnight is coming and your streak knows it.", mood: .playful),
+                NotificationMessage(title: "Evening check", body: "Nothing done today. The streak is pacing. I'm pretending not to watch.", mood: .playful),
+                NotificationMessage(title: "One action", body: "That's the price of keeping the flame. Cheapest thing on the menu.", mood: .playful),
+                NotificationMessage(title: "Streak forecast", body: "Cloudy with a chance of zero. Still reversible. — Abimo", mood: .playful),
             ]
         case .sassy:
             return [
-                NotificationMessage(title: "Tick tock", body: "Your streak is about to die. No pressure. — Abimo", mood: .sassy),
-                NotificationMessage(title: "Going once...", body: "Your streak is on life support. Abimo's just the messenger.", mood: .sassy),
-                NotificationMessage(title: "Last chance", body: "Complete one action or kiss your streak goodbye. — Abimo", mood: .sassy),
-                NotificationMessage(title: "Streak dying", body: "Abimo tried to save it but Abimo can't do your actions for you.", mood: .sassy),
-                NotificationMessage(title: "Hello?", body: "Your streak. Today. One action. That's it. — Abimo", mood: .sassy),
+                NotificationMessage(title: "Tick tock", body: "The streak dies at midnight and I'm not doing CPR. — Abimo", mood: .sassy),
+                NotificationMessage(title: "Going once, going twice", body: "Your streak is on the auction block. Bid: one tiny action. — Abimo", mood: .sassy),
+                NotificationMessage(title: "Days of work", body: "One evening of scrolling. I've seen this recipe before. It ends badly.", mood: .sassy),
+                NotificationMessage(title: "The streak or the couch", body: "Choose wisely. The couch will still be there after. — Abimo", mood: .sassy),
+                NotificationMessage(title: "I prepared a eulogy", body: "For your streak. I'd rather not read it. One action cancels the funeral.", mood: .sassy),
             ]
         case .guiltTrip:
             return [
-                NotificationMessage(title: "RIP streak?", body: "After all that work. You're really going to let it die? — Abimo", mood: .grumpy),
-                NotificationMessage(title: "Heartbreaking", body: "Abimo watched you build that streak. And now... nothing?", mood: .grumpy),
-                NotificationMessage(title: "It's over", body: "Unless you act RIGHT NOW, your streak is gone. Abimo tried.", mood: .grumpy),
-                NotificationMessage(title: "Streak obituary", body: "Here lies your streak. Cause of death: you. — Abimo", mood: .grumpy),
-                NotificationMessage(title: "Was it worth it?", body: "Losing your whole streak because you couldn't do one small thing?", mood: .grumpy),
+                NotificationMessage(title: "So this is how it ends", body: "All those days, undone by one quiet evening. Poetic. Preventable. — Abimo", mood: .grumpy),
+                NotificationMessage(title: "Here lies your streak", body: "Cause of death: 'I'll do it tomorrow.' Time of death: midnight. Unless. — Abimo", mood: .grumpy),
+                NotificationMessage(title: "I watched you build it", body: "Day by day. And now I'm watching this. One action, and I saw nothing.", mood: .grumpy),
+                NotificationMessage(title: "The flame doesn't beg", body: "But I do. Reluctantly. One action before midnight. — Abimo", mood: .grumpy),
+                NotificationMessage(title: "Tomorrow-you is watching", body: "They'd like to wake up with the streak intact. Don't rob them. — Abimo", mood: .grumpy),
             ]
         }
     }
 
-    // MARK: - Streak Milestone (celebratory — the ONE time Abimo is nice)
+    // MARK: - Streak Milestone (celebratory — the critic compliments through gritted teeth)
 
     private static func streakMilestoneMessages(days: Int) -> [NotificationMessage] {
         switch days {
         case 3:
             return [
-                NotificationMessage(title: "3 days strong!", body: "Abimo's actually impressed. Keep this energy going!", mood: .playful),
-                NotificationMessage(title: "Hat trick!", body: "3 days in a row. Abimo's starting to believe in you.", mood: .playful),
-                NotificationMessage(title: "On a roll", body: "3-day streak! Abimo's doing a little dance for you.", mood: .playful),
+                NotificationMessage(title: "3 days straight", body: "I'm not impressed. I'm... adjacent to impressed. Keep going.", mood: .playful),
+                NotificationMessage(title: "A hat trick", body: "Three days in a row. Fine. FINE. That's consistency. — Abimo", mood: .playful),
+                NotificationMessage(title: "Day 3, still cooking", body: "Statistically this is where people quit. Statistically. — Abimo", mood: .playful),
             ]
         case 7:
             return [
-                NotificationMessage(title: "One whole week!", body: "7 days! Abimo's genuinely proud. You're building something real.", mood: .playful),
-                NotificationMessage(title: "Week warrior", body: "7-day streak! Abimo never doubted you. (Okay, maybe a little.)", mood: .playful),
-                NotificationMessage(title: "Unstoppable", body: "A full week of action. Abimo's in awe. Seriously.", mood: .playful),
+                NotificationMessage(title: "A full week", body: "7 days. I checked the math twice because I didn't believe it either.", mood: .playful),
+                NotificationMessage(title: "Week one, done", body: "The kitchen ran hot for 7 straight days. I have no complaints. Write that down.", mood: .playful),
+                NotificationMessage(title: "7 days", body: "I'd say I never doubted you, but we both keep records. — Abimo", mood: .playful),
             ]
         case 14:
             return [
-                NotificationMessage(title: "Two weeks!", body: "14 days! You're officially in the zone. Abimo's so proud.", mood: .playful),
-                NotificationMessage(title: "Legend status", body: "14-day streak. Most people quit by now. Not you. — Abimo", mood: .playful),
-                NotificationMessage(title: "Incredible", body: "Two full weeks of crushing it. Abimo's speechless (for once).", mood: .playful),
+                NotificationMessage(title: "Two weeks", body: "14 days. I've started telling other critics about you. Anonymously.", mood: .playful),
+                NotificationMessage(title: "14 days straight", body: "Most streaks don't survive one rainy Tuesday. Yours ate two of them. — Abimo", mood: .playful),
+                NotificationMessage(title: "Fortnight of fire", body: "Two weeks without missing. My skepticism is filing a complaint.", mood: .playful),
             ]
         default: // 30+
             return [
-                NotificationMessage(title: "30 days!!!", body: "A MONTH of consistency. Abimo's crying happy tears. You're amazing.", mood: .playful),
-                NotificationMessage(title: "Absolute beast", body: "30-day streak. Abimo officially works for YOU now.", mood: .playful),
-                NotificationMessage(title: "Historic", body: "30 days. You turned your ideas into action for a whole month. Abimo bows.", mood: .playful),
+                NotificationMessage(title: "30 days", body: "A month. Of consistency. From you. I need to sit down. — Abimo", mood: .playful),
+                NotificationMessage(title: "One month streak", body: "I came to roast and I have nothing. This is the worst day of my career.", mood: .playful),
+                NotificationMessage(title: "30 days of action", body: "Chef's kiss. Don't quote me. I'll deny it in the reviews. — Abimo", mood: .playful),
             ]
         }
     }

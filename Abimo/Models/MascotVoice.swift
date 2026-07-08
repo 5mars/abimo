@@ -15,11 +15,16 @@ enum MascotMomentTrigger: Equatable {
     case actionCompleted(count: Int)
     case streakExtended(days: Int)
     case planComplete
+    // Popup triggers — the ONLY ones that go through MascotDirector.
+    // Popups are rare by design: max one per session, each with an action.
+    case firstWelcome                    // first session ever after sign-in
     case returnedAfterAbsence(days: Int)
+    case streakAtRisk(days: Int)         // streak from yesterday, nothing today
+    // Static line sources (consumed via .line only, never popups)
     case emptyKitchen
-    case plansIdle
-    case randomJab
-    case recordPrompt   // static line beside the record button, not a popup
+    case recordPrompt
+    case launching
+    case ideaCapReached
 
     /// Stable key for per-trigger throttle timestamps.
     var throttleKey: String {
@@ -28,22 +33,29 @@ enum MascotMomentTrigger: Equatable {
         case .actionCompleted:      return "actionCompleted"
         case .streakExtended:       return "streakExtended"
         case .planComplete:         return "planComplete"
+        case .firstWelcome:         return "firstWelcome"
         case .returnedAfterAbsence: return "returnedAfterAbsence"
+        case .streakAtRisk:         return "streakAtRisk"
         case .emptyKitchen:         return "emptyKitchen"
-        case .plansIdle:            return "plansIdle"
-        case .randomJab:            return "randomJab"
         case .recordPrompt:         return "recordPrompt"
+        case .launching:            return "launching"
+        case .ideaCapReached:       return "ideaCapReached"
         }
     }
+}
 
-    /// Ambient moments are unprompted commentary and get throttled;
-    /// event moments respond to something the user just did and always show.
-    var isAmbient: Bool {
-        switch self {
-        case .emptyKitchen, .plansIdle, .randomJab: return true
-        default: return false
-        }
-    }
+/// Where a mascot popup's action button routes. Lives in the Models layer —
+/// the popup host maps intents to tabs/sheets, never the other way around.
+enum MascotActionIntent: Equatable {
+    case goRecord
+    case openPlans
+    case showPaywall
+    case openNote(UUID)   // plumbed for future triggers; no producer yet
+}
+
+struct MascotAction: Equatable {
+    let label: String
+    let intent: MascotActionIntent
 }
 
 struct MascotMoment: Identifiable, Equatable {
@@ -51,7 +63,7 @@ struct MascotMoment: Identifiable, Equatable {
     let trigger: MascotMomentTrigger
     let line: String
     let mood: MascotMood
-    var duration: TimeInterval = 4.5
+    var action: MascotAction? = nil
 }
 
 enum MascotVoice {
@@ -62,12 +74,31 @@ enum MascotVoice {
         switch trigger {
         case .actionCompleted(let count):
             line = line.replacingOccurrences(of: "{count}", with: "\(count)")
-        case .streakExtended(let days), .returnedAfterAbsence(let days):
+        case .streakExtended(let days), .returnedAfterAbsence(let days),
+             .streakAtRisk(let days):
             line = line.replacingOccurrences(of: "{days}", with: "\(days)")
         default:
             break
         }
-        return MascotMoment(trigger: trigger, line: line, mood: mood)
+        var moment = MascotMoment(trigger: trigger, line: line, mood: mood)
+        moment.action = defaultAction(for: trigger)
+        return moment
+    }
+
+    /// Every popup trigger carries an action — that's the point of a popup.
+    /// Static line consumers only read `.line`, so nothing else gets one.
+    private static func defaultAction(for trigger: MascotMomentTrigger) -> MascotAction? {
+        switch trigger {
+        case .firstWelcome:
+            return MascotAction(label: "Record an idea", intent: .goRecord)
+        case .returnedAfterAbsence:
+            return MascotAction(label: "Drop an idea", intent: .goRecord)
+        case .streakAtRisk:
+            return MascotAction(label: "Save the streak", intent: .openPlans)
+        case .scoreRevealed, .actionCompleted, .streakExtended, .planComplete,
+             .emptyKitchen, .recordPrompt, .launching, .ideaCapReached:
+            return nil
+        }
     }
 
     // MARK: - Variant pools
@@ -143,18 +174,18 @@ enum MascotVoice {
                 "Record something. I can't roast air.",
             ], .neutral)
 
-        case .plansIdle:
+        case .firstWelcome:
             return ([
-                "That plan won't execute itself. Believe me, I checked.",
-                "Step one is still step one. It's been days.",
-            ], .sassy)
+                "New in my kitchen? Bring me an idea. I'll tell you if it's edible.",
+                "Welcome. I judge ideas for a living. Yours are safe-ish with me.",
+                "First day. Low expectations. Surprise me with an idea.",
+            ], .playful)
 
-        case .randomJab:
+        case .streakAtRisk:
             return ([
-                "Just checking in. Judging, mostly.",
-                "No notes today. Suspicious.",
-                "I critique because I care. Mostly critique.",
-                "Still here. Still skeptical.",
+                "{days} days of momentum, about to expire at midnight. One tiny action.",
+                "Your {days}-day streak is on the counter getting cold. Do something.",
+                "I don't do sentimental, but losing a {days}-day streak? Even I'd flinch.",
             ], .sassy)
 
         case .recordPrompt:
@@ -164,6 +195,23 @@ enum MascotVoice {
                 "The kitchen's open. What are we making?",
                 "One tap. One idea. Go.",
             ], .neutral)
+
+        case .launching:
+            return ([
+                "Warming up the judgment.",
+                "Preheating opinions to 450°.",
+                "Reviewing your life choices. One sec.",
+                "Sharpening the red pen.",
+                "Polishing the tasting spoon.",
+            ], .neutral)
+
+        case .ideaCapReached:
+            return ([
+                "Three ideas on the stove already. I'm one critic, not a brigade.",
+                "Free menu's full. Clear a plate or buy the whole kitchen.",
+                "I only have two hands and three of your ideas.",
+                "The counter's full. Toss a dish or go pro.",
+            ], .sassy)
         }
     }
 }

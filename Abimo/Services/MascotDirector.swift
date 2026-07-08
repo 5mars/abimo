@@ -2,9 +2,10 @@
 //  MascotDirector.swift
 //  Abimo
 //
-//  Decides when the mascot gets to speak. Event moments (reactions to
-//  something the user did) always show; ambient moments (unprompted jabs)
-//  are throttled hard so the critic stays funny instead of exhausting.
+//  Decides when the mascot gets to interrupt. Popups are Duolingo-style
+//  center-screen moments that prompt an action — never random commentary.
+//  Hard rules: max ONE popup per app session, each trigger has its own
+//  cooldown, and a popup stays until the user acts or dismisses it.
 //
 
 import Foundation
@@ -16,49 +17,46 @@ final class MascotDirector: ObservableObject {
 
     @Published private(set) var currentMoment: MascotMoment?
 
-    /// Hard cap on unprompted commentary per app session.
-    private let ambientSessionCap = 2
-    private var sessionAmbientCount = 0
-    private var dismissTask: Task<Void, Never>?
+    /// Hard cap: the mascot interrupts at most once per app session.
+    private let popupSessionCap = 1
+    private var sessionPopupCount = 0
     private let defaults = UserDefaults.standard
+    private let supabase = SupabaseService.shared
 
-    /// Minimum gap between showings of the same ambient trigger.
+    /// Minimum gap between showings of the same trigger.
     private func minInterval(for trigger: MascotMomentTrigger) -> TimeInterval {
         switch trigger {
-        case .randomJab:                  return 4 * 3600
-        case .emptyKitchen, .plansIdle:   return 24 * 3600
-        default:                          return 0
+        case .streakAtRisk: return 20 * 3600   // once a day, evening-ish
+        default:            return 0
         }
     }
 
     private init() {}
 
     func fire(_ trigger: MascotMomentTrigger) {
-        if trigger.isAmbient {
-            guard passesAmbientThrottle(trigger) else { return }
-            // Don't talk over a celebration or an existing moment
-            guard currentMoment == nil else { return }
-            sessionAmbientCount += 1
-            defaults.set(Date().timeIntervalSince1970, forKey: throttleDefaultsKey(trigger))
-        }
+        guard sessionPopupCount < popupSessionCap else { return }
+        guard currentMoment == nil else { return }
+        guard passesThrottle(trigger) else { return }
 
-        // Event moments replace whatever is showing (ambient or older event)
-        show(MascotVoice.moment(for: trigger))
-    }
-
-    /// Roll the ~20% random-jab dice for a qualifying visit (tab switch).
-    func maybeJab() {
-        guard Double.random(in: 0..<1) < 0.2 else { return }
-        fire(.randomJab)
+        sessionPopupCount += 1
+        defaults.set(Date().timeIntervalSince1970, forKey: throttleDefaultsKey(trigger))
+        currentMoment = MascotVoice.moment(for: trigger)
     }
 
     func dismiss() {
-        dismissTask?.cancel()
-        dismissTask = nil
         currentMoment = nil
     }
 
-    /// Call on app foreground: fires the welcome-back jab after a real gap.
+    /// Call once when the authenticated main screen first appears:
+    /// greets a brand-new user with their first prompt to record.
+    func fireFirstWelcomeIfNeeded() {
+        let key = "mascot_first_welcome_shown"
+        guard !defaults.bool(forKey: key) else { return }
+        defaults.set(true, forKey: key)
+        fire(.firstWelcome)
+    }
+
+    /// Call on app foreground: fires the welcome-back popup after a real gap.
     func appBecameActive() {
         let key = "last_active_date"
         let now = Date()
@@ -81,28 +79,39 @@ final class MascotDirector: ObservableObject {
         fire(.returnedAfterAbsence(days: days))
     }
 
+    /// Evening check: the user carried a streak into today but hasn't
+    /// completed an action yet. Fetches completions itself so it can run
+    /// from app open without any tab having loaded plan data.
+    func evaluateStreakAtRisk() async {
+        guard Calendar.current.component(.hour, from: Date()) >= 15 else { return }
+        // Cheap gates first — skip the network entirely when a popup
+        // already showed this session or the daily cooldown hasn't passed.
+        guard sessionPopupCount < popupSessionCap, currentMoment == nil,
+              passesThrottle(.streakAtRisk(days: 0)) else { return }
+
+        guard let userId = try? await supabase.getCurrentUser()?.id,
+              let allPlans = try? await supabase.fetchAllActionPlans(userId: userId) else { return }
+
+        var dates: [Date] = []
+        for plan in allPlans {
+            let actions = (try? await supabase.fetchMicroActions(actionPlanId: plan.id)) ?? []
+            dates.append(contentsOf: actions.compactMap(\.completedAt))
+        }
+
+        let atRisk = ActionPlanViewModel.streakEndingYesterday(completionDates: dates)
+        guard atRisk >= 2 else { return }
+        fire(.streakAtRisk(days: atRisk))
+    }
+
     private var launchGate = Set<String>()
 
     // MARK: - Internals
-
-    private func show(_ moment: MascotMoment) {
-        dismissTask?.cancel()
-        currentMoment = moment
-        dismissTask = Task { [weak self] in
-            try? await Task.sleep(for: .seconds(moment.duration))
-            guard !Task.isCancelled else { return }
-            if self?.currentMoment?.id == moment.id {
-                self?.currentMoment = nil
-            }
-        }
-    }
 
     private func throttleDefaultsKey(_ trigger: MascotMomentTrigger) -> String {
         "mascot_last_shown_\(trigger.throttleKey)"
     }
 
-    private func passesAmbientThrottle(_ trigger: MascotMomentTrigger) -> Bool {
-        guard sessionAmbientCount < ambientSessionCap else { return false }
+    private func passesThrottle(_ trigger: MascotMomentTrigger) -> Bool {
         let last = defaults.double(forKey: throttleDefaultsKey(trigger))
         let elapsed = Date().timeIntervalSince1970 - last
         return elapsed >= minInterval(for: trigger)

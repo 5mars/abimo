@@ -18,7 +18,7 @@ class NotificationScheduler {
 
     func onBackground() {
         scheduleInactivityCycle()
-        scheduleStreakAtRisk()
+        Task { await scheduleStreakAtRisk() }
     }
 
     func onForeground() {
@@ -57,10 +57,22 @@ class NotificationScheduler {
 
     // MARK: - Streak At Risk
 
-    private func scheduleStreakAtRisk() {
+    /// Only fires when there is an actual streak on the line — a user with
+    /// no streak (or one already extended today) hears nothing at 8pm.
+    private func scheduleStreakAtRisk() async {
         guard defaults.bool(forKey: "notif_streak") else { return }
         let hour = Calendar.current.component(.hour, from: Date())
         guard hour < 20 else { return }
+
+        let supabase = SupabaseService.shared
+        guard let userId = try? await supabase.getCurrentUser()?.id,
+              let allPlans = try? await supabase.fetchAllActionPlans(userId: userId) else { return }
+        var dates: [Date] = []
+        for plan in allPlans {
+            let actions = (try? await supabase.fetchMicroActions(actionPlanId: plan.id)) ?? []
+            dates.append(contentsOf: actions.compactMap(\.completedAt))
+        }
+        guard ActionPlanViewModel.streakEndingYesterday(completionDates: dates) >= 2 else { return }
 
         let msg = NotificationCopy.message(for: .streakAtRisk, sass: .playful)
         service.scheduleNotificationAtHour(

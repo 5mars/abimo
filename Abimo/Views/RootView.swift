@@ -9,12 +9,17 @@ struct RootView: View {
     @StateObject private var authViewModel = AuthViewModel()
     @StateObject private var coordinator = NavigationCoordinator()
     @AppStorage("hasSeenNotificationPermission") private var hasSeenPermission = false
+    // Once-per-process: the fullscreen intro never replays (sign-out included).
+    // In-app loading after launch is handled by each screen's own spinners.
+    @State private var introFinished = false
 
     var body: some View {
         ZStack {
-            if authViewModel.isLoading {
-                MascotLoadingView(mode: .fullscreen, text: "abimo")
-                    .transition(.opacity)
+            if !introFinished {
+                LaunchIntroView(isResolved: !authViewModel.isLoading) {
+                    introFinished = true
+                }
+                .transition(.opacity)
             } else if authViewModel.isAuthenticated && !hasSeenPermission {
                 NotificationPermissionView {
                     hasSeenPermission = true
@@ -31,7 +36,7 @@ struct RootView: View {
                     .transition(.opacity)
             }
         }
-        .animation(.easeInOut(duration: 0.4), value: authViewModel.isLoading)
+        .animation(.easeInOut(duration: 0.4), value: introFinished)
         .animation(.easeInOut(duration: 0.4), value: authViewModel.isAuthenticated)
         .animation(.easeInOut(duration: 0.4), value: hasSeenPermission)
     }
@@ -43,6 +48,7 @@ struct MainContentView: View {
     @EnvironmentObject var authViewModel: AuthViewModel
     @EnvironmentObject var coordinator: NavigationCoordinator
     @StateObject private var mascot = MascotDirector.shared
+    @State private var showMascotPaywall = false
 
     var body: some View {
         // Content and tab bar are stacked — pages physically END at the top
@@ -65,22 +71,41 @@ struct MainContentView: View {
                     .allowsHitTesting(coordinator.selectedTab == .profile)
             }
             .animation(nil, value: coordinator.selectedTab) // Disable animation on content — prevents flash
-            .overlay(alignment: .bottom) {
-                // Global mascot popup — floats just above the tab bar
-                if let moment = mascot.currentMoment {
-                    MascotSpeechBubble(moment: moment) { mascot.dismiss() }
-                        .padding(.horizontal, 16)
-                        .padding(.bottom, 8)
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
-                }
-            }
-            .animation(.spring(response: 0.4, dampingFraction: 0.72), value: mascot.currentMoment)
-
             CustomTabBar(selectedTab: $coordinator.selectedTab)
         }
-        .onChange(of: coordinator.selectedTab) { _, _ in
-            // Kept-alive tabs never refire onAppear — jab rolls live here
-            mascot.maybeJab()
+        .overlay {
+            // Global mascot moment — a rare center-screen popup (max 1/session)
+            if let moment = mascot.currentMoment {
+                MascotCenterPopup(
+                    moment: moment,
+                    onAction: { handleMascotIntent($0) },
+                    onDismiss: { mascot.dismiss() }
+                )
+                .transition(.opacity)
+            }
+        }
+        .animation(.easeOut(duration: 0.2), value: mascot.currentMoment)
+        .task {
+            mascot.fireFirstWelcomeIfNeeded()
+            await mascot.evaluateStreakAtRisk()
+        }
+        .sheet(isPresented: $showMascotPaywall) {
+            PaywallView(context: .ideaCap)
+        }
+    }
+
+    private func handleMascotIntent(_ intent: MascotActionIntent) {
+        mascot.dismiss()
+        switch intent {
+        case .goRecord:
+            coordinator.selectedTab = .record
+        case .openPlans:
+            coordinator.selectedTab = .actions
+        case .showPaywall:
+            showMascotPaywall = true
+        case .openNote:
+            // No trigger produces this yet; land on the Kitchen as a safe default.
+            coordinator.selectedTab = .ideas
         }
     }
 }

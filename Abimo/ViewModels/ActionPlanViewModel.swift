@@ -226,6 +226,26 @@ class ActionPlanViewModel: ObservableObject {
         return (streak, completionsToday)
     }
 
+    /// The streak a user is about to lose: consecutive days ending YESTERDAY,
+    /// with nothing completed today yet. Returns 0 if today is already covered
+    /// (nothing at risk) or there was no run ending yesterday.
+    static func streakEndingYesterday(completionDates: [Date], calendar: Calendar = .current, now: Date = Date()) -> Int {
+        let today = calendar.startOfDay(for: now)
+        let days = Set(completionDates.map { calendar.startOfDay(for: $0) })
+        guard !days.contains(today),
+              let yesterday = calendar.date(byAdding: .day, value: -1, to: today),
+              days.contains(yesterday) else { return 0 }
+
+        var streak = 0
+        var check = yesterday
+        while days.contains(check) {
+            streak += 1
+            guard let prev = calendar.date(byAdding: .day, value: -1, to: check) else { break }
+            check = prev
+        }
+        return streak
+    }
+
     /// Fires the streak-extended flame banner (and the dormant streak-milestone
     /// notification) on the first completion of the day. Queued behind whatever
     /// celebration is already on screen; planComplete owns the screen alone.
