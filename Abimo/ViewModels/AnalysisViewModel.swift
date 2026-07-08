@@ -34,7 +34,16 @@ class AnalysisViewModel: ObservableObject {
         }
     }
 
-    func generateAnalysis(transcription: Transcription, noteTitle: String? = nil) async {
+    /// Regenerates (or pivots) the analysis. This path always REPLACES any
+    /// existing analysis for the transcription — retrying or re-tasting must
+    /// never leave duplicate rows behind.
+    func generateAnalysis(
+        transcription: Transcription,
+        noteTitle: String? = nil,
+        pivot: IdeaVariant? = nil
+    ) async {
+        let previous = analysis
+        analysis = nil          // show the cooking state while the critic re-judges
         isLoading = true
         errorMessage = nil
         defer { isLoading = false }
@@ -42,15 +51,22 @@ class AnalysisViewModel: ObservableObject {
         do {
             // Best-effort web research first — grounds the manual regenerate
             // path the same way the pipeline does; nil just means ungrounded.
-            let research = await aiService.researchMarket(transcription.text)
+            var researchText = transcription.text
+            if let pivot {
+                researchText += "\nPivot: \(pivot.title) — \(pivot.pitch)"
+            }
+            let research = await aiService.researchMarket(researchText)
             analysis = try await aiService.generateAndSaveSWOTAnalysis(
                 transcriptionId: transcription.id,
                 transcriptionText: transcription.text,
                 noteId: transcription.noteId,
                 currentNoteTitle: noteTitle,
-                research: research
+                research: research,
+                pivot: pivot,
+                replaceExisting: true
             )
         } catch {
+            analysis = previous   // keep showing the old taste test on failure
             errorMessage = "Failed to generate analysis: \(error.localizedDescription)"
         }
     }

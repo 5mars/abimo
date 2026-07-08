@@ -49,6 +49,20 @@ struct MarketComparable: Codable, Hashable, Identifiable {
     let pricing: String
     let status: String
     let url: String?
+    // Idea-aware comparison, added at analysis time (nil on older rows)
+    let overlap: String?   // what it shares with the founder's idea
+    let edge: String?      // how the founder's idea differs / could win
+
+    init(name: String, what: String, pricing: String, status: String,
+         url: String?, overlap: String? = nil, edge: String? = nil) {
+        self.name = name
+        self.what = what
+        self.pricing = pricing
+        self.status = status
+        self.url = url
+        self.overlap = overlap
+        self.edge = edge
+    }
 }
 
 struct MarketInsights: Codable {
@@ -87,6 +101,18 @@ struct IdeaVariant: Codable, Hashable, Identifiable {
     let title: String
     let pitch: String
     let differentiator: String
+    // vs-the-original comparison (nil on rows from before the polish round)
+    let keeps: String?     // what stays from the original idea
+    let changes: String?   // what's different or added
+
+    init(title: String, pitch: String, differentiator: String,
+         keeps: String? = nil, changes: String? = nil) {
+        self.title = title
+        self.pitch = pitch
+        self.differentiator = differentiator
+        self.keeps = keeps
+        self.changes = changes
+    }
 }
 
 // MARK: - SWOTAnalysis

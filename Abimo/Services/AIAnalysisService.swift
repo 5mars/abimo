@@ -59,9 +59,14 @@ class AIAnalysisService: ObservableObject {
     private struct AnalyzeRequest: Encodable {
         let transcription: String
         let research: ResearchDigest?
+        let pivot: IdeaVariant?
     }
 
-    func analyzeTranscription(_ text: String, research: ResearchDigest? = nil) async throws -> SWOTAnalysisResponse {
+    func analyzeTranscription(
+        _ text: String,
+        research: ResearchDigest? = nil,
+        pivot: IdeaVariant? = nil
+    ) async throws -> SWOTAnalysisResponse {
         isAnalyzing = true
         errorMessage = nil
         defer { isAnalyzing = false }
@@ -70,21 +75,34 @@ class AIAnalysisService: ObservableObject {
             .invoke(
                 "analyze-swot",
                 options: FunctionInvokeOptions(
-                    body: AnalyzeRequest(transcription: text, research: research)
+                    body: AnalyzeRequest(transcription: text, research: research, pivot: pivot)
                 )
             )
 
         return response
     }
 
+    /// - Parameters:
+    ///   - pivot: re-judge the idea as this remix (the transcript becomes
+    ///     background context). A pivot is a deliberate rename, so the note
+    ///     title always updates to the new ideaTitle.
+    ///   - replaceExisting: delete any prior analysis (and its action plan)
+    ///     for this transcription before saving — keeps one analysis per
+    ///     transcription instead of accumulating duplicates.
     func generateAndSaveSWOTAnalysis(
         transcriptionId: UUID,
         transcriptionText: String,
         noteId: UUID? = nil,
         currentNoteTitle: String? = nil,
-        research: ResearchDigest? = nil
+        research: ResearchDigest? = nil,
+        pivot: IdeaVariant? = nil,
+        replaceExisting: Bool = false
     ) async throws -> SWOTAnalysis {
-        let response = try await analyzeTranscription(transcriptionText, research: research)
+        let response = try await analyzeTranscription(transcriptionText, research: research, pivot: pivot)
+
+        if replaceExisting {
+            try await supabase.deleteAnalysisArtifacts(transcriptionId: transcriptionId)
+        }
 
         let analysis = SWOTAnalysis(
             id: UUID(),
@@ -111,13 +129,16 @@ class AIAnalysisService: ObservableObject {
         try await supabase.createSWOTAnalysis(analysis)
 
         // Upgrade an auto-generated recording title to the AI's idea name.
-        // User-chosen titles (no auto prefix) are never touched; a failed
-        // title update shouldn't fail the analysis.
+        // User-chosen titles are never touched — EXCEPT on a pivot, which is
+        // a deliberate rename to the remix. A failed title update shouldn't
+        // fail the analysis.
         if let noteId,
            let ideaTitle = response.ideaTitle?.trimmingCharacters(in: .whitespaces),
-           !ideaTitle.isEmpty,
-           let currentNoteTitle, VoiceNote.isAutoTitle(currentNoteTitle) {
-            try? await supabase.updateVoiceNoteTitle(id: noteId, title: ideaTitle)
+           !ideaTitle.isEmpty {
+            let autoTitled = currentNoteTitle.map(VoiceNote.isAutoTitle) ?? false
+            if pivot != nil || autoTitled {
+                try? await supabase.updateVoiceNoteTitle(id: noteId, title: ideaTitle)
+            }
         }
 
         return analysis

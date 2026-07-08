@@ -261,10 +261,50 @@ class SupabaseService {
             .from("swot_analyses")
             .select()
             .eq("transcription_id", value: transcriptionId)
+            .order("created_at", ascending: false)
             .execute()
             .value
 
         return response.first
+    }
+
+    /// Deletes every analysis for a transcription plus its dependent action
+    /// plans and micro-actions. Client-side, child-first — no cascade
+    /// assumption. Used before re-generating so a transcription never
+    /// accumulates duplicate analyses.
+    func deleteAnalysisArtifacts(transcriptionId: UUID) async throws {
+        let analyses: [SWOTAnalysis] = try await client
+            .from("swot_analyses")
+            .select()
+            .eq("transcription_id", value: transcriptionId)
+            .execute()
+            .value
+
+        for analysis in analyses {
+            let plans: [ActionPlan] = try await client
+                .from("action_plans")
+                .select()
+                .eq("analysis_id", value: analysis.id)
+                .execute()
+                .value
+            for plan in plans {
+                try await client
+                    .from("micro_actions")
+                    .delete()
+                    .eq("action_plan_id", value: plan.id)
+                    .execute()
+                try await client
+                    .from("action_plans")
+                    .delete()
+                    .eq("id", value: plan.id)
+                    .execute()
+            }
+            try await client
+                .from("swot_analyses")
+                .delete()
+                .eq("id", value: analysis.id)
+                .execute()
+        }
     }
 
     // MARK: - Action Plans

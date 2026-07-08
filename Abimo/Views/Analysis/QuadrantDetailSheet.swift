@@ -11,6 +11,8 @@ import SwiftUI
 
 struct QuadrantDetailSheet: View {
     let course: SWOTCourse
+    /// Fires the same flow as the main "Get your action plan" CTA.
+    var onGetActionPlan: (() -> Void)? = nil
 
     @ObservedObject private var entitlements = EntitlementService.shared
     @Environment(\.dismiss) private var dismiss
@@ -24,7 +26,7 @@ struct QuadrantDetailSheet: View {
 
                     if course.items.isEmpty {
                         Text(course.kind.emptyLine)
-                            .font(.system(size: 14))
+                            .font(.duoBody)
                             .foregroundColor(.textSec)
                             .italic()
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -35,9 +37,10 @@ struct QuadrantDetailSheet: View {
                             .duoPanel(padding: 16)
 
                         if course.items.count > 1 {
-                            VStack(alignment: .leading, spacing: 12) {
+                            VStack(alignment: .leading, spacing: 14) {
                                 ForEach(course.items.dropFirst()) { item in
                                     SWOTItemRow(item: item, color: course.kind.color)
+                                        .duoInset(padding: 14)
                                 }
                                 CategoryPillsRow(
                                     categories: Array(Set(course.items.map(\.category))).sorted(),
@@ -49,6 +52,24 @@ struct QuadrantDetailSheet: View {
                                 showPaywall = true
                             }
                         }
+                    }
+
+                    if let onGetActionPlan, !course.items.isEmpty {
+                        Button {
+                            onGetActionPlan()
+                        } label: {
+                            HStack(spacing: 8) {
+                                Image(systemName: "bolt.fill")
+                                    .font(.system(size: 14))
+                                Text("Get your action plan")
+                                    .font(.system(size: 16, weight: .bold))
+                            }
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 54)
+                        }
+                        .buttonStyle(Duo3DGradientButtonStyle(fill: .record))
+                        .padding(.top, 4)
                     }
                 }
                 .padding(.horizontal, 16)
@@ -114,10 +135,10 @@ struct SWOTItemRow: View {
     let color: Color
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 12) {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .top, spacing: 12) {
                 Text(item.point)
-                    .font(.system(size: 14))
+                    .font(.system(size: 15, weight: .semibold, design: .rounded))
                     .foregroundColor(.textPri)
                     .fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -133,10 +154,9 @@ struct SWOTItemRow: View {
 
             if let detail = item.detail {
                 Text(detail)
-                    .font(.system(size: 13))
+                    .font(.system(size: 14))
                     .foregroundColor(.textSec)
-                    .lineSpacing(3)
-                    .padding(.top, 2)
+                    .lineSpacing(4)
             }
         }
     }

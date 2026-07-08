@@ -38,8 +38,10 @@ const COMPARABLE_SCHEMA = {
     pricing: { type: "string" },
     status:  { type: "string" },
     url:     { type: "string" },
+    overlap: { type: "string" },   // what it shares with the founder's idea
+    edge:    { type: "string" },   // how the founder's idea differs / could win
   },
-  required: ["name", "what", "pricing", "status", "url"],
+  required: ["name", "what", "pricing", "status", "url", "overlap", "edge"],
   additionalProperties: false,
 };
 
@@ -91,9 +93,11 @@ const SWOT_SCHEMA = {
         properties: {
           title:          { type: "string" },
           pitch:          { type: "string" },
+          keeps:          { type: "string" },   // what stays from the original
+          changes:        { type: "string" },   // what's different or added
           differentiator: { type: "string" },
         },
-        required: ["title", "pitch", "differentiator"],
+        required: ["title", "pitch", "keeps", "changes", "differentiator"],
         additionalProperties: false,
       },
     },
@@ -302,7 +306,9 @@ marketInsights:
 - growth_rate: plain-words demand direction. GOOD: "More photographers ditch all-in-one suites every year." BAD: "11% CAGR".
 - trend_direction: up, down, or stable — for the NICHE.
 - key_competitors: the small/indie players closest to this idea (from the research digest when present). Name a giant only if it genuinely blocks the niche.
-- comparables: copied from the research digest; empty array if no digest.
+- comparables: copied from the research digest; empty array if no digest. For EACH comparable, add two idea-aware sentences:
+  - overlap: what it shares with the founder's idea ("Same dish" — plain words, one sentence).
+  - edge: how the founder's idea differs or could beat it — a concrete angle, not a platitude. If there is genuinely no edge, say so honestly; that IS the insight.
 
 --------------------------------------------------
 
@@ -311,6 +317,8 @@ IDEA VARIANTS — "Remix the Recipe"
 Return 2-3 remixes of the founder's idea. Keep the core ingredient; change exactly one axis per remix (narrower audience, different business model, different channel, or a sharper wedge feature). Each remix:
 - title: menu-dish style, 3-6 words ("Invoice Nagger for Design Studios")
 - pitch: 1-2 sentences describing the remixed version.
+- keeps: one short sentence — what stays from the original idea (the core ingredient).
+- changes: one short sentence — exactly what this remix changes or adds versus the original.
 - differentiator: one sentence on why this remix beats the plain version — what sets the founder apart and who specifically it wins.
 At least one remix should aim at the weakest dimension you scored.
 
@@ -335,7 +343,7 @@ serve(async (req) => {
   }
 
   try {
-    const { transcription, research } = await req.json();
+    const { transcription, research, pivot } = await req.json();
 
     if (!transcription || typeof transcription !== "string") {
       return new Response(
@@ -345,6 +353,9 @@ serve(async (req) => {
     }
 
     let userMessage = `Startup idea voice note transcription:\n\n${transcription}\n\n`;
+    if (pivot && typeof pivot.title === "string") {
+      userMessage += `FOUNDER'S PIVOT — the founder tasted the original and chose this remix instead. Analyze THE REMIX as the idea; the transcript above is background context only. ideaTitle must reflect the remix.\nRemix: ${pivot.title}\nPitch: ${pivot.pitch ?? ""}\nDifferentiator: ${pivot.differentiator ?? ""}\n\n`;
+    }
     const hasResearch = research &&
       ((research.comparables?.length ?? 0) > 0 ||
        (research.niche_notes ?? "") !== "" ||

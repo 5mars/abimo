@@ -18,6 +18,7 @@ struct SWOTAnalysisView: View {
     @State private var showMarketSheet = false
     @State private var showVariantsSheet = false
     @State private var showPaywall = false
+    @State private var pendingRetaste: IdeaVariant?
 
     init(transcription: Transcription, preloadedAnalysis: SWOTAnalysis? = nil, noteTitle: String = "") {
         self.transcription = transcription
@@ -77,7 +78,11 @@ struct SWOTAnalysisView: View {
                 }
             }
             .sheet(item: $activeCourse) { course in
-                QuadrantDetailSheet(course: course)
+                QuadrantDetailSheet(course: course, onGetActionPlan: {
+                    guard let analysis = viewModel.analysis else { return }
+                    activeCourse = nil
+                    startActionPlan(analysis)
+                })
             }
             .sheet(isPresented: $showMarketSheet) {
                 if let analysis = viewModel.analysis, let insights = analysis.marketInsights {
@@ -86,13 +91,56 @@ struct SWOTAnalysisView: View {
             }
             .sheet(isPresented: $showVariantsSheet) {
                 if let variants = viewModel.analysis?.ideaVariants, !variants.isEmpty {
-                    VariantsDetailSheet(variants: variants)
+                    VariantsDetailSheet(variants: variants, onRetaste: { variant in
+                        showVariantsSheet = false
+                        pendingRetaste = variant
+                    })
                 }
             }
             .sheet(isPresented: $showPaywall) {
                 PaywallView(context: .fullAnalysis)
             }
+            .alert("Re-taste as \"\(pendingRetaste?.title ?? "")\"?", isPresented: Binding(
+                get: { pendingRetaste != nil },
+                set: { if !$0 { pendingRetaste = nil } }
+            )) {
+                Button("Re-taste", role: .destructive) {
+                    if let variant = pendingRetaste {
+                        pendingRetaste = nil
+                        Task {
+                            await viewModel.generateAnalysis(
+                                transcription: transcription,
+                                noteTitle: noteTitle,
+                                pivot: variant
+                            )
+                        }
+                    }
+                }
+                Button("Keep current", role: .cancel) { pendingRetaste = nil }
+            } message: {
+                Text("The critic re-judges your idea as this remix. Your current score, analysis, and action plan get replaced.")
+            }
+            .alert("Kitchen incident", isPresented: Binding(
+                get: { viewModel.errorMessage != nil && viewModel.analysis != nil },
+                set: { if !$0 { viewModel.errorMessage = nil } }
+            )) {
+                Button("OK") { viewModel.errorMessage = nil }
+            } message: {
+                Text(viewModel.errorMessage ?? "")
+            }
         }
+    }
+
+    /// Shared "turn this into action" behavior — used by the bottom CTA and
+    /// the quadrant sheets' action button.
+    private func startActionPlan(_ analysis: SWOTAnalysis) {
+        coordinator.startPlanGeneration(
+            analysis: analysis,
+            transcriptionText: transcription.text,
+            noteTitle: noteTitle
+        )
+        coordinator.selectedTab = .actions
+        dismiss()
     }
 
     // MARK: - Analysis Content
@@ -353,13 +401,7 @@ struct SWOTAnalysisView: View {
             }
 
             Button {
-                coordinator.startPlanGeneration(
-                    analysis: analysis,
-                    transcriptionText: transcription.text,
-                    noteTitle: noteTitle
-                )
-                coordinator.selectedTab = .actions
-                dismiss()
+                startActionPlan(analysis)
             } label: {
                 HStack(spacing: 8) {
                     Image(systemName: "bolt.fill")
@@ -385,7 +427,6 @@ struct ViabilityGaugeView: View {
     var dimensions: DimensionScores? = nil
     var rationale: String? = nil
     @State private var animatedScore: Double = 0
-    @State private var criticLine: String?
 
     private var verdict: ScoreVerdict { ScoreVerdict(score: score) }
 
@@ -432,9 +473,6 @@ struct ViabilityGaugeView: View {
                     case .simmering, .chefsKiss: HapticEngine.success()
                     case .needsSeasoning: break
                     }
-                    AnimationPolicy.animate(.spring(response: 0.42, dampingFraction: 0.72)) {
-                        criticLine = MascotVoice.moment(for: .scoreRevealed(verdict: verdict)).line
-                    }
                 }
             }
 
@@ -447,24 +485,11 @@ struct ViabilityGaugeView: View {
                 .background(verdict.color.opacity(0.15))
                 .clipShape(Capsule())
 
-            // The critic delivers the verdict in person, ~a beat after the gauge lands
-            HStack(alignment: .center, spacing: 6) {
-                Image(MascotMood.forVerdict(verdict).assetName)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 54, height: 54)
-                if let criticLine {
-                    MascotSpeechLine(line: criticLine, arrowOffsetY: 20)
-                        .transition(.scale(scale: 0.85, anchor: .leading).combined(with: .opacity))
-                } else {
-                    Text(verdict.caption)
-                        .font(.system(size: 13))
-                        .foregroundColor(.textSec)
-                        .multilineTextAlignment(.leading)
-                }
-                Spacer(minLength: 0)
-            }
-            .padding(.horizontal, 8)
+            Text(verdict.caption)
+                .font(.system(size: 13))
+                .foregroundColor(.textSec)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 8)
 
             // The receipt behind the number — free for everyone, because a
             // harsh score without a "why" just feels arbitrary.

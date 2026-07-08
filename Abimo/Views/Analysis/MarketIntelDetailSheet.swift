@@ -23,12 +23,22 @@ struct MarketIntelDetailSheet: View {
                         MarketInsightGrid(insights: insights)
 
                         if let context, !context.isEmpty {
-                            Text(context)
-                                .font(.system(size: 13))
-                                .foregroundColor(.textSec)
-                                .lineSpacing(3)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .duoInset()
+                            VStack(alignment: .leading, spacing: 8) {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "map.fill")
+                                        .font(.system(size: 13, weight: .semibold))
+                                        .foregroundColor(.brandBlue)
+                                    Text("The lay of the land")
+                                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                                        .foregroundColor(.textPri)
+                                }
+                                Text(context)
+                                    .font(.system(size: 14))
+                                    .foregroundColor(.textSec)
+                                    .lineSpacing(5)
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .duoInset(padding: 14)
                         }
                     }
                     .duoPanel()
@@ -76,10 +86,10 @@ struct MarketIntelDetailSheet: View {
             }
 
             ForEach(comparables) { comp in
-                VStack(alignment: .leading, spacing: 5) {
+                VStack(alignment: .leading, spacing: 10) {
                     HStack(spacing: 8) {
                         Text(comp.name)
-                            .font(.system(size: 14, weight: .bold, design: .rounded))
+                            .font(.system(size: 15, weight: .bold, design: .rounded))
                             .foregroundColor(.textPri)
                         if !comp.status.isEmpty {
                             Text(comp.status)
@@ -94,26 +104,61 @@ struct MarketIntelDetailSheet: View {
                         Spacer()
                         if !comp.pricing.isEmpty && comp.pricing.lowercased() != "unknown" {
                             Text(comp.pricing)
-                                .font(.duoCaption)
+                                .font(.system(size: 12, weight: .bold))
                                 .foregroundColor(.textSec)
                         }
                     }
+
                     Text(comp.what)
-                        .font(.system(size: 13))
+                        .font(.system(size: 14))
                         .foregroundColor(.textSec)
+                        .lineSpacing(4)
+
+                    if let overlap = comp.overlap, !overlap.isEmpty {
+                        comparisonRow(icon: "equal.circle.fill", tint: .textSec,
+                                      label: "Same dish", text: overlap)
+                    }
+                    if let edge = comp.edge, !edge.isEmpty {
+                        comparisonRow(icon: "bolt.fill", tint: .brandGreen,
+                                      label: "Your edge", text: edge)
+                    }
+
                     if let url = comp.url, !url.isEmpty, let link = URL(string: url) {
                         Link(destination: link) {
-                            Text(link.host() ?? url)
-                                .font(.duoCaption)
-                                .foregroundColor(.brandBlue)
+                            HStack(spacing: 6) {
+                                Image(systemName: "safari.fill")
+                                    .font(.system(size: 12, weight: .semibold))
+                                Text("Visit site")
+                                    .font(.duoLabel)
+                            }
+                            .foregroundColor(.brand)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 36)
                         }
+                        .buttonStyle(Duo3DSecondaryButtonStyle())
+                        .padding(.top, 2)
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .duoInset()
+                .duoInset(padding: 14)
             }
         }
         .duoPanel()
+    }
+
+    /// One labeled comparison line: icon circle + bold label + body text.
+    private func comparisonRow(icon: String, tint: Color, label: String, text: String) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: icon)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(tint)
+                .frame(width: 18)
+                .padding(.top, 2)
+            (Text("\(label): ").bold().foregroundColor(.textPri) + Text(text).foregroundColor(.textSec))
+                .font(.system(size: 14))
+                .lineSpacing(4)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
@@ -188,9 +233,10 @@ struct MarketInsightTile: View {
                     .foregroundColor(.textSec)
             }
             Text(value)
-                .font(.system(size: 13, weight: .medium))
+                .font(.system(size: 14, weight: .semibold, design: .rounded))
                 .foregroundColor(.textPri)
-                .lineLimit(2)
+                .lineSpacing(3)
+                .lineLimit(4)
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
