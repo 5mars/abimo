@@ -93,6 +93,7 @@ struct AppTextField: View {
     @Binding var text: String
     var isSecure: Bool = false
     var keyboardType: UIKeyboardType = .default
+    var submitLabel: SubmitLabel = .done
 
     @FocusState private var isFocused: Bool
 
@@ -104,10 +105,12 @@ struct AppTextField: View {
             } else {
                 TextField(placeholder, text: $text)
                     .keyboardType(keyboardType)
-                    .autocapitalization(.none)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
                     .focused($isFocused)
             }
         }
+        .submitLabel(submitLabel)
         .padding(.horizontal, 16)
         .padding(.vertical, 14)
         .background(

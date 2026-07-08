@@ -15,6 +15,20 @@ class RecordingViewModel: ObservableObject {
     @Published var isSaving = false
     @Published var errorMessage: String?
     @Published var recordingFileURL: URL?
+    @Published var activeIdeaCount: Int?   // nil until first fetch
+
+    /// Free-tier gate: at the cap when not premium and the last known count
+    /// has reached the limit. While the count is unfetched (nil) we allow
+    /// optimistically — the pipeline's server-side pre-flight is the backstop.
+    var isAtFreeCap: Bool {
+        guard !EntitlementService.shared.isPremium else { return false }
+        guard let count = activeIdeaCount else { return false }
+        return count >= EntitlementService.freeIdeaLimit
+    }
+
+    func refreshIdeaCount() async {
+        activeIdeaCount = try? await supabase.countVoiceNotes()
+    }
 
     private let audioService = AudioRecordingService()
     private let supabase = SupabaseService.shared

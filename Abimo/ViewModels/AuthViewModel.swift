@@ -69,7 +69,7 @@ class AuthViewModel: ObservableObject {
             currentUser = try await supabase.signUp(email: email, password: password)
             isAuthenticated = true
         } catch {
-            errorMessage = "Sign up failed: \(error.localizedDescription)"
+            errorMessage = Self.friendlyAuthMessage(error, fallback: "Sign up didn't take. Give it another shot.")
         }
     }
 
@@ -82,8 +82,38 @@ class AuthViewModel: ObservableObject {
             currentUser = try await supabase.signIn(email: email, password: password)
             isAuthenticated = true
         } catch {
-            errorMessage = "Sign in failed: \(error.localizedDescription)"
+            errorMessage = Self.friendlyAuthMessage(error, fallback: "Sign in didn't take. Give it another shot.")
         }
+    }
+
+    /// Maps raw Supabase auth failures to human copy; the raw error stays in
+    /// the console for debugging.
+    private static func friendlyAuthMessage(_ error: Error, fallback: String) -> String {
+        print("Auth error: \(error)")
+        let raw = error.localizedDescription.lowercased()
+        if raw.contains("invalid login credentials") || raw.contains("invalid_credentials") {
+            return "That email and password combo isn't cooking."
+        }
+        if raw.contains("already registered") || raw.contains("already exists") {
+            return "That email's already in the kitchen — try signing in."
+        }
+        if raw.contains("weak") || (raw.contains("password") && raw.contains("least")) {
+            return "Password's a bit thin. Six characters minimum."
+        }
+        if raw.contains("valid email") || raw.contains("invalid format") || raw.contains("validate email") {
+            return "That doesn't look like an email address."
+        }
+        if raw.contains("network") || raw.contains("connection") || raw.contains("offline")
+            || raw.contains("timed out") || raw.contains("internet") {
+            return "Can't reach the kitchen. Check your connection."
+        }
+        if raw.contains("rate limit") || raw.contains("too many") {
+            return "Too many attempts. Let it rest a minute."
+        }
+        if raw.contains("not confirmed") {
+            return "Check your inbox first — that email isn't confirmed yet."
+        }
+        return fallback
     }
 
     func signOut() async {

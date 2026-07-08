@@ -9,7 +9,9 @@ struct ProfileView: View {
     @EnvironmentObject var authViewModel: AuthViewModel
     @EnvironmentObject var coordinator: NavigationCoordinator
     @StateObject private var actionsViewModel = ActionsTabViewModel()
+    @ObservedObject private var entitlements = EntitlementService.shared
     @State private var showSignOutAlert = false
+    @State private var showPaywall = false
     @State private var ideaCount: Int?
     @State private var analysisCount: Int?
     @State private var scoresByAnalysisId: [UUID: Int] = [:]
@@ -24,6 +26,9 @@ struct ProfileView: View {
                         Spacer().frame(height: 8)
 
                         heroCard
+                            .padding(.horizontal, 16)
+
+                        plusSection
                             .padding(.horizontal, 16)
 
                         AchievementGridView(context: achievementContext)
@@ -124,6 +129,58 @@ struct ProfileView: View {
                 .minimumScaleFactor(0.8)
         }
         .frame(maxWidth: .infinity)
+    }
+
+    @ViewBuilder
+    private var plusSection: some View {
+        if entitlements.isPremium {
+            HStack(spacing: 12) {
+                Image(systemName: "checkmark.seal.fill")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundColor(.brandGreen)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Abimo Plus — active")
+                        .font(.duoCardTitle)
+                        .foregroundColor(.textPri)
+                    Text("Unlimited idea slots")
+                        .font(.system(size: 13))
+                        .foregroundColor(.textSec)
+                }
+                Spacer()
+                Link("Manage", destination: URL(string: "https://apps.apple.com/account/subscriptions")!)
+                    .font(.duoLabel)
+                    .foregroundColor(.brandBlue)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .duoPanel(fill: .cardDarkTeal)
+        } else {
+            Button {
+                showPaywall = true
+            } label: {
+                HStack(spacing: 12) {
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundColor(.brandAmber)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Go Plus")
+                            .font(.duoCardTitle)
+                            .foregroundColor(.textPri)
+                        Text("Unlimited idea slots for the serious cooks")
+                            .font(.system(size: 13))
+                            .foregroundColor(.textSec)
+                    }
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(.textSec.opacity(0.5))
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .buttonStyle(DuoCardButtonStyle(padding: 18))
+            .sheet(isPresented: $showPaywall) {
+                PaywallView(context: .general)
+            }
+        }
     }
 
     private var signOutButton: some View {

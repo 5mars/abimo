@@ -1,0 +1,92 @@
+{
+  "identifier" : "4A7C1B2E-9F3D-4E8A-B6C5-2D1E0F9A8B7C",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+
+  ],
+  "settings" : {
+    "_failTransactionsEnabled" : false,
+    "_locale" : "en_US",
+    "_storefront" : "USA",
+    "_storeKitErrors" : [
+
+    ]
+  },
+  "subscriptionGroups" : [
+    {
+      "id" : "AB1M0PLUS01",
+      "localizations" : [
+
+      ],
+      "name" : "Abimo Plus",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "4.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "F0E1D2C3-B4A5-4697-8877-665544332211",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Unlimited idea slots, billed monthly.",
+              "displayName" : "Abimo Plus Monthly",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "com.mars.Abimo.plus.monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "Abimo Plus Monthly",
+          "subscriptionGroupID" : "AB1M0PLUS01",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "34.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "A9B8C7D6-E5F4-4321-9876-543210FEDCBA",
+          "introductoryOffer" : {
+            "internalID" : "1122AABB-CCDD-4EEF-8899-00AABBCCDDEE",
+            "paymentMode" : "free",
+            "subscriptionPeriod" : "P3D"
+          },
+          "localizations" : [
+            {
+              "description" : "Unlimited idea slots, billed yearly.",
+              "displayName" : "Abimo Plus Yearly",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "com.mars.Abimo.plus.yearly",
+          "recurringSubscriptionPeriod" : "P1Y",
+          "referenceName" : "Abimo Plus Yearly",
+          "subscriptionGroupID" : "AB1M0PLUS01",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
+        }
+      ]
+    }
+  ],
+  "version" : {
+    "major" : 4,
+    "minor" : 0
+  }
+}

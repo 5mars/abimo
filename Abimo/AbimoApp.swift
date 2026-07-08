@@ -20,6 +20,8 @@ struct AbimoApp: App {
             "notif_streak": true,
             "sound_enabled": true
         ])
+        // Start the StoreKit transaction listener before any purchase can occur.
+        _ = EntitlementService.shared
     }
 
     var body: some Scene {
@@ -35,6 +37,7 @@ struct AbimoApp: App {
                     case .active:
                         NotificationScheduler.shared.onForeground()
                         MascotDirector.shared.appBecameActive()
+                        Task { await EntitlementService.shared.refreshEntitlement() }
                     default:
                         break
                     }

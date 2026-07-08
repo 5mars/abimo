@@ -21,16 +21,17 @@ struct LoginView: View {
                 VStack(spacing: 0) {
                     Spacer().frame(height: 60)
 
-                    // Mascot + title
+                    // Mascot + title — neutral mascot so the cross-fade from
+                    // the launch intro never swaps faces mid-fade
                     VStack(spacing: 12) {
-                        Image(MascotMood.playful.assetName)
+                        Image(MascotMood.neutral.assetName)
                             .resizable()
                             .scaledToFit()
                             .frame(width: 170, height: 170)
                             .scaleEffect(appeared ? 1 : 0.6)
                             .opacity(appeared ? 1 : 0)
 
-                        Text("Abimo")
+                        Text("abimo")
                             .font(.system(size: 34, weight: .bold, design: .rounded))
                             .foregroundColor(.textPri)
 
@@ -48,16 +49,23 @@ struct LoginView: View {
                         AppTextField(
                             placeholder: "Email",
                             text: $email,
-                            keyboardType: .emailAddress
+                            keyboardType: .emailAddress,
+                            submitLabel: .next
                         )
                         .textContentType(.emailAddress)
 
                         AppTextField(
                             placeholder: "Password",
                             text: $password,
-                            isSecure: true
+                            isSecure: true,
+                            submitLabel: .go
                         )
                         .textContentType(.password)
+                        .onSubmit {
+                            if !email.isEmpty && !password.isEmpty {
+                                Task { await authViewModel.signIn(email: email, password: password) }
+                            }
+                        }
 
                         if let errorMessage = authViewModel.errorMessage {
                             HStack(spacing: 8) {

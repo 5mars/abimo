@@ -50,6 +50,19 @@ struct SettingsView: View {
                         notificationToggle(icon: "speaker.wave.2", title: "Celebration Sounds", color: .brandGreen, isOn: $soundEnabled)
                     }
 
+                    // Subscription section — reviewers expect Restore outside the paywall too
+                    settingsSection(title: "Subscription") {
+                        Button {
+                            Task { await EntitlementService.shared.restore() }
+                        } label: {
+                            settingsRow(icon: "arrow.triangle.2.circlepath", title: "Restore Purchases", color: .brandBlue)
+                        }
+                        Divider().overlay(Color.cardEdge)
+                        Link(destination: URL(string: "https://apps.apple.com/account/subscriptions")!) {
+                            settingsRow(icon: "creditcard", title: "Manage Subscription", color: .brandGreen)
+                        }
+                    }
+
                     // Data & Privacy section
                     settingsSection(title: "Data & Privacy") {
                         Button {
@@ -66,6 +79,10 @@ struct SettingsView: View {
                         Divider().overlay(Color.cardEdge)
                         Link(destination: URL(string: "https://abimo.app/privacy")!) {
                             settingsRow(icon: "hand.raised", title: "Privacy Policy", color: .brandGreen)
+                        }
+                        Divider().overlay(Color.cardEdge)
+                        Link(destination: URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")!) {
+                            settingsRow(icon: "doc.text", title: "Terms of Use", color: .brandBlue)
                         }
                     }
 

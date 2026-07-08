@@ -8,7 +8,9 @@ import SwiftUI
 struct NotesListView: View {
     @EnvironmentObject var coordinator: NavigationCoordinator
     @StateObject private var viewModel = NotesViewModel()
+    @ObservedObject private var entitlements = EntitlementService.shared
     @State private var confirmingDeleteNote: VoiceNote? = nil
+    @State private var showPaywall = false
 
     var body: some View {
         ZStack {
@@ -44,6 +46,11 @@ struct NotesListView: View {
             if let error = viewModel.errorMessage { Text(error) }
         }
         .task { await viewModel.fetchNotes() }
+        .sheet(isPresented: $showPaywall) {
+            PaywallView(
+                context: viewModel.notes.count >= EntitlementService.freeIdeaLimit ? .ideaCap : .general
+            )
+        }
         .onChange(of: coordinator.selectedTab) { _, newTab in
             if newTab == .ideas {
                 Task { await viewModel.fetchNotes() }
@@ -117,7 +124,9 @@ struct NotesListView: View {
         List {
             // Lab header
             Section {
-                LabHeaderView(count: viewModel.notes.count)
+                LabHeaderView(count: viewModel.notes.count, isPremium: entitlements.isPremium) {
+                    showPaywall = true
+                }
                     .listRowBackground(Color.clear)
                     .listRowInsets(EdgeInsets())
                     .listRowSeparator(.hidden)
@@ -153,6 +162,8 @@ struct NotesListView: View {
 
 struct LabHeaderView: View {
     let count: Int
+    var isPremium: Bool = false
+    var onSlotsTap: () -> Void = {}
 
     private var tagline: String {
         let ideas = "\(count) idea\(count == 1 ? "" : "s") · "
@@ -162,6 +173,8 @@ struct LabHeaderView: View {
         return ideas + "late night cooking hits different"
     }
 
+    private var atCap: Bool { count >= EntitlementService.freeIdeaLimit }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("The Kitchen")
@@ -170,11 +183,44 @@ struct LabHeaderView: View {
             Text(tagline)
                 .font(.system(size: 14, weight: .medium))
                 .foregroundColor(.textSec)
+            slotPill
+                .padding(.top, 4)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 20)
         .padding(.top, 12)
         .padding(.bottom, 12)
+    }
+
+    @ViewBuilder
+    private var slotPill: some View {
+        if isPremium {
+            pillLabel("Plus · unlimited slots", icon: "infinity",
+                      fg: .brandGreen, bg: Color.brandGreen.opacity(0.12))
+        } else {
+            Button(action: onSlotsTap) {
+                pillLabel(
+                    "\(min(count, EntitlementService.freeIdeaLimit)) of \(EntitlementService.freeIdeaLimit) idea slots used",
+                    icon: atCap ? "lock.fill" : "tray.full",
+                    fg: atCap ? .white : .brand,
+                    bg: atCap ? Color.brand : Color.brand.opacity(0.12)
+                )
+            }
+            .buttonStyle(DuoPressStyle())
+        }
+    }
+
+    private func pillLabel(_ text: String, icon: String, fg: Color, bg: Color) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.system(size: 10, weight: .bold))
+            Text(text)
+                .font(.system(size: 12, weight: .bold))
+        }
+        .foregroundColor(fg)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(Capsule().fill(bg))
     }
 }
 
