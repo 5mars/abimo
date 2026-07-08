@@ -306,8 +306,8 @@ marketInsights:
 - growth_rate: plain-words demand direction. GOOD: "More photographers ditch all-in-one suites every year." BAD: "11% CAGR".
 - trend_direction: up, down, or stable — for the NICHE.
 - key_competitors: the small/indie players closest to this idea (from the research digest when present). Name a giant only if it genuinely blocks the niche.
-- comparables: copied from the research digest; empty array if no digest. For EACH comparable, add two idea-aware sentences:
-  - overlap: what it shares with the founder's idea ("Same dish" — plain words, one sentence).
+- comparables: copied from the research digest; empty array if no digest. For EACH comparable, add two idea-aware sentences (plain sentences only — the app adds its own labels, so never start with "Same dish" or "Your edge"):
+  - overlap: what it shares with the founder's idea, one sentence.
   - edge: how the founder's idea differs or could beat it — a concrete angle, not a platitude. If there is genuinely no edge, say so honestly; that IS the insight.
 
 --------------------------------------------------
