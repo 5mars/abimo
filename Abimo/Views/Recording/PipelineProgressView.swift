@@ -14,14 +14,7 @@ struct PipelineProgressView: View {
     let onDiscard: () -> Void
     let onRetry: () -> Void
 
-    @State private var tastingMessageIndex = 0
-    @State private var tastingTimer: Timer?
-
-    private let tastingMessages = [
-        "Simmering your strategy…",
-        "Adding a pinch of market data…",
-        "Checking what the competition plated…",
-    ]
+    @State private var showPaywall = false
 
     var body: some View {
         ZStack {
@@ -34,14 +27,6 @@ struct PipelineProgressView: View {
                     .resizable()
                     .scaledToFit()
                     .frame(width: 140, height: 140)
-
-                Spacer().frame(height: 12)
-
-                Text(headline)
-                    .font(.system(size: 22, weight: .bold, design: .rounded))
-                    .foregroundColor(.textPri)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 32)
 
                 Spacer().frame(height: 28)
 
@@ -75,32 +60,20 @@ struct PipelineProgressView: View {
                     onFinished()
                 }
             }
-            syncTastingTimer(for: newStage)
-        }
-        .onAppear { syncTastingTimer(for: pipeline.stage) }
-        .onDisappear {
-            tastingTimer?.invalidate()
-            tastingTimer = nil
         }
         .interactiveDismissDisabled()
+        .sheet(isPresented: $showPaywall) {
+            PaywallView(context: .ideaCap)
+        }
     }
 
     private var stageMood: MascotMood {
         switch pipeline.stage {
-        case .idle, .running(.saving), .running(.transcribing): return .neutral
+        case .idle, .running(.saving), .running(.transcribing),
+             .running(.scouting):                               return .neutral
         case .running(.analyzing):                              return .sassy
         case .running(.planning), .done:                        return .playful
         case .failed:                                           return .grumpy
-        }
-    }
-
-    private var headline: String {
-        switch pipeline.stage {
-        case .idle, .running(.saving):    return "Got it — kitchen's on it"
-        case .running(.transcribing):     return "Got it — kitchen's on it"
-        case .running(.analyzing):        return tastingMessages[tastingMessageIndex % tastingMessages.count]
-        case .running(.planning), .done:  return "Order up!"
-        case .failed:                     return "Small kitchen fire"
         }
     }
 
@@ -182,11 +155,19 @@ struct PipelineProgressView: View {
         switch pipeline.stage {
         case .failed(let step, _):
             VStack(spacing: 12) {
-                GradientButton(title: "Try again") { onRetry() }
-                if step == .saving {
-                    secondaryButton("Discard recording", tint: .brand) { onDiscard() }
+                if pipeline.capHit {
+                    // Cap block: the recording is retained — retry re-enters
+                    // at .saving once the user upgrades or frees a slot.
+                    GradientButton(title: "Unlock Abimo Plus") { showPaywall = true }
+                    secondaryButton("I freed a slot — retry", tint: .brand) { onRetry() }
+                    secondaryButton("Discard recording", tint: .textSec) { onDiscard() }
                 } else {
-                    secondaryButton("I'll come back later", tint: .textSec) { onBackground() }
+                    GradientButton(title: "Try again") { onRetry() }
+                    if step == .saving {
+                        secondaryButton("Discard recording", tint: .brand) { onDiscard() }
+                    } else {
+                        secondaryButton("I'll come back later", tint: .textSec) { onBackground() }
+                    }
                 }
             }
         case .running(let step) where step != .saving:
@@ -207,19 +188,4 @@ struct PipelineProgressView: View {
         .buttonStyle(Duo3DSecondaryButtonStyle())
     }
 
-    private func syncTastingTimer(for stage: IdeaPipelineService.Stage) {
-        if case .running(.analyzing) = stage {
-            guard tastingTimer == nil else { return }
-            tastingTimer = Timer.scheduledTimer(withTimeInterval: 3.2, repeats: true) { _ in
-                Task { @MainActor in
-                    withAnimation(.spring(response: 0.45, dampingFraction: 0.75)) {
-                        tastingMessageIndex += 1
-                    }
-                }
-            }
-        } else {
-            tastingTimer?.invalidate()
-            tastingTimer = nil
-        }
-    }
 }

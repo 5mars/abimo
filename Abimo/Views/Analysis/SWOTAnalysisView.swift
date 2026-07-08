@@ -10,8 +10,14 @@ struct SWOTAnalysisView: View {
     let noteTitle: String
 
     @StateObject private var viewModel: AnalysisViewModel
+    @ObservedObject private var entitlements = EntitlementService.shared
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var coordinator: NavigationCoordinator
+
+    @State private var activeCourse: SWOTCourse?
+    @State private var showMarketSheet = false
+    @State private var showVariantsSheet = false
+    @State private var showPaywall = false
 
     init(transcription: Transcription, preloadedAnalysis: SWOTAnalysis? = nil, noteTitle: String = "") {
         self.transcription = transcription
@@ -70,6 +76,22 @@ struct SWOTAnalysisView: View {
                     await viewModel.generateAnalysis(transcription: transcription, noteTitle: noteTitle)
                 }
             }
+            .sheet(item: $activeCourse) { course in
+                QuadrantDetailSheet(course: course)
+            }
+            .sheet(isPresented: $showMarketSheet) {
+                if let analysis = viewModel.analysis, let insights = analysis.marketInsights {
+                    MarketIntelDetailSheet(insights: insights, context: analysis.marketContext)
+                }
+            }
+            .sheet(isPresented: $showVariantsSheet) {
+                if let variants = viewModel.analysis?.ideaVariants, !variants.isEmpty {
+                    VariantsDetailSheet(variants: variants)
+                }
+            }
+            .sheet(isPresented: $showPaywall) {
+                PaywallView(context: .fullAnalysis)
+            }
         }
     }
 
@@ -77,54 +99,44 @@ struct SWOTAnalysisView: View {
 
     @ViewBuilder
     private func analysisContent(_ analysis: SWOTAnalysis) -> some View {
-        // 1. Viability Score
-        ViabilityGaugeView(score: analysis.viabilityScore ?? 0)
-            .cardEntrance(delay: 0.05)
+        // 1. The tasting — score, verdict, critic quip, dimension breakdown
+        ViabilityGaugeView(
+            score: analysis.viabilityScore ?? 0,
+            dimensions: analysis.dimensionScores,
+            rationale: analysis.scoreRationale
+        )
+        .cardEntrance(delay: 0.05)
 
-        // 2. Market Intelligence
-        if let insights = analysis.marketInsights {
-            MarketIntelligenceSection(insights: insights, context: analysis.marketContext)
-                .cardEntrance(delay: 0.12)
+        // 2. The TL;DR
+        CriticsVerdictCard(
+            summary: analysis.summary,
+            verdict: ScoreVerdict(score: analysis.viabilityScore ?? 0)
+        )
+        .cardEntrance(delay: 0.12)
+
+        // 3. The courses — one compact card per quadrant, tap for the full plate
+        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+            ForEach(Array(analysis.courses.enumerated()), id: \.element.id) { index, course in
+                CourseCard(course: course) {
+                    activeCourse = course
+                }
+                .cardEntrance(delay: 0.18 + Double(index) * 0.04)
+            }
         }
 
-        // 3. The four quadrants (avg score lives in each header now)
-        QuadrantItemChart(
-            title: "The Wins",
-            items: analysis.resolvedStrengths,
-            avgScore: analysis.avgStrengthScore,
-            color: .brandGreen,
-            iconName: "checkmark.circle.fill"
-        )
-        .cardEntrance(delay: 0.18)
+        // 4. Remix the Recipe (fully Plus)
+        if let variants = analysis.ideaVariants, !variants.isEmpty {
+            remixCard(variants)
+                .cardEntrance(delay: 0.34)
+        }
 
-        QuadrantItemChart(
-            title: "Opportunities",
-            items: analysis.resolvedOpportunities,
-            avgScore: analysis.avgOpportunityScore,
-            color: .brandBlue,
-            iconName: "arrow.up.circle.fill"
-        )
-        .cardEntrance(delay: 0.24)
+        // 5. Market Intel course (Plus)
+        if let insights = analysis.marketInsights {
+            marketIntelCard(insights)
+                .cardEntrance(delay: 0.38)
+        }
 
-        QuadrantItemChart(
-            title: "Weaknesses",
-            items: analysis.resolvedWeaknesses,
-            avgScore: analysis.avgWeaknessScore,
-            color: .brand,
-            iconName: "xmark.circle.fill"
-        )
-        .cardEntrance(delay: 0.30)
-
-        QuadrantItemChart(
-            title: "Watch Out",
-            items: analysis.resolvedThreats,
-            avgScore: analysis.avgThreatScore,
-            color: .brandAmber,
-            iconName: "exclamationmark.triangle.fill"
-        )
-        .cardEntrance(delay: 0.36)
-
-        // 4. Action Plan CTA
+        // 5. Action Plan CTA
         actionPlanCTA(analysis)
             .cardEntrance(delay: 0.42)
 
@@ -133,6 +145,135 @@ struct SWOTAnalysisView: View {
             .foregroundColor(.textSec)
             .padding(.bottom, 8)
             .cardEntrance(delay: 0.48)
+    }
+
+    // MARK: - Remix the Recipe card (fully Plus)
+
+    @ViewBuilder
+    private func remixCard(_ variants: [IdeaVariant]) -> some View {
+        if entitlements.isPremium {
+            Button {
+                showVariantsSheet = true
+            } label: {
+                HStack(spacing: 12) {
+                    ZStack {
+                        Circle()
+                            .fill(Color.brandGreen.opacity(0.12))
+                            .frame(width: 44, height: 44)
+                        Image(systemName: "arrow.triangle.branch")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundColor(.brandGreen)
+                    }
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Remix the Recipe")
+                            .font(.duoCardTitle)
+                            .foregroundColor(.textPri)
+                        Text("\(variants.count) variation\(variants.count == 1 ? "" : "s") cooked")
+                            .font(.system(size: 13))
+                            .foregroundColor(.textSec)
+                    }
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(.textSec)
+                }
+            }
+            .buttonStyle(DuoCardButtonStyle(padding: 16))
+        } else {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(spacing: 8) {
+                    Image(systemName: "arrow.triangle.branch")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.brandGreen)
+                    Text("Remix the Recipe")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundColor(.textPri)
+                    Spacer()
+                    Text("\(variants.count) cooked")
+                        .font(.duoCaption)
+                        .foregroundColor(.brandGreen)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(Color.brandGreen.opacity(0.12))
+                        .clipShape(Capsule())
+                }
+                VStack(alignment: .leading, spacing: 8) {
+                    ForEach(variants) { variant in
+                        Text(variant.title)
+                            .font(.system(size: 14, weight: .semibold, design: .rounded))
+                            .foregroundColor(.textPri)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .plusLocked(true, message: "Unlock the remixes") {
+                    showPaywall = true
+                }
+            }
+            .duoPanel()
+        }
+    }
+
+    // MARK: - Market Intel course card
+
+    @ViewBuilder
+    private func marketIntelCard(_ insights: MarketInsights) -> some View {
+        if entitlements.isPremium {
+            // Plus: compact tap-through card into the full sheet
+            Button {
+                showMarketSheet = true
+            } label: {
+                HStack(spacing: 12) {
+                    ZStack {
+                        Circle()
+                            .fill(Color.brandBlue.opacity(0.12))
+                            .frame(width: 44, height: 44)
+                        Image(systemName: "globe.americas.fill")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundColor(.brandBlue)
+                    }
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Market Intel")
+                            .font(.duoCardTitle)
+                            .foregroundColor(.textPri)
+                        Text(insights.marketSize ?? insights.growthRate ?? "The lay of the land")
+                            .font(.system(size: 13))
+                            .foregroundColor(.textSec)
+                            .lineLimit(1)
+                    }
+                    Spacer()
+                    Label(insights.trendDirection?.capitalized ?? "Stable",
+                          systemImage: MarketTrendStyle.icon(for: insights.trendDirection))
+                        .font(.duoCaption)
+                        .foregroundColor(MarketTrendStyle.color(for: insights.trendDirection))
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(MarketTrendStyle.color(for: insights.trendDirection).opacity(0.1))
+                        .cornerRadius(20)
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(.textSec)
+                }
+            }
+            .buttonStyle(DuoCardButtonStyle(padding: 16))
+        } else {
+            // Free: the intel is right there — just out of focus
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(spacing: 8) {
+                    Image(systemName: "globe.americas.fill")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.brandBlue)
+                    Text("Market Intel")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundColor(.textPri)
+                    Spacer()
+                }
+                MarketInsightGrid(insights: insights)
+                    .plusLocked(true, message: "Unlock Market Intel") {
+                        showPaywall = true
+                    }
+            }
+            .duoPanel()
+        }
     }
 
     // MARK: - States
@@ -241,6 +382,8 @@ struct SWOTAnalysisView: View {
 
 struct ViabilityGaugeView: View {
     let score: Int
+    var dimensions: DimensionScores? = nil
+    var rationale: String? = nil
     @State private var animatedScore: Double = 0
     @State private var criticLine: String?
 
@@ -323,13 +466,79 @@ struct ViabilityGaugeView: View {
             }
             .padding(.horizontal, 8)
 
-            Text("Most fresh ideas score 20-45. The plan below is the recipe to raise it.")
+            // The receipt behind the number — free for everyone, because a
+            // harsh score without a "why" just feels arbitrary.
+            if let dimensions {
+                ScoreBreakdownView(dimensions: dimensions, rationale: rationale, color: verdict.color)
+                    .padding(.horizontal, 4)
+            }
+
+            Text("Scores run the full range — the plan below is the recipe to raise yours.")
                 .font(.system(size: 11, weight: .medium))
                 .foregroundColor(.textSec.opacity(0.7))
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 12)
         }
         .duoPanel(fill: .cardDarkMint, padding: 24)
+    }
+}
+
+// MARK: - Score Breakdown
+
+/// Five labeled bars showing the sub-scores behind the viability number,
+/// plus the critic's one-line rationale for the weakest link.
+struct ScoreBreakdownView: View {
+    let dimensions: DimensionScores
+    let rationale: String?
+    let color: Color
+
+    private var rows: [(label: String, value: Int)] {
+        [
+            ("Problem",   dimensions.problemSeverity),
+            ("Demand",    dimensions.demandEvidence),
+            ("Market",    dimensions.marketQuality),
+            ("Buildable", dimensions.feasibility),
+            ("Different", dimensions.differentiation),
+        ]
+    }
+
+    var body: some View {
+        VStack(spacing: 9) {
+            ForEach(rows, id: \.label) { row in
+                HStack(spacing: 10) {
+                    Text(row.label)
+                        .font(.duoCaption)
+                        .foregroundColor(.textSec)
+                        .frame(width: 74, alignment: .leading)
+
+                    GeometryReader { geo in
+                        ZStack(alignment: .leading) {
+                            Capsule().fill(Color.black.opacity(0.06))
+                            Capsule()
+                                .fill(color)
+                                .frame(width: max(8, geo.size.width * CGFloat(row.value) / 10))
+                        }
+                    }
+                    .frame(height: 8)
+
+                    Text("\(row.value)/10")
+                        .font(.duoCaption)
+                        .foregroundColor(color)
+                        .frame(width: 36, alignment: .trailing)
+                }
+            }
+
+            if let rationale, !rationale.isEmpty {
+                Text(rationale)
+                    .font(.system(size: 12))
+                    .italic()
+                    .foregroundColor(.textSec)
+                    .multilineTextAlignment(.leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.top, 4)
+            }
+        }
+        .padding(.top, 4)
     }
 }
 
@@ -351,222 +560,6 @@ struct GaugeArc: Shape {
         path.addArc(center: center, radius: radius,
                     startAngle: startAngle, endAngle: endAngle, clockwise: false)
         return path
-    }
-}
-
-// MARK: - Market Intelligence
-
-struct MarketIntelligenceSection: View {
-    let insights: MarketInsights
-    let context: String?
-
-    private var trendIcon: String {
-        switch insights.trendDirection {
-        case "up":     return "arrow.up.right"
-        case "down":   return "arrow.down.right"
-        default:       return "arrow.right"
-        }
-    }
-
-    private var trendColor: Color {
-        switch insights.trendDirection {
-        case "up":   return .brandGreen
-        case "down": return .brand
-        default:     return .brandAmber
-        }
-    }
-
-    private var trendBg: Color {
-        switch insights.trendDirection {
-        case "up":   return .cardDarkTeal
-        case "down": return .cardDarkRed
-        default:     return .cardDarkOrange
-        }
-    }
-
-    @State private var isExpanded = false
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            DuoDisclosureHeader(
-                icon: "globe.americas.fill",
-                title: "Market Intel",
-                isExpanded: $isExpanded
-            ) {
-                Label(insights.trendDirection?.capitalized ?? "Stable", systemImage: trendIcon)
-                    .font(.duoCaption)
-                    .foregroundColor(trendColor)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 5)
-                    .background(trendColor.opacity(0.1))
-                    .cornerRadius(20)
-            }
-
-            if isExpanded {
-                // 2×2 tile grid
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                    if let size = insights.marketSize {
-                        MarketInsightTile(icon: "chart.pie.fill", label: "Market Size", value: size, color: .brand, tileBackground: .cardDarkRed)
-                    }
-                    if let rate = insights.growthRate {
-                        MarketInsightTile(icon: "arrow.up.right.circle.fill", label: "Growth Rate", value: rate, color: .brandGreen, tileBackground: .cardDarkTeal)
-                    }
-                    if let competitors = insights.keyCompetitors, !competitors.isEmpty {
-                        MarketInsightTile(icon: "person.3.fill", label: "Competitors", value: competitors.prefix(3).joined(separator: ", "), color: .brandAmber, tileBackground: .cardDarkOrange)
-                    }
-                    if let dir = insights.trendDirection {
-                        MarketInsightTile(icon: "waveform.path.ecg", label: "Market Trend", value: dir.capitalized, color: trendColor, tileBackground: trendBg)
-                    }
-                }
-
-                if let context = context, !context.isEmpty {
-                    Text(context)
-                        .font(.system(size: 13))
-                        .foregroundColor(.textSec)
-                        .lineSpacing(3)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .duoInset()
-                }
-            }
-        }
-        .duoPanel()
-    }
-}
-
-struct MarketInsightTile: View {
-    let icon: String
-    let label: String
-    let value: String
-    let color: Color
-    var tileBackground: Color? = nil
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 6) {
-                Image(systemName: icon)
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(color)
-                Text(label)
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundColor(.textSec)
-            }
-            Text(value)
-                .font(.system(size: 13, weight: .medium))
-                .foregroundColor(.textPri)
-                .lineLimit(2)
-        }
-        .padding(12)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(tileBackground ?? color.opacity(0.06))
-        .cornerRadius(12)
-    }
-}
-
-// MARK: - Quadrant Item Chart
-
-struct QuadrantItemChart: View {
-    let title: String
-    let items: [SWOTItem]
-    let avgScore: Double
-    let color: Color
-    let iconName: String
-
-    @State private var isExpanded = false
-
-    private var sortedItems: [SWOTItem] {
-        items.sorted { $0.score > $1.score }
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            DuoDisclosureHeader(
-                icon: iconName,
-                tint: color,
-                title: title,
-                subtitle: "\(items.count) item\(items.count == 1 ? "" : "s")",
-                isExpanded: $isExpanded
-            ) {
-                if !items.isEmpty {
-                    Text("avg \(Int(avgScore.rounded()))")
-                        .font(.duoCaption)
-                        .foregroundColor(color)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 5)
-                        .background(color.opacity(0.12))
-                        .clipShape(Capsule())
-                }
-            }
-
-            if sortedItems.isEmpty {
-                Text("Nothing here — that's a good sign")
-                    .font(.system(size: 14))
-                    .foregroundColor(.textSec)
-                    .italic()
-                    .padding(.vertical, 4)
-            } else {
-                // Always show top item
-                itemRow(sortedItems[0])
-
-                if isExpanded {
-                    ForEach(sortedItems.dropFirst()) { item in
-                        itemRow(item)
-                    }
-
-                    // Category pills
-                    let categories = Array(Set(sortedItems.map(\.category))).sorted()
-                    if !categories.isEmpty {
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 6) {
-                                ForEach(categories, id: \.self) { cat in
-                                    Text(cat)
-                                        .font(.system(size: 11, weight: .medium))
-                                        .foregroundColor(color)
-                                        .padding(.horizontal, 10)
-                                        .padding(.vertical, 5)
-                                        .background(color.opacity(0.1))
-                                        .clipShape(Capsule())
-                                }
-                            }
-                        }
-                        .padding(.top, 2)
-                    }
-                } else if sortedItems.count > 1 {
-                    Text("+\(sortedItems.count - 1) more")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(color.opacity(0.7))
-                }
-            }
-        }
-        .duoPanel()
-    }
-
-    private func itemRow(_ item: SWOTItem) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 12) {
-                Text(item.point)
-                    .font(.system(size: 14))
-                    .foregroundColor(.textPri)
-                    .lineLimit(isExpanded ? nil : 2)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-
-                Text("\(item.score)")
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundColor(color)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 5)
-                    .background(color.opacity(0.12))
-                    .clipShape(Capsule())
-            }
-
-            if isExpanded, let detail = item.detail {
-                Text(detail)
-                    .font(.system(size: 13))
-                    .foregroundColor(.textSec)
-                    .lineSpacing(3)
-                    .padding(.top, 2)
-            }
-        }
     }
 }
 

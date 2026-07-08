@@ -105,14 +105,17 @@ For "generic" type: all fields as "".
 "summary" — One sentence. Reference the specific idea.
 
 ORDERING:
+0. When DIMENSION SCORES are provided, the first 1-2 actions must attack the WEAKEST dimension.
 1. Address biggest weakness/risk
 2. Validate top opportunity
 3. Leverage a strength
 4. Monitor threats
 
+When REAL SMALL COMPARABLES are provided, reference them by name in search/message templates (e.g. "PoolTrak alternatives pricing") instead of [competitor] placeholders.
+
 Generate exactly 5-7 actions. Spread across quadrants.
 
-STRATEGY BY VIABILITY (scores are harsh by design — 20-45 is a normal starting point):
+STRATEGY BY VIABILITY (scores spread the full range — treat the band as truth):
 0-19: The idea as described doesn't survive. Actions should hunt for a pivot or the real problem underneath.
 20-39: Something's there but unproven. Actions should find out if the problem actually exists.
 40-59: Real problem, unproven demand. Actions should test whether anyone cares enough to act.
@@ -146,6 +149,9 @@ serve(async (req) => {
       opportunities,
       threats,
       viability_score,
+      dimension_scores,
+      score_rationale,
+      comparables,
     } = await req.json();
 
     if (!transcription_text || typeof transcription_text !== "string") {
@@ -154,6 +160,10 @@ serve(async (req) => {
         { status: 400, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
       );
     }
+
+    const dims = dimension_scores
+      ? `problem ${dimension_scores.problemSeverity}, demand ${dimension_scores.demandEvidence}, market ${dimension_scores.marketQuality}, buildable ${dimension_scores.feasibility}, different ${dimension_scores.differentiation}`
+      : "Not available.";
 
     const userMessage = `Founder's idea and SWOT analysis:
 
@@ -166,6 +176,9 @@ WEAKNESSES: ${(weaknesses || []).join("; ") || "None."}
 OPPORTUNITIES: ${(opportunities || []).join("; ") || "None."}
 THREATS: ${(threats || []).join("; ") || "None."}
 VIABILITY: ${viability_score ?? 50}/100
+DIMENSION SCORES (0-10): ${dims}
+WEAKEST LINK: ${score_rationale || "Not available."}
+REAL SMALL COMPARABLES (from live web research): ${(comparables || []).join(" | ") || "None found."}
 
 Generate 5-7 micro-actions with copy-paste templates.`;
 

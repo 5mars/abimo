@@ -40,18 +40,53 @@ struct SWOTItem: Identifiable, Codable, Hashable {
 
 // MARK: - MarketInsights
 
+/// A real small business found by live web research — proof the dish sells
+/// at a small table. Nested inside the market_insights jsonb.
+struct MarketComparable: Codable, Hashable, Identifiable {
+    var id: String { name }
+    let name: String
+    let what: String
+    let pricing: String
+    let status: String
+    let url: String?
+}
+
 struct MarketInsights: Codable {
     let marketSize: String?
     let growthRate: String?
     let trendDirection: String?   // "up" | "down" | "stable"
     let keyCompetitors: [String]?
+    let comparables: [MarketComparable]?
 
     enum CodingKeys: String, CodingKey {
         case marketSize      = "market_size"
         case growthRate      = "growth_rate"
         case trendDirection  = "trend_direction"
         case keyCompetitors  = "key_competitors"
+        case comparables
     }
+}
+
+// MARK: - DimensionScores
+
+/// The five 0-10 sub-scores behind the viability score. Keys stay camelCase
+/// in the jsonb column — they mirror the edge-function response verbatim.
+struct DimensionScores: Codable, Hashable {
+    let problemSeverity: Int
+    let demandEvidence: Int
+    let marketQuality: Int
+    let feasibility: Int
+    let differentiation: Int
+}
+
+// MARK: - IdeaVariant
+
+/// A "Remix the Recipe" variation: same core idea, one axis changed.
+struct IdeaVariant: Codable, Hashable, Identifiable {
+    var id: String { title }
+    let title: String
+    let pitch: String
+    let differentiator: String
 }
 
 // MARK: - SWOTAnalysis
@@ -78,6 +113,12 @@ struct SWOTAnalysis: Identifiable, Codable {
     let marketContext: String?
     let marketInsights: MarketInsights?
 
+    // Score transparency + remixes (nullable — rows before the overhaul have NULL)
+    let dimensionScores: DimensionScores?
+    let scoreRationale: String?
+    let fatalFlaw: Bool?
+    let ideaVariants: [IdeaVariant]?
+
     enum CodingKeys: String, CodingKey {
         case id
         case transcriptionId  = "transcription_id"
@@ -94,6 +135,10 @@ struct SWOTAnalysis: Identifiable, Codable {
         case viabilityScore   = "viability_score"
         case marketContext    = "market_context"
         case marketInsights   = "market_insights"
+        case dimensionScores  = "dimension_scores"
+        case scoreRationale   = "score_rationale"
+        case fatalFlaw        = "fatal_flaw"
+        case ideaVariants     = "idea_variants"
     }
 
     // MARK: - Computed helpers (Charts fall back to score=50 for legacy rows)

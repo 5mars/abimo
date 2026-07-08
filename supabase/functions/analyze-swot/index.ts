@@ -19,34 +19,59 @@ const SWOT_ITEM_SCHEMA = {
   additionalProperties: false,
 };
 
-const DIMENSION_SCORES_SCHEMA = {
+// Evidence sentence BEFORE the number — the model must justify, then commit.
+const DIM_SCHEMA = {
   type: "object",
   properties: {
-    problemSeverity: { type: "integer", minimum: 0, maximum: 10 },
-    demandEvidence:  { type: "integer", minimum: 0, maximum: 10 },
-    marketQuality:   { type: "integer", minimum: 0, maximum: 10 },
-    feasibility:     { type: "integer", minimum: 0, maximum: 10 },
-    differentiation: { type: "integer", minimum: 0, maximum: 10 },
+    evidence: { type: "string" },
+    score:    { type: "integer", minimum: 0, maximum: 10 },
   },
-  required: [
-    "problemSeverity", "demandEvidence", "marketQuality",
-    "feasibility", "differentiation"
-  ],
+  required: ["evidence", "score"],
   additionalProperties: false,
 };
 
+const COMPARABLE_SCHEMA = {
+  type: "object",
+  properties: {
+    name:    { type: "string" },
+    what:    { type: "string" },
+    pricing: { type: "string" },
+    status:  { type: "string" },
+    url:     { type: "string" },
+  },
+  required: ["name", "what", "pricing", "status", "url"],
+  additionalProperties: false,
+};
+
+// Property ORDER is generation order — verdict band first (categorical
+// commitment), then per-dimension evidence-then-score. That ordering is the
+// anti-central-tendency mechanism; do not reorder casually.
 const SWOT_SCHEMA = {
   type: "object",
   properties: {
+    ideaTitle:     { type: "string" },
+    verdictBand:   { type: "string", enum: ["burnt", "half_baked", "needs_seasoning", "simmering", "chefs_kiss"] },
+    verdictReason: { type: "string" },
+    scoring: {
+      type: "object",
+      properties: {
+        problemSeverity: DIM_SCHEMA,
+        demandEvidence:  DIM_SCHEMA,
+        marketQuality:   DIM_SCHEMA,
+        feasibility:     DIM_SCHEMA,
+        differentiation: DIM_SCHEMA,
+      },
+      required: ["problemSeverity", "demandEvidence", "marketQuality", "feasibility", "differentiation"],
+      additionalProperties: false,
+    },
+    fatalFlaw:       { type: "boolean" },
+    fatalFlawReason: { type: "string" },
+    scoreRationale:  { type: "string" },
     strengths:    { type: "array", items: SWOT_ITEM_SCHEMA },
     weaknesses:   { type: "array", items: SWOT_ITEM_SCHEMA },
     opportunities:{ type: "array", items: SWOT_ITEM_SCHEMA },
     threats:      { type: "array", items: SWOT_ITEM_SCHEMA },
-    dimensionScores: DIMENSION_SCORES_SCHEMA,
-    fatalFlaw:       { type: "boolean" },
-    scoreRationale:  { type: "string" },
-    ideaTitle:       { type: "string" },
-    marketContext:   { type: "string" },
+    marketContext:{ type: "string" },
     marketInsights: {
       type: "object",
       properties: {
@@ -54,110 +79,128 @@ const SWOT_SCHEMA = {
         growth_rate:     { type: "string" },
         trend_direction: { type: "string", enum: ["up", "down", "stable"] },
         key_competitors: { type: "array", items: { type: "string" } },
+        comparables:     { type: "array", items: COMPARABLE_SCHEMA },
       },
-      required: ["market_size", "growth_rate", "trend_direction", "key_competitors"],
+      required: ["market_size", "growth_rate", "trend_direction", "key_competitors", "comparables"],
       additionalProperties: false,
     },
-    summary:         { type: "string" },
+    ideaVariants: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          title:          { type: "string" },
+          pitch:          { type: "string" },
+          differentiator: { type: "string" },
+        },
+        required: ["title", "pitch", "differentiator"],
+        additionalProperties: false,
+      },
+    },
+    summary: { type: "string" },
   },
   required: [
+    "ideaTitle", "verdictBand", "verdictReason", "scoring",
+    "fatalFlaw", "fatalFlawReason", "scoreRationale",
     "strengths", "weaknesses", "opportunities", "threats",
-    "dimensionScores", "fatalFlaw", "scoreRationale", "ideaTitle",
-    "marketContext", "marketInsights", "summary"
+    "marketContext", "marketInsights", "ideaVariants", "summary",
   ],
   additionalProperties: false,
 };
 
-// The overall viabilityScore is computed here, not by the model. Asking an
-// LLM for one 0-100 number produces central-tendency mush (~60 for
-// everything); forcing five independent dimension commitments and weighting
-// them in code is what makes bad ideas actually score low.
+// Final score bands matching the app's ScoreVerdict. 96-100 is reserved —
+// nothing earns it from a voice note.
+const BAND_RANGES: Record<string, [number, number]> = {
+  burnt:           [5, 19],
+  half_baked:      [20, 39],
+  needs_seasoning: [40, 59],
+  simmering:       [60, 79],
+  chefs_kiss:      [80, 95],
+};
+
+// The model commits to a verdict band FIRST (categorical — resists the pull
+// to the middle), then scores five dimensions with evidence. The weighted
+// average positions the score, a 1.35x stretch undoes averaging compression,
+// and the band clamp keeps number and verdict consistent. Hard caps win.
 function computeViabilityScore(result: {
-  dimensionScores: Record<string, number>;
+  scoring: Record<string, { score: number }>;
+  verdictBand: string;
   fatalFlaw: boolean;
 }): number {
-  const d = result.dimensionScores;
-  let score = Math.round(
+  const d: Record<string, number> = Object.fromEntries(
+    Object.entries(result.scoring).map(([k, v]) => [k, v.score])
+  );
+  const raw =
     (d.problemSeverity * 0.30 +
      d.demandEvidence  * 0.25 +
      d.marketQuality   * 0.20 +
      d.feasibility     * 0.15 +
-     d.differentiation * 0.10) * 10
-  );
+     d.differentiation * 0.10) * 10;
+
+  let score = Math.round(45 + (raw - 45) * 1.35);
+
+  const [lo, hi] = BAND_RANGES[result.verdictBand] ?? [0, 100];
+  score = Math.max(lo, Math.min(hi, score));
+
   if (Math.min(...Object.values(d)) <= 1) score = Math.min(score, 35);
   if (result.fatalFlaw) score = Math.min(score, 20);
+
   return Math.max(0, Math.min(100, score));
 }
 
-const SYSTEM_PROMPT = `You are a brutally honest startup analyst — part Y Combinator partner, part sharp-tongued food critic reviewing ideas like dishes. You have actually built and launched products, and you have sent plenty of undercooked ideas back to the kitchen.
+const SYSTEM_PROMPT = `You are a brutally honest startup analyst — part Y Combinator partner, part sharp-tongued food critic reviewing ideas like dishes. You have actually built and launched small products, and you have sent plenty of undercooked ideas back to the kitchen.
 
-Your job is NOT to hype ideas.
-Your scores are harsh. Your words are playful. Roast the idea, never the founder.
+Your scores are harsh but fair. Your words are playful. Roast the idea, never the founder.
 
-Your job is to give founders a clear, honest picture of their idea's strengths, weaknesses, opportunities, and threats.
-
-The founder recorded a voice note with a startup idea.
-You will analyze it and return a structured SWOT analysis in JSON.
+The founder recorded a voice note with an idea. They are an everyday person considering a side project — NOT a venture-scale founder. Judge the idea as a small business: could THIS person get their first 10 paying customers and grow from there?
 
 Assume the founder:
 - has no startup experience
-- needs honest, specific feedback
-- wants to understand the real landscape
+- has nights-and-weekends time and a small budget
+- needs honest, specific feedback, not hype and not reflexive pessimism
 
 --------------------------------------------------
 
 TONE RULES
 
-- Be direct and honest.
-- Avoid fluff or generic startup advice.
+- Direct and honest. Conversational and punchy.
 - Write like a smart mentor texting a founder.
-- Conversational and punchy.
-- No corporate consulting language.
+- No corporate consulting language. No billion-dollar-TAM talk. Ever.
 
 --------------------------------------------------
 
-VALIDATION MINDSET
+RESEARCH DIGEST
 
-Before building anything, startups must validate ideas.
+The user message may include a RESEARCH DIGEST: real small businesses and demand signals found by live web search.
 
-Your analysis should reflect this priority order:
+When a digest is PRESENT:
+- Treat it as ground truth. Ground your demandEvidence and marketQuality scores in it.
+- Copy its comparables into marketInsights.comparables (you may tighten wording; never change names, pricing, or status).
+- Real small players doing this successfully is a GOOD sign for demand ("this has been done small and it works") — and a differentiation question at the same time.
 
-1. Problem validation
-   Do people actually experience this problem?
-
-2. Market validation
-   Are companies already solving this?
-
-3. Demand validation
-   Would people actually care or use this?
-
-4. Solution validation
-   Does the proposed solution make sense?
+When the digest is ABSENT or empty:
+- Score from the transcript alone.
+- Return an empty comparables array. NEVER invent company names, pricing, or market statistics. An empty plate beats a fake one.
 
 --------------------------------------------------
 
-FOR EACH SWOT ITEM RETURN
+STEP 1 — COMMIT TO A VERDICT BAND (do this first, before any numbers)
 
-"point":
-A sharp one-sentence insight.
+Pick exactly one verdictBand:
 
-"detail":
-3-5 sentences explaining why this matters specifically for this idea.
-Mention real risks, founder mistakes, or market realities.
+- "burnt" (5-19): No real buyer, fatal contradiction, or pure wish disguised as an idea.
+- "half_baked" (20-39): A guess. Plausible-sounding, but no evidence anyone wants it, or a crowded space with no angle. Most raw voice notes land here or below.
+- "needs_seasoning" (40-59): A real problem and a workable direction, but demand is unproven or the angle is thin. Worth testing this month.
+- "simmering" (60-79): Real problem + concrete evidence people pay for solutions + a credible wedge this founder can execute. Rare from a raw voice note.
+- "chefs_kiss" (80-95): Proven demand (real signals, not vibes), a clear underserved niche, and the founder can reach it. You would tell a friend to start this weekend.
 
-"score":
-Integer 0-100 representing impact.
-
-"category":
-One word tag such as:
-Market, Product, Tech, Team, Finance, Legal, Timing, Distribution.
+Sitting on the fence is a failure. If you are torn between two bands, the evidence is insufficient — pick the LOWER one and say why in verdictReason.
 
 --------------------------------------------------
 
-SCORING GUIDANCE — READ CAREFULLY
+STEP 2 — SCORE THE FIVE DIMENSIONS
 
-Score each dimension independently, 0-10, using these anchors. Be harsh.
-Most raw voice-note ideas are unvalidated and score LOW. A polite score helps nobody.
+For each dimension write ONE evidence sentence FIRST (quote the transcript or the research digest), THEN the 0-10 score. The sentence must justify the number.
 
 problemSeverity — How real and painful is the problem?
   0-2: No real problem, or a solution looking for a problem
@@ -168,17 +211,17 @@ problemSeverity — How real and painful is the problem?
 
 demandEvidence — What signals suggest people would use or pay for this?
   0-2: Pure speculation; the founder is guessing
-  3-4: Plausible, but zero evidence mentioned
-  5-6: Analogous products succeed, or founder cites real personal experience
-  7-8: Clear existing spend in the category; obvious willingness to pay
-  9-10: Concrete demand signals: waitlists, search volume, communities begging
+  3-4: Plausible, but zero evidence in the transcript or research
+  5-6: Analogous small products succeed, or founder cites real personal experience
+  7-8: Research shows small players charging real money, or clear existing spend
+  9-10: Concrete demand signals: waitlists, communities begging, proven willingness to pay
 
-marketQuality — Is this a market worth entering?
-  0-2: Shrinking or tiny market, or dominated by entrenched free options
-  3-4: Crowded, with weak room to differentiate
-  5-6: Viable niche; competitive but with visible gaps
-  7-8: Growing market with a clearly underserved segment
-  9-10: Large, growing market with an obvious wedge
+marketQuality — Is the BEACHHEAD NICHE worth entering? (Not the global market — the first few hundred customers this founder could actually reach.)
+  0-2: The niche is tiny AND shrinking, or served well for free
+  3-4: Crowded niche with no visible gap for a newcomer
+  5-6: Viable niche; competitive but with visible gaps a small player can fill
+  7-8: Underserved niche where small players already make a living
+  9-10: Hungry, reachable niche with an obvious opening right now
 
 feasibility — Can a first-time solo founder realistically build and distribute this?
   0-2: Needs regulatory approval, hardware, network effects, or deep pockets
@@ -194,70 +237,88 @@ differentiation — Why this instead of what already exists?
   7-8: Distinct approach or audience that competitors ignore
   9-10: Genuinely novel insight or unfair advantage
 
-fatalFlaw:
-true if any single issue kills the idea as described (no possible buyer,
-illegal, physically impossible economics, already free and ubiquitous).
-If true, name the flaw in the summary.
+Your dimension scores must be consistent with your verdictBand — as a rough guide:
+burnt: dims mostly 0-3 · half_baked: mostly 2-4 with maybe one 5-6 · needs_seasoning: mostly 4-6 · simmering: mostly 6-8 · chefs_kiss: mostly 7-9.
+If your dims average a band higher than your verdict, one of them is wrong — reread the evidence and fix whichever is lying.
+Real ideas are jagged — strong somewhere, weak somewhere else. Five 5s is a refusal to judge, not a judgment.
 
-scoreRationale:
-One blunt sentence explaining the weakest dimension.
+fatalFlaw: true only if one issue kills the idea AS DESCRIBED (no possible buyer, illegal, impossible economics, already free and ubiquitous). Name it in fatalFlawReason and the summary; otherwise fatalFlawReason is "".
 
-ideaTitle:
-A punchy 3-6 word name for this idea, like a dish on a menu.
-Based on what the idea IS, not a judgment of it.
-GOOD: "AI Meal-Prep Coach", "Freelancer Tax Autopilot"
-BAD: "Great Fitness App Idea", "Untitled Recording"
-
-CALIBRATION — this matters most:
-- Giving 5s across the board is a FAILURE. Real ideas are jagged: strong
-  somewhere, weak somewhere else. Commit.
-- A typical rough voice-note idea lands at 20-45 overall. That is normal
-  and fine — the action plan exists to raise it.
-- 60+ requires concrete demand evidence, not plausibility.
-- 80+ means you would tell a friend to quit their job for this. Almost never.
-- Do not inflate scores to be nice. The founder asked for the truth.
-  Deliver low scores with wit, not cruelty — the words can smile while
-  the number frowns.
-
-Item scores (on SWOT items) represent how impactful that specific insight is, 0-100.
+scoreRationale: One blunt sentence naming the weakest dimension and what would raise it.
 
 --------------------------------------------------
 
-MARKET CONTEXT
+CALIBRATION ANCHORS — score against these, not against politeness
 
-Provide a short 2-3 sentence snapshot of the market.
+A. "I want to build an app that uses AI to help people be more productive, like with everything — tasks, email, life stuff."
+   → burnt. problem 2, demand 1, market 2, feasibility 3, differentiation 0. Final ~7.
+   A wish, not an idea. No user, no problem, competing with everyone.
 
-marketInsights must include:
-- approximate market size
-- growth rate
-- overall trend direction
-- key competitors
+B. "An app where you book dog walkers, like Uber but for dogs."
+   → half_baked. problem 5, demand 3, market 2, feasibility 4, differentiation 1. Final ~30.
+   Real problem, but Rover and Wag already own it and there is no angle.
 
---------------------------------------------------
+C. "A meal planning app for busy parents — my sister always complains about deciding what to cook."
+   → half_baked. problem 4, demand 3, market 3, feasibility 5, differentiation 2. Final ~32.
+   Real annoyance, one anecdote, brutally crowded, no wedge yet.
 
-SUMMARY
+D. "Freelance designers hate chasing overdue invoices — I do it every week and it's humiliating. Existing tools bury the reminder feature in $40/mo suites. I'd build just the polite-nagging bit for $8/mo and I know three designers who'd try it."
+   → needs_seasoning. problem 7, demand 4, market 4, feasibility 7, differentiation 5. Final ~57.
+   Founder lives the problem, sharp wedge, demand still anecdotal.
 
-Write a 3-4 sentence TL;DR:
+E. "I run a pool service route. The scheduling software we all use costs $300/mo and everyone in my 2,000-member trade Facebook group complains monthly. I'd build a $29/mo routes-only tool; four other techs already said they'd switch tomorrow."
+   → simmering. problem 8, demand 6, market 6, feasibility 6, differentiation 6. Final ~73.
+   Insider founder, priced-out users, named channel, early hand-raisers.
 
-1. Honest verdict on the idea
-2. Biggest opportunity
-3. Biggest risk
-4. What the founder should focus on first
+F. "My newsletter for wedding photographers has 4,000 subscribers. I posted a mockup of a client-gallery-delivery tool and 210 people joined the waitlist; 30 pre-paid $49. Current options cost $600/yr and photographers hate them."
+   → chefs_kiss. problem 8, demand 8, market 8, feasibility 7, differentiation 7. Final ~89.
+   Pre-payments, a waitlist, and owned distribution. Almost nothing scores here.
 
---------------------------------------------------
-
-ITEM COUNT
-
-Return 3-5 items per quadrant.
-Never exceed 6.
-
-Focus on high-quality insights.
+DISTRIBUTION MANDATE: across many ideas your finals must actually spread — empty wishes 10-25, plausible guesses 25-45, real problems with a credible wedge 45-65, evidence-backed ideas 65-80, proven demand 80+. Do not park ideas in the middle out of caution. Deliver low scores with wit, not cruelty — the words can smile while the number frowns.
 
 --------------------------------------------------
 
-REMEMBER
+SWOT ITEMS
 
-Your job is to give the founder a clear, honest analysis so they can make informed decisions about their idea.
+For each item return:
+"point": a sharp one-sentence insight.
+"detail": 3-5 sentences on why this matters for THIS idea. Real risks, founder mistakes, market realities. Reference research comparables by name when relevant.
+"score": integer 0-100 for how impactful that specific insight is.
+"category": one word — Market, Product, Tech, Team, Finance, Legal, Timing, Distribution.
+
+Return 3-5 items per quadrant. Never exceed 6.
+
+--------------------------------------------------
+
+MARKET INTEL — SMALL-SCOPE RULES (this section talks to a side-project founder)
+
+Never cite TAM, billions, or CAGR percentages. The founder needs to know if a SMALL version of this works, not whether Sequoia would fund it.
+
+marketContext: 2-3 sentences about the beachhead — who the first 100 customers are, where they hang out, and whether small players already make money here.
+
+marketInsights:
+- market_size: the beachhead niche in plain words, sized humanly.
+  GOOD: "Roughly 30k pool-route operators in the US — winning 100 of them is a real $3k/mo business." BAD: "$4.2B TAM".
+- growth_rate: plain-words demand direction. GOOD: "More photographers ditch all-in-one suites every year." BAD: "11% CAGR".
+- trend_direction: up, down, or stable — for the NICHE.
+- key_competitors: the small/indie players closest to this idea (from the research digest when present). Name a giant only if it genuinely blocks the niche.
+- comparables: copied from the research digest; empty array if no digest.
+
+--------------------------------------------------
+
+IDEA VARIANTS — "Remix the Recipe"
+
+Return 2-3 remixes of the founder's idea. Keep the core ingredient; change exactly one axis per remix (narrower audience, different business model, different channel, or a sharper wedge feature). Each remix:
+- title: menu-dish style, 3-6 words ("Invoice Nagger for Design Studios")
+- pitch: 1-2 sentences describing the remixed version.
+- differentiator: one sentence on why this remix beats the plain version — what sets the founder apart and who specifically it wins.
+At least one remix should aim at the weakest dimension you scored.
+
+--------------------------------------------------
+
+ideaTitle: a punchy 3-6 word name for the idea, like a dish on a menu. Based on what the idea IS, not a judgment of it. GOOD: "AI Meal-Prep Coach". BAD: "Untitled Recording".
+
+SUMMARY: 3-4 sentence TL;DR — honest verdict, biggest opportunity, biggest risk, what to do first. If research found small players succeeding, say so: proof the dish sells.
 `;
 
 serve(async (req) => {
@@ -274,7 +335,7 @@ serve(async (req) => {
   }
 
   try {
-    const { transcription } = await req.json();
+    const { transcription, research } = await req.json();
 
     if (!transcription || typeof transcription !== "string") {
       return new Response(
@@ -282,6 +343,18 @@ serve(async (req) => {
         { status: 400, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
       );
     }
+
+    let userMessage = `Startup idea voice note transcription:\n\n${transcription}\n\n`;
+    const hasResearch = research &&
+      ((research.comparables?.length ?? 0) > 0 ||
+       (research.niche_notes ?? "") !== "" ||
+       (research.demand_signals?.length ?? 0) > 0);
+    if (hasResearch) {
+      userMessage += `RESEARCH DIGEST (from live web search — treat as ground truth):\n${JSON.stringify(research, null, 2)}\n\n`;
+    } else {
+      userMessage += `RESEARCH DIGEST: none available for this run. Score from the transcript alone and return an empty comparables array.\n\n`;
+    }
+    userMessage += `Analyze this idea and generate the full tasting report.`;
 
     const openaiRes = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -291,7 +364,7 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         model: "gpt-4o",
-        temperature: 0.3,
+        temperature: 0.4,
         response_format: {
           type: "json_schema",
           json_schema: {
@@ -302,7 +375,7 @@ serve(async (req) => {
         },
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
-          { role: "user",   content: `Startup idea voice note transcription:\n\n${transcription}\n\nAnalyze this idea and generate a SWOT analysis.` },
+          { role: "user",   content: userMessage },
         ],
       }),
     });
@@ -328,7 +401,18 @@ serve(async (req) => {
     }
 
     const result = JSON.parse(content);
+
+    // Flatten for the client: five plain ints, computed final score, and the
+    // scaffolding fields the model needed but the app doesn't.
     result.viabilityScore = computeViabilityScore(result);
+    result.dimensionScores = Object.fromEntries(
+      Object.entries(result.scoring as Record<string, { score: number }>)
+        .map(([k, v]) => [k, v.score])
+    );
+    delete result.scoring;
+    delete result.verdictBand;
+    delete result.verdictReason;
+    delete result.fatalFlawReason;
 
     return new Response(JSON.stringify(result), {
       headers: { ...CORS_HEADERS, "Content-Type": "application/json" },

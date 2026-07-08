@@ -6,8 +6,9 @@
 import SwiftUI
 
 /// Single source of truth for how a viability score reads across the app.
-/// Scores are intentionally harsh (most fresh ideas land 20-45), so the
-/// verdict copy stays playful while the number tells the truth.
+/// Scores are harsh but spread the full range — empty wishes land 10-25,
+/// evidence-backed ideas can hit 75+. Verdict copy stays playful while the
+/// number tells the truth.
 enum ScoreVerdict: CaseIterable {
     case burnt          // 0-19
     case halfBaked      // 20-39

@@ -14,7 +14,54 @@ class AIAnalysisService: ObservableObject {
 
     private let supabase = SupabaseService.shared
 
-    func analyzeTranscription(_ text: String) async throws -> SWOTAnalysisResponse {
+    // MARK: - Market Research (best-effort, never blocks the pipeline)
+
+    /// Live web research digest from the research-market edge function.
+    struct ResearchDigest: Codable {
+        let comparables: [MarketComparable]
+        let nicheNotes: String
+        let demandSignals: [String]
+
+        enum CodingKeys: String, CodingKey {
+            case comparables
+            case nicheNotes    = "niche_notes"
+            case demandSignals = "demand_signals"
+        }
+
+        var isEmpty: Bool {
+            comparables.isEmpty && nicheNotes.isEmpty && demandSignals.isEmpty
+        }
+    }
+
+    /// Scouts the market via live web search. Returns nil on ANY failure or
+    /// after ~25s — the analysis simply proceeds ungrounded.
+    func researchMarket(_ text: String) async -> ResearchDigest? {
+        let invoke = { [supabase] () async throws -> ResearchDigest in
+            try await supabase.client.functions.invoke(
+                "research-market",
+                options: FunctionInvokeOptions(body: ["transcription": text])
+            )
+        }
+        return await withTaskGroup(of: ResearchDigest?.self) { group in
+            group.addTask { try? await invoke() }
+            group.addTask {
+                try? await Task.sleep(for: .seconds(25))
+                return nil
+            }
+            let first = await group.next() ?? nil
+            group.cancelAll()
+            return first
+        }
+    }
+
+    // MARK: - SWOT Analysis
+
+    private struct AnalyzeRequest: Encodable {
+        let transcription: String
+        let research: ResearchDigest?
+    }
+
+    func analyzeTranscription(_ text: String, research: ResearchDigest? = nil) async throws -> SWOTAnalysisResponse {
         isAnalyzing = true
         errorMessage = nil
         defer { isAnalyzing = false }
@@ -23,7 +70,7 @@ class AIAnalysisService: ObservableObject {
             .invoke(
                 "analyze-swot",
                 options: FunctionInvokeOptions(
-                    body: ["transcription": text]
+                    body: AnalyzeRequest(transcription: text, research: research)
                 )
             )
 
@@ -34,9 +81,10 @@ class AIAnalysisService: ObservableObject {
         transcriptionId: UUID,
         transcriptionText: String,
         noteId: UUID? = nil,
-        currentNoteTitle: String? = nil
+        currentNoteTitle: String? = nil,
+        research: ResearchDigest? = nil
     ) async throws -> SWOTAnalysis {
-        let response = try await analyzeTranscription(transcriptionText)
+        let response = try await analyzeTranscription(transcriptionText, research: research)
 
         let analysis = SWOTAnalysis(
             id: UUID(),
@@ -53,7 +101,11 @@ class AIAnalysisService: ObservableObject {
             threatItems: response.threats,
             viabilityScore: response.viabilityScore,
             marketContext: response.marketContext,
-            marketInsights: response.marketInsights
+            marketInsights: response.marketInsights,
+            dimensionScores: response.dimensionScores,
+            scoreRationale: response.scoreRationale,
+            fatalFlaw: response.fatalFlaw,
+            ideaVariants: response.ideaVariants
         )
 
         try await supabase.createSWOTAnalysis(analysis)
@@ -93,6 +145,9 @@ class AIAnalysisService: ObservableObject {
             let opportunities: [String]
             let threats: [String]
             let viabilityScore: Int
+            let dimensionScores: DimensionScores?
+            let scoreRationale: String?
+            let comparables: [String]?
 
             enum CodingKeys: String, CodingKey {
                 case analysisId = "analysis_id"
@@ -100,6 +155,9 @@ class AIAnalysisService: ObservableObject {
                 case swotSummary = "swot_summary"
                 case strengths, weaknesses, opportunities, threats
                 case viabilityScore = "viability_score"
+                case dimensionScores = "dimension_scores"
+                case scoreRationale = "score_rationale"
+                case comparables
             }
         }
 
@@ -111,7 +169,12 @@ class AIAnalysisService: ObservableObject {
             weaknesses: analysis.resolvedWeaknesses.map(\.point),
             opportunities: analysis.resolvedOpportunities.map(\.point),
             threats: analysis.resolvedThreats.map(\.point),
-            viabilityScore: analysis.viabilityScore ?? 50
+            viabilityScore: analysis.viabilityScore ?? 50,
+            dimensionScores: analysis.dimensionScores,
+            scoreRationale: analysis.scoreRationale,
+            comparables: analysis.marketInsights?.comparables?.map {
+                "\($0.name) — \($0.what), \($0.pricing)"
+            }
         )
 
         let response: ActionPlanResponse = try await supabase.client.functions
@@ -180,4 +243,6 @@ struct SWOTAnalysisResponse: Codable {
     let ideaTitle: String?
     let scoreRationale: String?
     let fatalFlaw: Bool?
+    let dimensionScores: DimensionScores?
+    let ideaVariants: [IdeaVariant]?
 }

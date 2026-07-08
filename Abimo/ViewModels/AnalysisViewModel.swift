@@ -40,11 +40,15 @@ class AnalysisViewModel: ObservableObject {
         defer { isLoading = false }
 
         do {
+            // Best-effort web research first — grounds the manual regenerate
+            // path the same way the pipeline does; nil just means ungrounded.
+            let research = await aiService.researchMarket(transcription.text)
             analysis = try await aiService.generateAndSaveSWOTAnalysis(
                 transcriptionId: transcription.id,
                 transcriptionText: transcription.text,
                 noteId: transcription.noteId,
-                currentNoteTitle: noteTitle
+                currentNoteTitle: noteTitle,
+                research: research
             )
         } catch {
             errorMessage = "Failed to generate analysis: \(error.localizedDescription)"
