@@ -15,6 +15,10 @@ import UIKit
 @MainActor
 final class IdeaPipelineService: ObservableObject {
 
+    /// One pipeline runs at a time app-wide; shared so The Kitchen can show
+    /// live cooking progress on the note's card while the run is in flight.
+    static let shared = IdeaPipelineService()
+
     enum Step: Int, CaseIterable, Equatable {
         case saving
         case transcribing
@@ -67,6 +71,23 @@ final class IdeaPipelineService: ObservableObject {
     private let transcriptionService = TranscriptionService()
     private let aiService = AIAnalysisService()
     private var runTask: Task<Void, Never>?
+
+    /// True while any step is actively running (not idle/failed/done).
+    var isActive: Bool {
+        if case .running = stage { return true }
+        return false
+    }
+
+    /// True when THIS note is the one currently cooking.
+    func isCooking(noteId: UUID) -> Bool {
+        isActive && note?.id == noteId
+    }
+
+    /// Title of the step currently running, for progress labels.
+    var currentStepTitle: String? {
+        if case .running(let step) = stage { return step.title }
+        return nil
+    }
 
     /// Begin a fresh run for a new recording. Cancels any still-running
     /// previous run (its persisted artifacts stay recoverable from the note).

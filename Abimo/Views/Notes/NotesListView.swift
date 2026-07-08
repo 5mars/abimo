@@ -9,6 +9,7 @@ struct NotesListView: View {
     @EnvironmentObject var coordinator: NavigationCoordinator
     @StateObject private var viewModel = NotesViewModel()
     @ObservedObject private var entitlements = EntitlementService.shared
+    @ObservedObject private var pipeline = IdeaPipelineService.shared
     @State private var confirmingDeleteNote: VoiceNote? = nil
     @State private var showPaywall = false
 
@@ -53,6 +54,12 @@ struct NotesListView: View {
         }
         .onChange(of: coordinator.selectedTab) { _, newTab in
             if newTab == .ideas {
+                Task { await viewModel.fetchNotes() }
+            }
+        }
+        .onChange(of: pipeline.stage) { _, newStage in
+            // A finished cook flips the card from "Cooking" to "Analyzed"
+            if newStage == .done {
                 Task { await viewModel.fetchNotes() }
             }
         }
@@ -136,9 +143,15 @@ struct NotesListView: View {
             // Ideas — cards are self-evident, no section header needed
             Section {
                 ForEach(viewModel.notes) { note in
+                    let isCooking = pipeline.isCooking(noteId: note.id)
                     NavigationLink(destination: NoteDetailView(note: note)) {
-                        IdeaCardView(note: note, viewModel: viewModel)
+                        IdeaCardView(
+                            note: note,
+                            viewModel: viewModel,
+                            cookingStepTitle: isCooking ? pipeline.currentStepTitle : nil
+                        )
                     }
+                    .disabled(isCooking)   // no peeking while the kitchen works
                     .listRowBackground(Color.appBg)
                     .listRowSeparator(.hidden)
                     .listRowInsets(EdgeInsets(top: 5, leading: 16, bottom: 5, trailing: 16))
@@ -229,8 +242,12 @@ struct LabHeaderView: View {
 struct IdeaCardView: View {
     let note: VoiceNote
     let viewModel: NotesViewModel
+    /// Non-nil while the pipeline is actively cooking this note — the card
+    /// shows live progress and NotesListView disables navigation into it.
+    var cookingStepTitle: String? = nil
 
     private var isAnalyzed: Bool { note.analysisId != nil }
+    private var isCooking: Bool { cookingStepTitle != nil }
 
     private func timeAgo(_ date: Date) -> String {
         let s = Int(Date().timeIntervalSince(date))
@@ -260,34 +277,61 @@ struct IdeaCardView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
 
                 // Status tag
-                Text(isAnalyzed ? "Analyzed" : "New")
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundColor(isAnalyzed ? .brandGreen : .brand)
+                if isCooking {
+                    HStack(spacing: 6) {
+                        ProgressView()
+                            .scaleEffect(0.65)
+                            .tint(.brandAmber)
+                        Text("Cooking")
+                            .font(.system(size: 11, weight: .bold))
+                    }
+                    .foregroundColor(.brandAmber)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 5)
-                    .background((isAnalyzed ? Color.brandGreen : Color.brand).opacity(0.12))
+                    .background(Color.brandAmber.opacity(0.12))
                     .clipShape(Capsule())
+                } else {
+                    Text(isAnalyzed ? "Analyzed" : "New")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(isAnalyzed ? .brandGreen : .brand)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background((isAnalyzed ? Color.brandGreen : Color.brand).opacity(0.12))
+                        .clipShape(Capsule())
+                }
             }
 
-            // Meta row
+            // Meta row — live step title while cooking, the usual facts after
             HStack(spacing: 10) {
-                Label(viewModel.formatDuration(note.duration), systemImage: "waveform")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(.textSec)
+                if let cookingStepTitle {
+                    Text(cookingStepTitle)
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.brandAmber)
 
-                Text("·")
-                    .foregroundColor(.textSec.opacity(0.4))
-                    .font(.system(size: 14))
+                    Spacer()
 
-                Text(timeAgo(note.createdAt))
-                    .font(.system(size: 12))
-                    .foregroundColor(.textSec)
+                    Image(systemName: "lock.fill")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(Color.textSec.opacity(0.3))
+                } else {
+                    Label(viewModel.formatDuration(note.duration), systemImage: "waveform")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.textSec)
 
-                Spacer()
+                    Text("·")
+                        .foregroundColor(.textSec.opacity(0.4))
+                        .font(.system(size: 14))
 
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundColor(Color.textSec.opacity(0.3))
+                    Text(timeAgo(note.createdAt))
+                        .font(.system(size: 12))
+                        .foregroundColor(.textSec)
+
+                    Spacer()
+
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(Color.textSec.opacity(0.3))
+                }
             }
 
         }

@@ -11,7 +11,7 @@ import SwiftUI
 struct RecordingView: View {
     @EnvironmentObject var coordinator: NavigationCoordinator
     @StateObject private var viewModel = RecordingViewModel()
-    @StateObject private var pipeline = IdeaPipelineService()
+    @ObservedObject private var pipeline = IdeaPipelineService.shared
     @ObservedObject private var entitlements = EntitlementService.shared
     @State private var showPipeline = false
     @State private var showPaywall = false

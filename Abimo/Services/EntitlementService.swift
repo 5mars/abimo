@@ -25,6 +25,13 @@ final class EntitlementService: ObservableObject {
     /// Free tier: max ACTIVE ideas — deleting one frees a slot.
     static let freeIdeaLimit = 3
 
+    #if DEBUG
+    /// TESTING OVERRIDE — treats debug builds as Abimo Plus without a
+    /// purchase. Flip to false to exercise the free tier and paywalls.
+    /// Compiled out of release builds entirely.
+    static let debugForcePremium = true
+    #endif
+
     @Published private(set) var isPremium = false
     @Published private(set) var products: [Product] = []   // sorted monthly-first
     @Published private(set) var isLoadingProducts = false
@@ -57,6 +64,12 @@ final class EntitlementService: ObservableObject {
     // MARK: - Entitlement
 
     func refreshEntitlement() async {
+        #if DEBUG
+        if Self.debugForcePremium {
+            isPremium = true
+            return
+        }
+        #endif
         var premium = false
         for await entitlement in Transaction.currentEntitlements {
             // Only verified, unrevoked transactions count — never trust .unverified.
