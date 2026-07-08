@@ -1,11 +1,10 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { gate, CORS_HEADERS } from "../_shared/gate.ts";
 
 const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY")!;
 
-const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+const DAILY_LIMIT = 10;
+const MAX_TRANSCRIPTION_CHARS = 8000;
 
 // Research is best-effort by design: ANY failure returns an empty digest with
 // HTTP 200 so the analysis pipeline never blocks on a flaky search.
@@ -72,14 +71,15 @@ serve(async (req) => {
     return new Response(null, { headers: CORS_HEADERS });
   }
 
-  const authHeader = req.headers.get("Authorization");
-  if (!authHeader) {
-    return jsonResponse({ error: "Not authenticated" }, 401);
-  }
+  // Best-effort applies to OpenAI hiccups only; auth/rate-limit failures must
+  // surface as real errors, not silently look like "no research found".
+  const g = await gate(req, "research-market", DAILY_LIMIT);
+  if (g instanceof Response) return g;
 
   try {
     const { transcription } = await req.json();
-    if (!transcription || typeof transcription !== "string") {
+    if (!transcription || typeof transcription !== "string" ||
+        transcription.length > MAX_TRANSCRIPTION_CHARS) {
       return jsonResponse(EMPTY_DIGEST);
     }
 
@@ -91,6 +91,7 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         model: "gpt-4o",
+        max_output_tokens: 3000,
         tools: [{ type: "web_search" }],
         input: [
           { role: "system", content: RESEARCH_PROMPT },

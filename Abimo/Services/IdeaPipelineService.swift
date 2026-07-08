@@ -6,6 +6,7 @@
 import Foundation
 import Combine
 import UIKit
+import Supabase
 
 /// Runs the full record → results pipeline with zero taps:
 /// save upload → Whisper transcription → market scouting → SWOT analysis →
@@ -154,7 +155,7 @@ final class IdeaPipelineService: ObservableObject {
                 }
                 HapticEngine.selection()
             } catch {
-                fail(.transcribing, "Couldn't hear that one: \(error.localizedDescription)")
+                fail(.transcribing, friendlyMessage(for: error, fallback: "Couldn't hear that one: \(error.localizedDescription)"))
                 return
             }
         }
@@ -183,7 +184,7 @@ final class IdeaPipelineService: ObservableObject {
                         research: research
                     )
                 } catch {
-                    fail(.analyzing, "The critic choked: \(error.localizedDescription)")
+                    fail(.analyzing, friendlyMessage(for: error, fallback: "The critic choked: \(error.localizedDescription)"))
                     return
                 }
             }
@@ -210,6 +211,15 @@ final class IdeaPipelineService: ObservableObject {
     }
 
     // MARK: - Failure + background notification
+
+    /// The server enforces a per-user daily AI budget (HTTP 429) — surface it
+    /// as a closed kitchen, not a random error.
+    private func friendlyMessage(for error: Error, fallback: String) -> String {
+        if case FunctionsError.httpError(let code, _) = error, code == 429 {
+            return "The kitchen's done for today — you've hit the daily cooking limit. Burners are back on tomorrow."
+        }
+        return fallback
+    }
 
     private func fail(_ step: Step, _ message: String) {
         stage = .failed(step, message)

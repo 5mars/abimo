@@ -1,11 +1,11 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { gate, jsonError, CORS_HEADERS } from "../_shared/gate.ts";
 
 const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY")!;
 
-const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+const DAILY_LIMIT = 20;
+const MAX_TRANSCRIPTION_CHARS = 8000;
+const MAX_SWOT_CONTEXT_CHARS = 6000;
 
 const ACTION_PLAN_SCHEMA = {
   type: "object",
@@ -131,13 +131,8 @@ serve(async (req) => {
     return new Response(null, { headers: CORS_HEADERS });
   }
 
-  const authHeader = req.headers.get("Authorization");
-  if (!authHeader) {
-    return new Response(
-      JSON.stringify({ error: "Not authenticated" }),
-      { status: 401, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
-    );
-  }
+  const g = await gate(req, "generate-action-plan", DAILY_LIMIT);
+  if (g instanceof Response) return g;
 
   try {
     const {
@@ -155,30 +150,33 @@ serve(async (req) => {
     } = await req.json();
 
     if (!transcription_text || typeof transcription_text !== "string") {
-      return new Response(
-        JSON.stringify({ error: "transcription_text field required" }),
-        { status: 400, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
-      );
+      return jsonError("transcription_text field required", 400);
+    }
+    if (transcription_text.length > MAX_TRANSCRIPTION_CHARS) {
+      return jsonError("transcription_text too long", 400);
     }
 
     const dims = dimension_scores
       ? `problem ${dimension_scores.problemSeverity}, demand ${dimension_scores.demandEvidence}, market ${dimension_scores.marketQuality}, buildable ${dimension_scores.feasibility}, different ${dimension_scores.differentiation}`
       : "Not available.";
 
+    const clip = (arr: unknown) =>
+      ((arr as string[] | undefined) || []).join("; ").slice(0, MAX_SWOT_CONTEXT_CHARS) || "None.";
+
     const userMessage = `Founder's idea and SWOT analysis:
 
 VOICE NOTE:
 ${transcription_text}
 
-SUMMARY: ${swot_summary || "None."}
-STRENGTHS: ${(strengths || []).join("; ") || "None."}
-WEAKNESSES: ${(weaknesses || []).join("; ") || "None."}
-OPPORTUNITIES: ${(opportunities || []).join("; ") || "None."}
-THREATS: ${(threats || []).join("; ") || "None."}
+SUMMARY: ${String(swot_summary || "None.").slice(0, MAX_SWOT_CONTEXT_CHARS)}
+STRENGTHS: ${clip(strengths)}
+WEAKNESSES: ${clip(weaknesses)}
+OPPORTUNITIES: ${clip(opportunities)}
+THREATS: ${clip(threats)}
 VIABILITY: ${viability_score ?? 50}/100
 DIMENSION SCORES (0-10): ${dims}
 WEAKEST LINK: ${score_rationale || "Not available."}
-REAL SMALL COMPARABLES (from live web research): ${(comparables || []).join(" | ") || "None found."}
+REAL SMALL COMPARABLES (from live web research): ${((comparables || []).join(" | ")).slice(0, MAX_SWOT_CONTEXT_CHARS) || "None found."}
 
 Generate 5-7 micro-actions with copy-paste templates.`;
 
@@ -191,6 +189,7 @@ Generate 5-7 micro-actions with copy-paste templates.`;
       body: JSON.stringify({
         model: "gpt-4o",
         temperature: 0.4,
+        max_tokens: 2500,
         response_format: {
           type: "json_schema",
           json_schema: {

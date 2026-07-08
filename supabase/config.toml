@@ -1,0 +1,13 @@
+project_id = "ymbfqlrarlnqtzatgfah"
+
+[functions.transcribe-audio]
+verify_jwt = true
+
+[functions.research-market]
+verify_jwt = true
+
+[functions.analyze-swot]
+verify_jwt = true
+
+[functions.generate-action-plan]
+verify_jwt = true

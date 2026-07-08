@@ -1,11 +1,11 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { gate, jsonError, CORS_HEADERS } from "../_shared/gate.ts";
 
 const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY")!;
 
-const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+const DAILY_LIMIT = 20;
+const MAX_TRANSCRIPTION_CHARS = 8000;
+const MAX_PIVOT_FIELD_CHARS = 500;
 
 const SWOT_ITEM_SCHEMA = {
   type: "object",
@@ -334,22 +334,22 @@ serve(async (req) => {
     return new Response(null, { headers: CORS_HEADERS });
   }
 
-  const authHeader = req.headers.get("Authorization");
-  if (!authHeader) {
-    return new Response(
-      JSON.stringify({ error: "Not authenticated" }),
-      { status: 401, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
-    );
-  }
+  const g = await gate(req, "analyze-swot", DAILY_LIMIT);
+  if (g instanceof Response) return g;
 
   try {
     const { transcription, research, pivot } = await req.json();
 
     if (!transcription || typeof transcription !== "string") {
-      return new Response(
-        JSON.stringify({ error: "transcription field required" }),
-        { status: 400, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
-      );
+      return jsonError("transcription field required", 400);
+    }
+    if (transcription.length > MAX_TRANSCRIPTION_CHARS) {
+      return jsonError("transcription too long", 400);
+    }
+    if (pivot && [pivot.title, pivot.pitch, pivot.differentiator].some(
+      (f) => typeof f === "string" && f.length > MAX_PIVOT_FIELD_CHARS,
+    )) {
+      return jsonError("pivot fields too long", 400);
     }
 
     let userMessage = `Startup idea voice note transcription:\n\n${transcription}\n\n`;
@@ -376,6 +376,7 @@ serve(async (req) => {
       body: JSON.stringify({
         model: "gpt-4o",
         temperature: 0.4,
+        max_tokens: 4096,
         response_format: {
           type: "json_schema",
           json_schema: {
