@@ -114,25 +114,39 @@ final class EntitlementService: ObservableObject {
             case .success(.verified(let transaction)):
                 await transaction.finish()
                 await refreshEntitlement()
+                AnalyticsService.shared.log(.purchaseSucceeded(productId: product.id))
+                if transaction.offer?.type == .introductory {
+                    AnalyticsService.shared.log(.trialStarted(productId: product.id))
+                }
                 return true
             case .success(.unverified):
                 lastError = "That purchase couldn't be verified. Try Restore Purchases."
+                AnalyticsService.shared.log(.purchaseFailed(reason: "unverified"))
                 return false
-            case .userCancelled, .pending:
+            case .userCancelled:
+                AnalyticsService.shared.log(.purchaseFailed(reason: "cancelled"))
+                return false
+            case .pending:
+                AnalyticsService.shared.log(.purchaseFailed(reason: "pending"))
                 return false
             @unknown default:
                 return false
             }
         } catch {
             lastError = "Purchase failed: \(error.localizedDescription)"
+            AnalyticsService.shared.log(.purchaseFailed(reason: "error"))
             return false
         }
     }
 
     func restore() async {
         do {
+            let wasPremium = isPremium
             try await AppStore.sync()
             await refreshEntitlement()
+            if isPremium && !wasPremium {
+                AnalyticsService.shared.log(.purchaseRestored)
+            }
         } catch {
             lastError = "Restore failed: \(error.localizedDescription)"
         }

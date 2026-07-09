@@ -17,6 +17,8 @@
 		73C8EB5BB682575EC87A171A /* ActionIconMapperTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C826A6FCE48478DCB74F2135 /* ActionIconMapperTests.swift */; };
 		846A32C3BB81E3C29B621792 /* HapticEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73C8EB5BB682575EC87A171B /* HapticEngineTests.swift */; };
 		A1B2C3D4E5F6A7B8C9D0E1F2 /* Vortex in Frameworks */ = {isa = PBXBuildFile; productRef = A1B2C3D4E5F6A7B8C9D0E1F3 /* Vortex */; };
+		FBA0000000000000000000A3 /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = FBA0000000000000000000A2 /* FirebaseAnalytics */; };
+		FBA0000000000000000000A5 /* FirebaseCrashlytics in Frameworks */ = {isa = PBXBuildFile; productRef = FBA0000000000000000000A4 /* FirebaseCrashlytics */; };
 		A1B2C3D4E5F6A7B8C9D0E1F4 /* Lottie in Frameworks */ = {isa = PBXBuildFile; productRef = A1B2C3D4E5F6A7B8C9D0E1F5 /* Lottie */; };
 		A2B3C4D5E6F7A8B9C0D1E2F3 /* CustomTabBarTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2B3C4D5E6F7A8B9C0D1E2F4 /* CustomTabBarTests.swift */; };
 		B3C4D5E6F7A8B9C0D1E2F3A4 /* CelebrationStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3C4D5E6F7A8B9C0D1E2F3A5 /* CelebrationStateTests.swift */; };
@@ -94,6 +96,8 @@
 				0D796D1E2F576B3B005CE115 /* Realtime in Frameworks */,
 				A1B2C3D4E5F6A7B8C9D0E1F2 /* Vortex in Frameworks */,
 				A1B2C3D4E5F6A7B8C9D0E1F4 /* Lottie in Frameworks */,
+				FBA0000000000000000000A3 /* FirebaseAnalytics in Frameworks */,
+				FBA0000000000000000000A5 /* FirebaseCrashlytics in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -156,6 +160,7 @@
 				0D25206B2F57455E00219D62 /* Sources */,
 				0D25206C2F57455E00219D62 /* Frameworks */,
 				0D25206D2F57455E00219D62 /* Resources */,
+				FBA0000000000000000000A6 /* Upload Crashlytics dSYMs */,
 			);
 			buildRules = (
 			);
@@ -174,6 +179,8 @@
 				0D796D212F576B3B005CE115 /* Supabase */,
 				A1B2C3D4E5F6A7B8C9D0E1F3 /* Vortex */,
 				A1B2C3D4E5F6A7B8C9D0E1F5 /* Lottie */,
+				FBA0000000000000000000A2 /* FirebaseAnalytics */,
+				FBA0000000000000000000A4 /* FirebaseCrashlytics */,
 			);
 			productName = Abimo;
 			productReference = 0D25206F2F57455E00219D62 /* Abimo.app */;
@@ -229,6 +236,7 @@
 				0D796D162F576B3B005CE115 /* XCRemoteSwiftPackageReference "supabase-swift" */,
 				A1B2C3D4E5F6A7B8C9D0E1F8 /* XCRemoteSwiftPackageReference "Vortex" */,
 				A1B2C3D4E5F6A7B8C9D0E1F9 /* XCRemoteSwiftPackageReference "lottie-spm" */,
+				FBA0000000000000000000A1 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 0D2520702F57455E00219D62 /* Products */;
@@ -257,6 +265,30 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		FBA0000000000000000000A6 /* Upload Crashlytics dSYMs */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}/Contents/Resources/DWARF/${TARGET_NAME}",
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/GoogleService-Info.plist",
+				"$(TARGET_BUILD_DIR)/$(EXECUTABLE_PATH)",
+			);
+			name = "Upload Crashlytics dSYMs";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# Skip until GoogleService-Info.plist is added to the target (Firebase console download).\nif [ -f \"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/GoogleService-Info.plist\" ]; then\n  \"${BUILD_DIR%/Build/*}/SourcePackages/checkouts/firebase-ios-sdk/Crashlytics/run\"\nelse\n  echo \"GoogleService-Info.plist not found — skipping Crashlytics dSYM upload.\"\nfi\n";
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		0D25206B2F57455E00219D62 /* Sources */ = {
@@ -436,7 +468,7 @@
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 26.2;
@@ -481,7 +513,7 @@
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 26.2;
@@ -509,7 +541,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = VMFBV25WD2;
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				MACOSX_DEPLOYMENT_TARGET = 26.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.mars.AbimoTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -529,7 +561,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = VMFBV25WD2;
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				MACOSX_DEPLOYMENT_TARGET = 26.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.mars.AbimoTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -599,6 +631,14 @@
 				minimumVersion = 4.5.0;
 			};
 		};
+		FBA0000000000000000000A1 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 12.0.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -641,6 +681,16 @@
 			isa = XCSwiftPackageProductDependency;
 			package = A1B2C3D4E5F6A7B8C9D0E1F9 /* XCRemoteSwiftPackageReference "lottie-spm" */;
 			productName = Lottie;
+		};
+		FBA0000000000000000000A2 /* FirebaseAnalytics */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = FBA0000000000000000000A1 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAnalytics;
+		};
+		FBA0000000000000000000A4 /* FirebaseCrashlytics */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = FBA0000000000000000000A1 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseCrashlytics;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

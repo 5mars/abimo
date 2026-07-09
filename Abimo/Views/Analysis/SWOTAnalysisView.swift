@@ -76,6 +76,10 @@ struct SWOTAnalysisView: View {
                 if Self.shouldAutoGenerate(analysis: viewModel.analysis, errorMessage: viewModel.errorMessage) {
                     await viewModel.generateAnalysis(transcription: transcription, noteTitle: noteTitle)
                 }
+                if let score = viewModel.analysis?.viabilityScore {
+                    let band = score >= 70 ? "high" : score >= 40 ? "mid" : "low"
+                    AnalyticsService.shared.log(.analysisViewed(scoreBand: band))
+                }
             }
             .sheet(item: $activeCourse) { course in
                 QuadrantDetailSheet(course: course, onGetActionPlan: {
@@ -254,6 +258,7 @@ struct SWOTAnalysisView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .plusLocked(true, message: "Unlock the remixes") {
+                    AnalyticsService.shared.log(.gateHit(gate: "swot_lock"))
                     showPaywall = true
                 }
             }
@@ -317,6 +322,7 @@ struct SWOTAnalysisView: View {
                 }
                 MarketInsightGrid(insights: insights)
                     .plusLocked(true, message: "Unlock Market Intel") {
+                        AnalyticsService.shared.log(.gateHit(gate: "swot_lock"))
                         showPaywall = true
                     }
             }

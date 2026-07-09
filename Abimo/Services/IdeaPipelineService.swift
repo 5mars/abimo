@@ -72,6 +72,7 @@ final class IdeaPipelineService: ObservableObject {
     private let transcriptionService = TranscriptionService()
     private let aiService = AIAnalysisService()
     private var runTask: Task<Void, Never>?
+    private var runStartedAt: Date?
 
     /// True while any step is actively running (not idle/failed/done).
     var isActive: Bool {
@@ -100,6 +101,7 @@ final class IdeaPipelineService: ObservableObject {
         research = nil
         stage = .idle
         capHit = false
+        runStartedAt = Date()
         runTask = Task { await run(recordingVM: recordingVM, coordinator: coordinator) }
     }
 
@@ -121,6 +123,7 @@ final class IdeaPipelineService: ObservableObject {
                let count = try? await supabase.countVoiceNotes(),
                count >= EntitlementService.freeIdeaLimit {
                 capHit = true
+                AnalyticsService.shared.log(.gateHit(gate: "idea_cap"))
                 fail(.saving, "Kitchen's full — three dishes max on the free menu. Your recording is safe; free a slot or go Plus, then retry.")
                 return
             }
@@ -129,6 +132,8 @@ final class IdeaPipelineService: ObservableObject {
                 return
             }
             note = saved
+            AnalyticsService.shared.log(.ideaCreated)
+            AnalyticsService.shared.log(.pipelineStageCompleted(stage: "saving"))
             HapticEngine.selection()
         }
         guard let note, !Task.isCancelled else { return }
@@ -153,6 +158,7 @@ final class IdeaPipelineService: ObservableObject {
                     try await supabase.createTranscription(new)
                     transcription = new
                 }
+                AnalyticsService.shared.log(.pipelineStageCompleted(stage: "transcribing"))
                 HapticEngine.selection()
             } catch {
                 fail(.transcribing, friendlyMessage(for: error, fallback: "Couldn't hear that one: \(error.localizedDescription)"))
@@ -171,6 +177,7 @@ final class IdeaPipelineService: ObservableObject {
                 if research == nil {
                     stage = .running(.scouting)
                     research = await aiService.researchMarket(transcription.text)
+                    AnalyticsService.shared.log(.pipelineStageCompleted(stage: "scouting"))
                     HapticEngine.selection()
                 }
                 guard !Task.isCancelled else { return }
@@ -191,6 +198,7 @@ final class IdeaPipelineService: ObservableObject {
             if let analysis {
                 try? await supabase.updateVoiceNoteAnalysisId(noteId: note.id, analysisId: analysis.id)
             }
+            AnalyticsService.shared.log(.pipelineStageCompleted(stage: "analyzing"))
             HapticEngine.selection()
         }
         guard let analysis, !Task.isCancelled else { return }
@@ -206,6 +214,8 @@ final class IdeaPipelineService: ObservableObject {
             noteTitle: freshTitle
         )
         stage = .done
+        let duration = runStartedAt.map { Int(Date().timeIntervalSince($0)) } ?? 0
+        AnalyticsService.shared.log(.pipelineCompleted(durationSec: duration))
         HapticEngine.success()
         notifyIfBackgrounded(success: true)
     }
@@ -223,6 +233,7 @@ final class IdeaPipelineService: ObservableObject {
 
     private func fail(_ step: Step, _ message: String) {
         stage = .failed(step, message)
+        AnalyticsService.shared.log(.pipelineFailed(stage: String(describing: step), reason: message))
         notifyIfBackgrounded(success: false)
     }
 

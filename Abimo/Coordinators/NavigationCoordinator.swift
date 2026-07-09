@@ -11,6 +11,15 @@ enum AppTab: Int, CaseIterable {
     case record = 1
     case actions = 2
     case profile = 3
+
+    var screenName: String {
+        switch self {
+        case .ideas:   return "tab_ideas"
+        case .record:  return "tab_record"
+        case .actions: return "tab_actions"
+        case .profile: return "tab_profile"
+        }
+    }
 }
 
 extension AppTab {
@@ -42,7 +51,12 @@ struct PlanGenerationRetryContext {
 
 @MainActor
 final class NavigationCoordinator: ObservableObject {
-    @Published var selectedTab: AppTab = .ideas
+    @Published var selectedTab: AppTab = .ideas {
+        didSet {
+            guard selectedTab != oldValue else { return }
+            AnalyticsService.shared.logScreen(selectedTab.screenName)
+        }
+    }
     @Published var pendingNote: VoiceNote? = nil
     @Published var pendingPlanGeneration: Bool = false
     @Published var planGenerationRetry: PlanGenerationRetryContext? = nil

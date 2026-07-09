@@ -31,6 +31,14 @@ struct PaywallView: View {
             case .fullAnalysis: return "Every point, every detail, every market stat — no blur."
             }
         }
+
+        var analyticsName: String {
+            switch self {
+            case .ideaCap:      return "idea_cap"
+            case .general:      return "general"
+            case .fullAnalysis: return "full_analysis"
+            }
+        }
     }
 
     let context: Context
@@ -42,6 +50,9 @@ struct PaywallView: View {
     var body: some View {
         ZStack {
             Color.appBg.ignoresSafeArea()
+                .onAppear {
+                    AnalyticsService.shared.log(.paywallShown(context: context.analyticsName))
+                }
 
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 0) {
@@ -323,7 +334,7 @@ struct PaywallView: View {
                 Link("Terms of Use",
                      destination: URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")!)
                 Link("Privacy Policy",
-                     destination: URL(string: "https://abimo.app/privacy")!)
+                     destination: URL(string: "https://5mars.github.io/abimo-legal/privacy/")!)
             }
             .font(.duoCaption)
             .foregroundColor(.textSec)
@@ -335,6 +346,7 @@ struct PaywallView: View {
     private func buySelected() {
         guard let product = entitlements.products.first(where: { $0.id == selectedProductID })
                 ?? entitlements.products.first else { return }
+        AnalyticsService.shared.log(.purchaseInitiated(productId: product.id))
         Task {
             if await entitlements.purchase(product) {
                 HapticEngine.success()

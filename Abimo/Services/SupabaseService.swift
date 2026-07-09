@@ -14,7 +14,6 @@ class SupabaseService {
     let client: SupabaseClient
 
     private init() {
-        // TODO: Replace with your actual Supabase credentials
         let supabaseURL = URL(string: "https://ymbfqlrarlnqtzatgfah.supabase.co")!
         let supabaseAnonKey = "sb_publishable_HUIZRQ5EfaFU3EV-1IzqNQ_8uOBDJ39"
 

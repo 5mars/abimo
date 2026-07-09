@@ -36,10 +36,12 @@ class AuthViewModel: ObservableObject {
                     if let user = session?.user {
                         currentUser = User(id: user.id, email: user.email, createdAt: user.createdAt)
                         isAuthenticated = true
+                        AnalyticsService.shared.setUser(id: user.id)
                     }
                 case .signedOut:
                     currentUser = nil
                     isAuthenticated = false
+                    AnalyticsService.shared.setUser(id: nil)
                 default:
                     break
                 }
@@ -55,7 +57,9 @@ class AuthViewModel: ObservableObject {
             currentUser = try await supabase.getCurrentUser()
             isAuthenticated = currentUser != nil
         } catch {
+            #if DEBUG
             print("Auth check error: \(error.localizedDescription)")
+            #endif
             isAuthenticated = false
         }
     }
@@ -68,6 +72,7 @@ class AuthViewModel: ObservableObject {
         do {
             currentUser = try await supabase.signUp(email: email, password: password)
             isAuthenticated = true
+            AnalyticsService.shared.log(.signUp)
         } catch {
             errorMessage = Self.friendlyAuthMessage(error, fallback: "Sign up didn't take. Give it another shot.")
         }
@@ -81,6 +86,7 @@ class AuthViewModel: ObservableObject {
         do {
             currentUser = try await supabase.signIn(email: email, password: password)
             isAuthenticated = true
+            AnalyticsService.shared.log(.login)
         } catch {
             errorMessage = Self.friendlyAuthMessage(error, fallback: "Sign in didn't take. Give it another shot.")
         }
@@ -89,7 +95,9 @@ class AuthViewModel: ObservableObject {
     /// Maps raw Supabase auth failures to human copy; the raw error stays in
     /// the console for debugging.
     private static func friendlyAuthMessage(_ error: Error, fallback: String) -> String {
+        #if DEBUG
         print("Auth error: \(error)")
+        #endif
         let raw = error.localizedDescription.lowercased()
         if raw.contains("invalid login credentials") || raw.contains("invalid_credentials") {
             return "That email and password combo isn't cooking."

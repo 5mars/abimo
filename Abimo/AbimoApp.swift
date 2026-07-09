@@ -13,6 +13,8 @@ struct AbimoApp: App {
     @Environment(\.scenePhase) var scenePhase
 
     init() {
+        // Firebase first so Crashlytics catches crashes from the very start.
+        AnalyticsService.shared.configure()
         UserDefaults.standard.register(defaults: [
             "notif_inactivity": true,
             "notif_action_nudge": true,

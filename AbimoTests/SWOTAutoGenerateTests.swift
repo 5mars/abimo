@@ -27,7 +27,11 @@ final class SWOTAutoGenerateTests: XCTestCase {
             threatItems: [],
             viabilityScore: nil,
             marketContext: nil,
-            marketInsights: nil
+            marketInsights: nil,
+            dimensionScores: nil,
+            scoreRationale: nil,
+            fatalFlaw: nil,
+            ideaVariants: nil
         )
     }
 
