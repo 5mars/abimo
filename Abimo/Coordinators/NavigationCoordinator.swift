@@ -73,6 +73,9 @@ final class NavigationCoordinator: ObservableObject {
     /// On failure the context is kept so the Actions tab can offer a retry
     /// instead of silently never showing the plan.
     func startPlanGeneration(analysis: SWOTAnalysis, transcriptionText: String, noteTitle: String) {
+        // A generation is already cooking (the pipeline fires one automatically;
+        // the results CTA can request another before it lands) — let it finish.
+        guard !pendingPlanGeneration else { return }
         pendingPlanGeneration = true
         planGenerationRetry = nil
         Task { @MainActor in

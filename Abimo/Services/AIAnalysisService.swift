@@ -157,6 +157,14 @@ class AIAnalysisService: ObservableObject {
             throw NSError(domain: "AIAnalysisService", code: 401, userInfo: [NSLocalizedDescriptionKey: "Not authenticated"])
         }
 
+        // One plan per analysis: the pipeline auto-generates on every run, and
+        // the results CTA can fire again — return the existing plan instead of
+        // cooking (and paying for) a duplicate.
+        if let existing = try await supabase.fetchActionPlan(analysisId: analysis.id) {
+            let actions = try await supabase.fetchMicroActions(actionPlanId: existing.id)
+            return (existing, actions)
+        }
+
         struct ActionPlanRequest: Encodable {
             let analysisId: String
             let transcriptionText: String
