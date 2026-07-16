@@ -25,6 +25,10 @@ enum AnalyticsEvent {
     case purchaseFailed(reason: String)        // "cancelled" | "pending" | "unverified" | "error"
     case purchaseRestored
     case trialStarted(productId: String)
+    case walkInStarted
+    case walkInStepCompleted(step: String)     // WalkInStep rawValue
+    case walkInSkipped(step: String)
+    case walkInCompleted
 
     var name: String {
         switch self {
@@ -42,6 +46,10 @@ enum AnalyticsEvent {
         case .purchaseFailed:         return "purchase_failed"
         case .purchaseRestored:       return "purchase_restored"
         case .trialStarted:           return "trial_started"
+        case .walkInStarted:          return "walk_in_started"
+        case .walkInStepCompleted:    return "walk_in_step_completed"
+        case .walkInSkipped:          return "walk_in_skipped"
+        case .walkInCompleted:        return "walk_in_completed"
         }
     }
 
@@ -49,8 +57,10 @@ enum AnalyticsEvent {
         switch self {
         case .signUp, .login:
             return [AnalyticsParameterMethod: "email"]
-        case .ideaCreated, .purchaseRestored:
+        case .ideaCreated, .purchaseRestored, .walkInStarted, .walkInCompleted:
             return nil
+        case .walkInStepCompleted(let step), .walkInSkipped(let step):
+            return ["step": step]
         case .pipelineStageCompleted(let stage):
             return ["stage": stage]
         case .pipelineCompleted(let durationSec):

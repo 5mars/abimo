@@ -17,7 +17,7 @@ enum MascotMomentTrigger: Equatable {
     case planComplete
     // Popup triggers — the ONLY ones that go through MascotDirector.
     // Popups are rare by design: max one per session, each with an action.
-    case firstWelcome                    // first session ever after sign-in
+    case walkInWelcome                   // first beat of the first-user walk-in tour
     case returnedAfterAbsence(days: Int)
     case streakAtRisk(days: Int)         // streak from yesterday, nothing today
     // Static line sources (consumed via .line only, never popups)
@@ -33,7 +33,7 @@ enum MascotMomentTrigger: Equatable {
         case .actionCompleted:      return "actionCompleted"
         case .streakExtended:       return "streakExtended"
         case .planComplete:         return "planComplete"
-        case .firstWelcome:         return "firstWelcome"
+        case .walkInWelcome:        return "walkInWelcome"
         case .returnedAfterAbsence: return "returnedAfterAbsence"
         case .streakAtRisk:         return "streakAtRisk"
         case .emptyKitchen:         return "emptyKitchen"
@@ -89,8 +89,10 @@ enum MascotVoice {
     /// Static line consumers only read `.line`, so nothing else gets one.
     private static func defaultAction(for trigger: MascotMomentTrigger) -> MascotAction? {
         switch trigger {
-        case .firstWelcome:
-            return MascotAction(label: "Record an idea", intent: .goRecord)
+        case .walkInWelcome:
+            // Intent is unused — the walk-in host dismisses and lets the
+            // glowing Record tab teach the navigation instead of jumping.
+            return MascotAction(label: "Show me", intent: .goRecord)
         case .returnedAfterAbsence:
             return MascotAction(label: "Drop an idea", intent: .goRecord)
         case .streakAtRisk:
@@ -174,11 +176,11 @@ enum MascotVoice {
                 "Record something. I can't roast air.",
             ], .neutral)
 
-        case .firstWelcome:
+        case .walkInWelcome:
             return ([
-                "New in my kitchen? Bring me an idea. I'll tell you if it's edible.",
-                "Welcome. I judge ideas for a living. Yours are safe-ish with me.",
-                "First day. Low expectations. Surprise me with an idea.",
+                "New in my kitchen? Let's cook. Follow me.",
+                "Fresh apron, empty counter. Let's fix that.",
+                "First day, chef. I'll show you where the fire is.",
             ], .playful)
 
         case .streakAtRisk:
@@ -214,4 +216,19 @@ enum MascotVoice {
             ], .sassy)
         }
     }
+}
+
+// MARK: - Walk-in script
+
+/// Fixed lines for the first-user walk-in tour — one per beat, no variant
+/// pools: the tour plays once, so every new user should get the best take.
+enum WalkInScript {
+    static let tabHint = "See the glowing mic? Tap it."
+    static let pitchFallback = "Drawing a blank? Pitch me 'artisanal hand-carved ice cubes'. I dare you."
+    static let tasteScore = "That number is your viability score. I don't hand those out gently."
+    static let tasteVerdict = "My verdict's below, plus four courses of strengths and slip-ups. Tap any card to dig in."
+    static let tastePlan = "Critics talk, cooks do. Your action plan is waiting at the bottom."
+    static let tastePlanButton = "Show me the plan"
+    static let actionsNudge = "I chopped your idea into bite-size actions. Check one off — feels good, I promise."
+    static let actionsNudgeButton = "Got it"
 }

@@ -7,6 +7,7 @@ import SwiftUI
 
 struct ActionsTabView: View {
     @StateObject private var viewModel = ActionsTabViewModel()
+    @ObservedObject private var walkIn = WalkInDirector.shared
     @EnvironmentObject var coordinator: NavigationCoordinator
     @State private var expandedCommitmentPlanId: UUID? = nil
 
@@ -75,7 +76,7 @@ struct ActionsTabView: View {
 
     // MARK: - Top Banner (budget: at most ONE message surface)
 
-    /// Priority: generation failed > plan cooking > mascot nudge.
+    /// Priority: generation failed > plan cooking > walk-in beat > mascot nudge.
     @ViewBuilder
     private var topBanner: some View {
         if let retry = coordinator.planGenerationRetry {
@@ -84,6 +85,16 @@ struct ActionsTabView: View {
         } else if coordinator.pendingPlanGeneration {
             planCookingRow
                 .padding(.horizontal, 16)
+        } else if walkIn.step == .actionPlan, !viewModel.plans.isEmpty {
+            // Final walk-in beat: nudge the first check-off.
+            WalkInHintBubble(
+                line: WalkInScript.actionsNudge,
+                primaryLabel: WalkInScript.actionsNudgeButton,
+                onPrimary: { walkIn.finishFinalBeat() },
+                onSkip: { walkIn.skip() }
+            )
+            .padding(.horizontal, 16)
+            .cardEntrance(delay: 0.04)
         } else if let nudge = viewModel.nudges.first,
                   !NudgeBanner.isDismissedToday(type: nudge.type) {
             NudgeBanner(nudge: nudge)

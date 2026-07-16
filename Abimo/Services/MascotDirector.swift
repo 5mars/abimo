@@ -34,6 +34,9 @@ final class MascotDirector: ObservableObject {
     private init() {}
 
     func fire(_ trigger: MascotMomentTrigger) {
+        // The first-user walk-in owns the stage while it runs — no
+        // streak/absence popup may collide with a tour beat.
+        guard !WalkInDirector.shared.isActive else { return }
         guard sessionPopupCount < popupSessionCap else { return }
         guard currentMoment == nil else { return }
         guard passesThrottle(trigger) else { return }
@@ -45,15 +48,6 @@ final class MascotDirector: ObservableObject {
 
     func dismiss() {
         currentMoment = nil
-    }
-
-    /// Call once when the authenticated main screen first appears:
-    /// greets a brand-new user with their first prompt to record.
-    func fireFirstWelcomeIfNeeded() {
-        let key = "mascot_first_welcome_shown"
-        guard !defaults.bool(forKey: key) else { return }
-        defaults.set(true, forKey: key)
-        fire(.firstWelcome)
     }
 
     /// Call on app foreground: fires the welcome-back popup after a real gap.

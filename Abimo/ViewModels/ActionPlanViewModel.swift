@@ -138,6 +138,9 @@ class ActionPlanViewModel: ObservableObject {
 
     func toggleMicroAction(id: UUID, isCompleted: Bool) async {
         if isCompleted {
+            // First check-off completes the walk-in tour (no-op otherwise)
+            WalkInDirector.shared.microActionCompleted()
+
             // Cancel nudge for completed action + streak-risk
             NotificationScheduler.shared.cancelActionNudge(actionId: id)
             NotificationService.shared.cancelNotification(id: "streak-risk")

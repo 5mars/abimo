@@ -4,6 +4,7 @@
 //
 //  One giant irresistible mic. You talk, the pipeline does the rest.
 //  No mascot here — status lines only when something needs saying.
+//  (One exception: the first-user walk-in drops a pitch dare while idle.)
 //
 
 import SwiftUI
@@ -13,6 +14,7 @@ struct RecordingView: View {
     @StateObject private var viewModel = RecordingViewModel()
     @ObservedObject private var pipeline = IdeaPipelineService.shared
     @ObservedObject private var entitlements = EntitlementService.shared
+    @ObservedObject private var walkIn = WalkInDirector.shared
     @State private var showPipeline = false
     @State private var showPaywall = false
     @State private var capLine = MascotVoice.moment(for: .ideaCapReached).line
@@ -116,9 +118,37 @@ struct RecordingView: View {
         } else if capBlocked {
             statusLine(capLine)
                 .transition(.opacity.combined(with: .scale(scale: 0.95)))
+        } else if walkIn.step == .record {
+            // Walk-in beat: a dare for the user's first pitch. Vanishes the
+            // moment recording starts (different branch above).
+            walkInPitchBubble
+                .transition(.opacity.combined(with: .scale(scale: 0.95)))
         } else {
             // Idle: the mic speaks for itself.
             Color.clear
+        }
+    }
+
+    private var walkInPitchBubble: some View {
+        VStack(spacing: 8) {
+            Spacer()
+            HStack(alignment: .center, spacing: 4) {
+                Image("MascotNeutral")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 84, height: 84)
+                MascotSpeechLine(line: WalkInScript.pitchFallback, arrowOffsetY: 30)
+            }
+            Button {
+                walkIn.skip()
+            } label: {
+                Text("Not now")
+                    .font(.duoLabel)
+                    .foregroundColor(.textSec)
+                    .padding(.vertical, 6)
+                    .padding(.horizontal, 12)
+            }
+            .buttonStyle(DuoPressStyle())
         }
     }
 
@@ -233,6 +263,7 @@ struct RecordingView: View {
     private func stopAndSave() {
         viewModel.stopRecording()
         showPipeline = true
+        walkIn.recordingSubmitted()
         pipeline.start(recordingVM: viewModel, coordinator: coordinator)
     }
 

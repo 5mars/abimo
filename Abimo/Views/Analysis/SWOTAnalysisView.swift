@@ -11,9 +11,11 @@ struct SWOTAnalysisView: View {
 
     @StateObject private var viewModel: AnalysisViewModel
     @ObservedObject private var entitlements = EntitlementService.shared
+    @ObservedObject private var walkIn = WalkInDirector.shared
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var coordinator: NavigationCoordinator
 
+    @State private var walkInBeat = 0
     @State private var activeCourse: SWOTCourse?
     @State private var showMarketSheet = false
     @State private var showVariantsSheet = false
@@ -61,6 +63,15 @@ struct SWOTAnalysisView: View {
                 }
             }
             .background(Color.appBg, ignoresSafeAreaEdges: .all)
+            .overlay(alignment: .bottom) {
+                // Walk-in tour: three tap-to-advance beats over the first
+                // analysis. No dimming — the report stays fully interactive,
+                // and dismissing the sheet mid-beats resumes next open.
+                if walkIn.step == .tasteTest, viewModel.analysis != nil, !viewModel.isLoading {
+                    walkInBeatCard
+                        .padding(.bottom, 12)
+                }
+            }
             .navigationTitle("The Taste Test")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(Color.appBg, for: .navigationBar)
@@ -133,6 +144,30 @@ struct SWOTAnalysisView: View {
                 Text(viewModel.errorMessage ?? "")
             }
         }
+    }
+
+    // MARK: - Walk-in beats
+
+    private var walkInBeatCard: some View {
+        let beats: [(mood: MascotMood, line: String, button: String)] = [
+            (.neutral, WalkInScript.tasteScore, "Next"),
+            (.sassy, WalkInScript.tasteVerdict, "Next"),
+            (.playful, WalkInScript.tastePlan, WalkInScript.tastePlanButton),
+        ]
+        let beat = beats[min(walkInBeat, beats.count - 1)]
+        return WalkInBeatCard(
+            mood: beat.mood,
+            line: beat.line,
+            buttonLabel: beat.button,
+            onNext: {
+                if walkInBeat < beats.count - 1 {
+                    walkInBeat += 1
+                } else {
+                    walkIn.tasteTestFinished()
+                }
+            },
+            onSkip: { walkIn.skip() }
+        )
     }
 
     /// Shared "turn this into action" behavior — used by the bottom CTA and

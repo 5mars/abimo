@@ -48,6 +48,7 @@ struct MainContentView: View {
     @EnvironmentObject var authViewModel: AuthViewModel
     @EnvironmentObject var coordinator: NavigationCoordinator
     @StateObject private var mascot = MascotDirector.shared
+    @StateObject private var walkIn = WalkInDirector.shared
     @State private var showMascotPaywall = false
 
     var body: some View {
@@ -73,9 +74,33 @@ struct MainContentView: View {
             .animation(nil, value: coordinator.selectedTab) // Disable animation on content — prevents flash
             CustomTabBar(selectedTab: $coordinator.selectedTab)
         }
+        .overlay(alignment: .bottom) {
+            // Walk-in beat 2: hint bubble above the glowing Record tab.
+            if walkIn.step == .record && coordinator.selectedTab != .record {
+                WalkInHintBubble(
+                    line: WalkInScript.tabHint,
+                    onSkip: { walkIn.skip() },
+                    tailFraction: 0.375  // Record is the 2nd of 4 equal tabs
+                )
+                .frame(maxWidth: 300)
+                .padding(.bottom, 66)  // clear the tab bar
+                .transition(.opacity)
+            }
+        }
         .overlay {
+            // Walk-in beat 1: the first-ever welcome. The CTA deliberately
+            // does NOT switch tabs — the Record tab starts glowing instead,
+            // so the user learns the navigation themselves.
+            if let moment = walkIn.welcomeMoment {
+                MascotCenterPopup(
+                    moment: moment,
+                    onAction: { _ in walkIn.welcomeAcknowledged() },
+                    onDismiss: { walkIn.skip() }
+                )
+                .transition(.opacity)
+            }
             // Global mascot moment — a rare center-screen popup (max 1/session)
-            if let moment = mascot.currentMoment {
+            else if let moment = mascot.currentMoment {
                 MascotCenterPopup(
                     moment: moment,
                     onAction: { handleMascotIntent($0) },
@@ -85,8 +110,10 @@ struct MainContentView: View {
             }
         }
         .animation(.easeOut(duration: 0.2), value: mascot.currentMoment)
+        .animation(.easeOut(duration: 0.2), value: walkIn.welcomeMoment)
+        .animation(.easeOut(duration: 0.2), value: walkIn.step)
         .task {
-            mascot.fireFirstWelcomeIfNeeded()
+            await walkIn.evaluateOnLaunch()
             await mascot.evaluateStreakAtRisk()
         }
         .sheet(isPresented: $showMascotPaywall) {
