@@ -12,6 +12,14 @@ class AIAnalysisService: ObservableObject {
     @Published var isAnalyzing = false
     @Published var errorMessage: String?
 
+    // Deallocating from inside another MainActor class's isolated deinit
+    // (ActionPlanViewModel holds this service) nests two
+    // swift_task_deinitOnExecutor hops, which double-frees in the Swift
+    // runtime's TaskLocal scope teardown (crashes the whole test host).
+    // A nonisolated deinit skips the second hop; nothing here needs the
+    // main actor to tear down.
+    nonisolated deinit {}
+
     private let supabase = SupabaseService.shared
 
     // MARK: - Market Research (best-effort, never blocks the pipeline)

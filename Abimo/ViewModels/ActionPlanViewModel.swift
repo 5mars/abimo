@@ -54,6 +54,12 @@ class ActionPlanViewModel: ObservableObject {
     private let supabase = SupabaseService.shared
     private let aiService = AIAnalysisService()
 
+    // Isolated deinits (the default under MainActor default isolation) crash
+    // the Swift runtime when the deallocation happens inside a task-local
+    // scope — XCTest always sets one, so every unit test that releases this
+    // VM aborts the test host. Nothing here needs the main actor to tear down.
+    nonisolated deinit {}
+
     // MARK: - Computed
 
     var completedCount: Int { microActions.filter(\.isCompleted).count }
