@@ -15,10 +15,7 @@ struct StreakBannerView: View {
     var body: some View {
         VStack {
             HStack(spacing: 8) {
-                Image((moment?.mood ?? .playful).assetName)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 40, height: 40)
+                MascotView(mood: moment?.mood ?? .playful, size: 40, motion: .none)
                 Image(systemName: "flame.fill")
                     .font(.system(size: 15, weight: .bold))
                     .foregroundColor(.white)

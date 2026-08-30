@@ -56,13 +56,7 @@ struct MascotLoadingView: View {
                 .animation(.linear(duration: 0.8).repeatForever(autoreverses: false), value: spinning)
 
             // Mascot
-            Image(mood.assetName)
-                .resizable()
-                .scaledToFit()
-                .frame(
-                    width: mode == .fullscreen ? 260 : 200,
-                    height: mode == .fullscreen ? 260 : 200
-                )
+            MascotView(mood: mood, size: mode == .fullscreen ? 260 : 200)
 
             // Text
             VStack(spacing: 8) {

@@ -146,10 +146,7 @@ struct PaywallView: View {
 
     private var mascotHeader: some View {
         HStack(alignment: .center, spacing: 4) {
-            Image(MascotMood.sassy.assetName)
-                .resizable()
-                .scaledToFit()
-                .frame(width: 110, height: 110)
+            MascotView(mood: .sassy, size: 110)
             MascotSpeechLine(line: context.mascotLine, arrowOffsetY: 26)
             Spacer(minLength: 0)
         }

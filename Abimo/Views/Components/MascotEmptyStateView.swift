@@ -20,10 +20,7 @@ struct MascotEmptyStateView<Extra: View>: View {
     var body: some View {
         VStack(spacing: 24) {
             HStack(alignment: .center, spacing: 2) {
-                Image("MascotNeutral")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 140, height: 140)
+                MascotView(mood: .neutral, size: 140)
                 MascotSpeechLine(line: line, arrowOffsetY: 25)
             }
             .padding(.horizontal, 8)

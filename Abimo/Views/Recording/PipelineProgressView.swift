@@ -23,10 +23,7 @@ struct PipelineProgressView: View {
             VStack(spacing: 0) {
                 Spacer()
 
-                Image(stageMood.assetName)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 140, height: 140)
+                MascotView(mood: stageMood, size: 140)
 
                 Spacer().frame(height: 28)
 

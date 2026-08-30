@@ -11,7 +11,6 @@ struct PlanCompletionView: View {
     let onDismiss: () -> Void
 
     @State private var appeared = false
-    @State private var mascotBounce = false
     @State private var moment: MascotMoment?
 
     var body: some View {
@@ -37,18 +36,7 @@ struct PlanCompletionView: View {
                 Spacer()
 
                 // The mascot takes the podium
-                Image((moment?.mood ?? .playful).assetName)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 220, height: 220)
-                    .rotationEffect(.degrees(mascotBounce ? 3 : -3))
-                    .onAppear {
-                        if !AnimationPolicy.reduceMotion {
-                            withAnimation(.easeInOut(duration: 0.7).repeatForever(autoreverses: true)) {
-                                mascotBounce = true
-                            }
-                        }
-                    }
+                MascotView(mood: moment?.mood ?? .playful, size: 220, motion: .celebrating)
 
                 // The critic's closing remarks
                 MascotCalloutLine(line: moment?.line ?? "No complaints. This is new.")

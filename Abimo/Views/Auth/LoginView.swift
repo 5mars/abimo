@@ -24,10 +24,7 @@ struct LoginView: View {
                     // Mascot + title — neutral mascot so the cross-fade from
                     // the launch intro never swaps faces mid-fade
                     VStack(spacing: 12) {
-                        Image(MascotMood.neutral.assetName)
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 170, height: 170)
+                        MascotView(mood: .neutral, size: 170)
                             .scaleEffect(appeared ? 1 : 0.6)
                             .opacity(appeared ? 1 : 0)
 

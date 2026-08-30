@@ -113,10 +113,7 @@ struct SpotlightOverlay: View {
     private var coachBubble: some View {
         VStack(spacing: 14) {
             HStack(alignment: .center, spacing: 6) {
-                Image("MascotNeutral")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 72, height: 72)
+                MascotView(mood: .neutral, size: 72, motion: .talking)
                 MascotSpeechLine(line: spec.line, arrowOffsetY: 30)
             }
 
@@ -163,10 +160,7 @@ struct SpotlightFallbackCard: View {
     var body: some View {
         VStack(spacing: 10) {
             HStack(alignment: .top, spacing: 12) {
-                Image("MascotNeutral")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 52, height: 52)
+                MascotView(mood: .neutral, size: 52, motion: .none)
 
                 Text(spec.line)
                     .font(.system(size: 15, weight: .semibold, design: .rounded))

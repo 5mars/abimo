@@ -19,7 +19,6 @@ struct CongratsHalfSheet: View {
     let onAdvance: () -> Void
 
     @State private var moment: MascotMoment?
-    @State private var mascotAppeared = false
 
     var body: some View {
         VStack(spacing: 24) {
@@ -27,12 +26,7 @@ struct CongratsHalfSheet: View {
             ZStack {
                 InlineConfettiView()
                     .allowsHitTesting(false)
-                Image((moment?.mood ?? .playful).assetName)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 160, height: 160)
-                    .scaleEffect(mascotAppeared ? 1 : 0.5)
-                    .rotationEffect(.degrees(mascotAppeared ? 0 : -8))
+                MascotView(mood: moment?.mood ?? .playful, size: 160, motion: .entrance)
             }
             .frame(width: 200, height: 180)
 
@@ -55,9 +49,6 @@ struct CongratsHalfSheet: View {
         .onAppear {
             moment = MascotVoice.moment(for: .actionCompleted(count: viewModel.completedCount))
             HapticEngine.impact(style: .light)
-            AnimationPolicy.animate(.spring(response: 0.4, dampingFraction: 0.6)) {
-                mascotAppeared = true
-            }
         }
     }
 }

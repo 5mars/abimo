@@ -23,10 +23,7 @@ struct MascotCenterPopup: View {
                 .onTapGesture { onDismiss() }
 
             VStack(spacing: 16) {
-                Image(moment.mood.assetName)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 130, height: 130)
+                MascotView(mood: moment.mood, size: 130, motion: .entrance)
 
                 Text(moment.line)
                     .font(.system(size: 17, weight: .bold, design: .rounded))

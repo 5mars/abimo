@@ -13,10 +13,7 @@ struct MilestoneBannerView: View {
     var body: some View {
         VStack {
             HStack(spacing: 8) {
-                Image((moment?.mood ?? .playful).assetName)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 40, height: 40)
+                MascotView(mood: moment?.mood ?? .playful, size: 40, motion: .none)
                 Text(moment?.line ?? "Keep going! \u{1F389}")
                     .font(.system(size: 15, weight: .bold, design: .rounded))
                     .foregroundColor(.white)

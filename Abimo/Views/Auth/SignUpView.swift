@@ -32,10 +32,7 @@ struct SignUpView: View {
 
                     // Header — same staged entrance as LoginView
                     VStack(spacing: 12) {
-                        Image(MascotMood.playful.assetName)
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 130, height: 130)
+                        MascotView(mood: .playful, size: 130)
                             .scaleEffect(appeared ? 1 : 0.6)
                             .opacity(appeared ? 1 : 0)
 
