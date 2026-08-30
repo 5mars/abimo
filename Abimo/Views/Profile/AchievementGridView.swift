@@ -72,15 +72,15 @@ struct AchievementGridView: View {
         }
         .padding(10)
         .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
+            RoundedRectangle(cornerRadius: DuoTokens.Radius.inset, style: .continuous)
                 .fill(Color.cardSurface)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
+            RoundedRectangle(cornerRadius: DuoTokens.Radius.inset, style: .continuous)
                 .strokeBorder(unlocked ? Color.brandAmber.opacity(0.35) : Color.cardEdge, lineWidth: 1.5)
         )
         .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
+            RoundedRectangle(cornerRadius: DuoTokens.Radius.inset, style: .continuous)
                 .fill(unlocked ? Color.brandAmberDark.opacity(0.35) : Color.cardEdge)
                 .offset(y: 2)
         )

@@ -5,7 +5,7 @@
 
 import SwiftUI
 
-/// In-app nudge banner with the mascot doing the nudging. Dismissal is
+/// In-app nudge banner with a tinted icon per nudge type. Dismissal is
 /// persisted per nudge type per day, so it stays gone after a swipe away
 /// but can return tomorrow if the situation hasn't improved.
 struct NudgeBanner: View {
@@ -35,21 +35,26 @@ struct NudgeBanner: View {
         }
     }
 
-    private var mood: MascotMood {
+    private var iconName: String {
         switch nudge.type {
-        case .inactivity, .commitmentDue: return .sassy
-        case .milestone:                  return .playful
-        case .nextAction:                 return .neutral
+        case .inactivity:    return "flame.fill"
+        case .commitmentDue: return "alarm.fill"
+        case .milestone:     return "trophy.fill"
+        case .nextAction:    return "bolt.fill"
         }
     }
 
     var body: some View {
         if isVisible {
             HStack(spacing: 10) {
-                Image(mood.assetName)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 40, height: 40)
+                ZStack {
+                    Circle()
+                        .fill(tintColor.opacity(0.15))
+                        .frame(width: 40, height: 40)
+                    Image(systemName: iconName)
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundColor(tintColor)
+                }
 
                 VStack(alignment: .leading, spacing: 3) {
                     Text(nudge.title)

@@ -29,6 +29,7 @@ extension Color {
     static let brandAmber   = Color(hex: "FFB800")  // Bold amber
     static let brandGreen   = Color(hex: "2EC46F")  // Bold green
     static let brandBlue    = Color(hex: "3B82F6")  // Bold blue
+    static let brandOrange  = Color(hex: "FF8A3D")  // Verdict-scale orange (coral↔amber)
 
     // Surfaces
     static let appBg               = Color.white
@@ -37,6 +38,8 @@ extension Color {
     static let cardSurfaceElevated = Color.white            // White elevated card
     static let textPri             = Color(hex: "3C3C43")  // Soft charcoal
     static let textSec             = Color(hex: "AFAFB4")  // Medium gray
+    static let textTertiary        = Color(hex: "C7C7CC")  // Chevrons, dots, decorative glyphs
+    static let insetBg             = Color(hex: "F7F7F7")  // duoInset well background
 
     // Tinted light card surfaces (cooler, tuned for pure white)
     static let cardDarkBlue   = Color(hex: "EDF4FE")  // Light blue tint

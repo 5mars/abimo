@@ -510,6 +510,10 @@ class ActionsTabViewModel: ObservableObject {
     @Published var microActionsByPlan: [UUID: [MicroAction]] = [:]
     @Published var activeCommitment: Commitment?
     @Published var isLoading = false
+    /// Only the first fetch shows the loading screen; refetches on tab switch
+    /// are silent. `plans.isEmpty` is the wrong signal — it stays true forever
+    /// on an empty account and would flash the loader on every switch.
+    @Published private(set) var hasLoadedOnce = false
     @Published var errorMessage: String?
 
     private let supabase = SupabaseService.shared
@@ -553,9 +557,11 @@ class ActionsTabViewModel: ObservableObject {
     }
 
     func loadAllPlans() async {
-        let isFirstLoad = plans.isEmpty
-        if isFirstLoad { isLoading = true }
-        defer { if isFirstLoad { isLoading = false } }
+        if !hasLoadedOnce { isLoading = true }
+        defer {
+            isLoading = false
+            hasLoadedOnce = true
+        }
 
         errorMessage = nil
 

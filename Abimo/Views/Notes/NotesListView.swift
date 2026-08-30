@@ -18,7 +18,7 @@ struct NotesListView: View {
             Color.appBg.ignoresSafeArea()
 
             Group {
-                if viewModel.isLoading && viewModel.notes.isEmpty {
+                if viewModel.isLoading && !viewModel.hasLoadedOnce {
                     labLoadingView
                 } else if viewModel.notes.isEmpty {
                     labEmptyView
@@ -86,42 +86,26 @@ struct NotesListView: View {
     // MARK: - Loading
 
     private var labLoadingView: some View {
-        MascotLoadingView(mode: .inline, text: "Firing up the kitchen...")
+        VStack(spacing: 12) {
+            ForEach(0..<3, id: \.self) { _ in
+                SkeletonCardRow()
+            }
+            Spacer()
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 24)
     }
 
     // MARK: - Empty State
 
     private var labEmptyView: some View {
-        VStack(spacing: 24) {
-            HStack(alignment: .center, spacing: 2) {
-                Image("MascotNeutral")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 150, height: 150)
-                MascotSpeechLine(
-                    line: MascotVoice.moment(for: .emptyKitchen).line,
-                    arrowOffsetY: 26
-                )
-            }
-            .padding(.horizontal, 8)
-
-            VStack(spacing: 10) {
-                Text("Welcome to The Kitchen")
-                    .font(.system(size: 22, weight: .bold, design: .rounded))
-                    .foregroundColor(.textPri)
-
-                Text("Record an idea and we'll turn it\ninto a real action plan")
-                    .font(.system(size: 15))
-                    .foregroundColor(.textSec)
-                    .multilineTextAlignment(.center)
-                    .lineSpacing(4)
-            }
-
-            GradientButton(title: "Record your first idea") {
-                coordinator.selectedTab = .record
-            }
-            .padding(.horizontal, 40)
-        }
+        MascotEmptyStateView(
+            line: MascotVoice.moment(for: .emptyKitchen).line,
+            title: "Welcome to The Kitchen",
+            subtitle: "Record an idea and we'll turn it\ninto a real action plan",
+            ctaTitle: "Record your first idea",
+            ctaAction: { coordinator.selectedTab = .record }
+        )
         .padding(.horizontal, 32)
     }
 
@@ -278,26 +262,11 @@ struct IdeaCardView: View {
 
                 // Status tag
                 if isCooking {
-                    HStack(spacing: 6) {
-                        ProgressView()
-                            .scaleEffect(0.65)
-                            .tint(.brandAmber)
-                        Text("Cooking")
-                            .font(.system(size: 11, weight: .bold))
-                    }
-                    .foregroundColor(.brandAmber)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 5)
-                    .background(Color.brandAmber.opacity(0.12))
-                    .clipShape(Capsule())
+                    StatusPill(text: "Cooking", tint: .brandAmber, showsSpinner: true)
+                } else if isAnalyzed {
+                    StatusPill(text: "Analyzed", tint: .brandGreen)
                 } else {
-                    Text(isAnalyzed ? "Analyzed" : "New")
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundColor(isAnalyzed ? .brandGreen : .brand)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 5)
-                        .background((isAnalyzed ? Color.brandGreen : Color.brand).opacity(0.12))
-                        .clipShape(Capsule())
+                    StatusPill(text: "New", tint: .brand)
                 }
             }
 
@@ -312,14 +281,14 @@ struct IdeaCardView: View {
 
                     Image(systemName: "lock.fill")
                         .font(.system(size: 11, weight: .semibold))
-                        .foregroundColor(Color.textSec.opacity(0.3))
+                        .foregroundColor(.textTertiary)
                 } else {
                     Label(viewModel.formatDuration(note.duration), systemImage: "waveform")
                         .font(.system(size: 12, weight: .medium))
                         .foregroundColor(.textSec)
 
                     Text("·")
-                        .foregroundColor(.textSec.opacity(0.4))
+                        .foregroundColor(.textTertiary)
                         .font(.system(size: 14))
 
                     Text(timeAgo(note.createdAt))
@@ -330,7 +299,7 @@ struct IdeaCardView: View {
 
                     Image(systemName: "chevron.right")
                         .font(.system(size: 11, weight: .semibold))
-                        .foregroundColor(Color.textSec.opacity(0.3))
+                        .foregroundColor(.textTertiary)
                 }
             }
 

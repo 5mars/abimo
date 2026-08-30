@@ -53,7 +53,7 @@ struct NodeBubbleView: View {
         .background(
             TopArrowBubbleShape(arrowOffset: arrowOffset)
                 .fill(Color.white)
-                .shadow(color: Color.textPri.opacity(0.12), radius: 12, x: 0, y: 4)
+                .duoShadow()
         )
         .overlay(
             TopArrowBubbleShape(arrowOffset: arrowOffset)

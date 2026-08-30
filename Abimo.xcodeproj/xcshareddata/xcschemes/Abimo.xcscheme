@@ -62,8 +62,14 @@
             ReferencedContainer = "container:Abimo.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
+      <CommandLineArguments>
+         <CommandLineArgument
+            argument = "-FIRDebugEnabled"
+            isEnabled = "NO">
+         </CommandLineArgument>
+      </CommandLineArguments>
       <StoreKitConfigurationFileReference
-         identifier = "../../../AbimoPlus.storekit">
+         identifier = "../../AbimoPlus.storekit">
       </StoreKitConfigurationFileReference>
    </LaunchAction>
    <ProfileAction

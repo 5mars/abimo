@@ -7,7 +7,6 @@ import SwiftUI
 
 struct ActionsTabView: View {
     @StateObject private var viewModel = ActionsTabViewModel()
-    @ObservedObject private var walkIn = WalkInDirector.shared
     @EnvironmentObject var coordinator: NavigationCoordinator
     @State private var expandedCommitmentPlanId: UUID? = nil
 
@@ -19,7 +18,7 @@ struct ActionsTabView: View {
                 VStack(spacing: 24) {
                     Spacer().frame(height: 4)
 
-                    if viewModel.isLoading {
+                    if viewModel.isLoading && !viewModel.hasLoadedOnce {
                         MascotLoadingView(mode: .inline, text: "Loading your actions...")
                     } else if viewModel.plans.isEmpty && viewModel.errorMessage != nil {
                         loadErrorState
@@ -48,6 +47,11 @@ struct ActionsTabView: View {
                         ForEach(Array(viewModel.plans.enumerated()), id: \.element.id) { index, plan in
                             ideaCard(plan)
                                 .padding(.horizontal, 16)
+                                // Final walk-in beat spotlights the first card.
+                                .walkInTarget(
+                                    .firstActionCard,
+                                    isActive: index == 0 && coordinator.selectedTab == .actions
+                                )
                                 .cardEntrance(delay: Double(index) * 0.08 + 0.06)
                         }
                     }
@@ -76,7 +80,8 @@ struct ActionsTabView: View {
 
     // MARK: - Top Banner (budget: at most ONE message surface)
 
-    /// Priority: generation failed > plan cooking > walk-in beat > mascot nudge.
+    /// Priority: generation failed > plan cooking > mascot nudge.
+    /// (The final walk-in beat is a root-level spotlight on the first card.)
     @ViewBuilder
     private var topBanner: some View {
         if let retry = coordinator.planGenerationRetry {
@@ -85,16 +90,6 @@ struct ActionsTabView: View {
         } else if coordinator.pendingPlanGeneration {
             planCookingRow
                 .padding(.horizontal, 16)
-        } else if walkIn.step == .actionPlan, !viewModel.plans.isEmpty {
-            // Final walk-in beat: nudge the first check-off.
-            WalkInHintBubble(
-                line: WalkInScript.actionsNudge,
-                primaryLabel: WalkInScript.actionsNudgeButton,
-                onPrimary: { walkIn.finishFinalBeat() },
-                onSkip: { walkIn.skip() }
-            )
-            .padding(.horizontal, 16)
-            .cardEntrance(delay: 0.04)
         } else if let nudge = viewModel.nudges.first,
                   !NudgeBanner.isDismissedToday(type: nudge.type) {
             NudgeBanner(nudge: nudge)
@@ -251,42 +246,20 @@ struct ActionsTabView: View {
     // MARK: - Empty State
 
     private var emptyState: some View {
-        VStack(spacing: 28) {
-            HStack(alignment: .center, spacing: 2) {
-                Image("MascotNeutral")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 130, height: 130)
-                MascotSpeechLine(
-                    line: MascotVoice.moment(for: .emptyKitchen).line,
-                    arrowOffsetY: 24
-                )
-            }
-            .padding(.horizontal, 8)
-
-            VStack(spacing: 10) {
-                Text("Your action plans will live here")
-                    .font(.system(size: 20, weight: .bold, design: .rounded))
-                    .foregroundColor(.textPri)
-
-                Text("Here's how it works")
-                    .font(.system(size: 14))
-                    .foregroundColor(.textSec)
-            }
-
+        MascotEmptyStateView(
+            line: MascotVoice.moment(for: .emptyKitchen).line,
+            title: "Your action plans will live here",
+            subtitle: "Here's how it works",
+            ctaTitle: "Record an idea",
+            ctaAction: { coordinator.selectedTab = .record }
+        ) {
             VStack(alignment: .leading, spacing: 16) {
                 stepRow(number: 1, icon: "mic.fill", text: "Record an idea")
                 stepRow(number: 2, icon: "fork.knife", text: "Let the critic taste it")
                 stepRow(number: 3, icon: "bolt.fill", text: "Get your action plan")
             }
             .padding(.horizontal, 32)
-
-            GradientButton(title: "Record an idea") {
-                coordinator.selectedTab = .record
-            }
-            .padding(.horizontal, 40)
         }
-        .frame(maxWidth: .infinity)
         .padding(.top, 40)
     }
 

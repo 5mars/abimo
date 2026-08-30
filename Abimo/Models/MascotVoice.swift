@@ -223,7 +223,7 @@ enum MascotVoice {
 /// Fixed lines for the first-user walk-in tour — one per beat, no variant
 /// pools: the tour plays once, so every new user should get the best take.
 enum WalkInScript {
-    static let tabHint = "See the glowing mic? Tap it."
+    static let tabHint = "Tap here to drop your first idea."
     static let pitchFallback = "Drawing a blank? Pitch me 'artisanal hand-carved ice cubes'. I dare you."
     static let tasteScore = "That number is your viability score. I don't hand those out gently."
     static let tasteVerdict = "My verdict's below, plus four courses of strengths and slip-ups. Tap any card to dig in."
@@ -231,4 +231,24 @@ enum WalkInScript {
     static let tastePlanButton = "Show me the plan"
     static let actionsNudge = "I chopped your idea into bite-size actions. Check one off — feels good, I promise."
     static let actionsNudgeButton = "Got it"
+}
+
+// MARK: - Recording prompts
+
+/// Example pitches for the idle Record screen's shuffle chip — dares for
+/// users staring at the mic with a blank mind. Keep each under ~45 chars so
+/// the chip never wraps on SE-width screens.
+enum RecordingPrompts {
+    static let pool: [String] = [
+        "artisanal hand-carved ice cubes",
+        "the Duolingo of whistling",
+        "a subscription box for houseplants",
+        "Tinder, but for finding gym buddies",
+        "an alarm clock you have to out-argue",
+        "sourdough coaching, live at 3am",
+        "a food truck that only does cereal",
+        "rent-a-grandma cookie delivery",
+        "noise-canceling for open offices, but IRL",
+        "a museum of failed startups",
+    ]
 }

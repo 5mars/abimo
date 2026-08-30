@@ -9,7 +9,6 @@ import SwiftUI
 
 struct CustomTabBar: View {
     @Binding var selectedTab: AppTab
-    @ObservedObject private var walkIn = WalkInDirector.shared
 
     var body: some View {
         HStack(spacing: 0) {
@@ -17,9 +16,6 @@ struct CustomTabBar: View {
                 TabBarButton(
                     tab: tab,
                     isSelected: selectedTab == tab,
-                    walkInHighlight: tab == .record
-                        && walkIn.step == .record
-                        && selectedTab != .record,
                     action: {
                         guard selectedTab != tab else { return }
                         HapticEngine.impact(style: .medium)
@@ -51,7 +47,6 @@ struct CustomTabBar: View {
 private struct TabBarButton: View {
     let tab: AppTab
     let isSelected: Bool
-    var walkInHighlight: Bool = false
     let action: () -> Void
 
     @State private var bounceScale: CGFloat = 1.0
@@ -65,17 +60,6 @@ private struct TabBarButton: View {
             }
         }) {
             ZStack {
-                // Walk-in tour: glow + pulse guiding the user to Record.
-                if walkInHighlight {
-                    Circle()
-                        .fill(Color.brand.opacity(0.15))
-                        .frame(width: 44, height: 44)
-                    if !AnimationPolicy.reduceMotion {
-                        PulseRing(color: .brand)
-                            .frame(width: 44, height: 44)
-                    }
-                }
-
                 // Rounded-square highlight behind selected icon
                 if isSelected {
                     RoundedRectangle(cornerRadius: DuoTokens.Radius.inset, style: .continuous)
@@ -89,12 +73,15 @@ private struct TabBarButton: View {
 
                 Image(systemName: isSelected ? tab.selectedIconName : tab.iconName)
                     .font(.system(size: 22, weight: .medium))
-                    .foregroundColor(isSelected ? .brand : .gray)
+                    .foregroundColor(isSelected ? .brand : .textSec)
                     .scaleEffect(bounceScale)
                     .rotationEffect(.degrees(bounceRotation))
             }
             .frame(maxWidth: .infinity)
             .frame(height: 44)
+            // Spotlight tour target: the circle cutout hugs the 44pt icon
+            // area, not the full tab column.
+            .walkInTarget(.recordTab, isActive: tab == .record)
         }
         .buttonStyle(.plain)
     }

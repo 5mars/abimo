@@ -63,15 +63,10 @@ struct SWOTAnalysisView: View {
                 }
             }
             .background(Color.appBg, ignoresSafeAreaEdges: .all)
-            .overlay(alignment: .bottom) {
-                // Walk-in tour: three tap-to-advance beats over the first
-                // analysis. No dimming — the report stays fully interactive,
-                // and dismissing the sheet mid-beats resumes next open.
-                if walkIn.step == .tasteTest, viewModel.analysis != nil, !viewModel.isLoading {
-                    walkInBeatCard
-                        .padding(.bottom, 12)
-                }
-            }
+            // Walk-in tour: three spotlight beats over the first analysis.
+            // Hosted here (not at the root) because this view is a sheet —
+            // dismissing it mid-beats resumes next open.
+            .walkInSpotlight(spotlightSpec)
             .navigationTitle("The Taste Test")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(Color.appBg, for: .navigationBar)
@@ -148,26 +143,43 @@ struct SWOTAnalysisView: View {
 
     // MARK: - Walk-in beats
 
-    private var walkInBeatCard: some View {
-        let beats: [(mood: MascotMood, line: String, button: String)] = [
-            (.neutral, WalkInScript.tasteScore, "Next"),
-            (.sassy, WalkInScript.tasteVerdict, "Next"),
-            (.playful, WalkInScript.tastePlan, WalkInScript.tastePlanButton),
-        ]
-        let beat = beats[min(walkInBeat, beats.count - 1)]
-        return WalkInBeatCard(
-            mood: beat.mood,
-            line: beat.line,
-            buttonLabel: beat.button,
-            onNext: {
-                if walkInBeat < beats.count - 1 {
-                    walkInBeat += 1
-                } else {
-                    walkIn.tasteTestFinished()
-                }
-            },
-            onSkip: { walkIn.skip() }
-        )
+    /// Spotlight spec for the current taste-test beat: score gauge, then the
+    /// verdict card, then the action-plan CTA. Each falls back to a bottom
+    /// card when its target is offscreen (the CTA usually is — no forced
+    /// scrolling, the mascot just tells the user where to look).
+    private var spotlightSpec: SpotlightSpec? {
+        guard walkIn.step == .tasteTest, viewModel.analysis != nil, !viewModel.isLoading else {
+            return nil
+        }
+        switch walkInBeat {
+        case 0:
+            return SpotlightSpec(
+                target: .tasteScore,
+                line: WalkInScript.tasteScore,
+                primaryLabel: "Next",
+                primaryAction: { AnimationPolicy.animate { walkInBeat = 1 } },
+                tapThrough: true,
+                fallback: .card
+            )
+        case 1:
+            return SpotlightSpec(
+                target: .tasteVerdict,
+                line: WalkInScript.tasteVerdict,
+                primaryLabel: "Next",
+                primaryAction: { AnimationPolicy.animate { walkInBeat = 2 } },
+                tapThrough: true,
+                fallback: .card
+            )
+        default:
+            return SpotlightSpec(
+                target: .tastePlanCTA,
+                line: WalkInScript.tastePlan,
+                primaryLabel: WalkInScript.tastePlanButton,
+                primaryAction: { walkIn.tasteTestFinished() },
+                tapThrough: true,
+                fallback: .card
+            )
+        }
     }
 
     /// Shared "turn this into action" behavior — used by the bottom CTA and
@@ -192,6 +204,7 @@ struct SWOTAnalysisView: View {
             dimensions: analysis.dimensionScores,
             rationale: analysis.scoreRationale
         )
+        .walkInTarget(.tasteScore)
         .cardEntrance(delay: 0.05)
 
         // 2. The TL;DR
@@ -199,6 +212,7 @@ struct SWOTAnalysisView: View {
             summary: analysis.summary,
             verdict: ScoreVerdict(score: analysis.viabilityScore ?? 0)
         )
+        .walkInTarget(.tasteVerdict)
         .cardEntrance(delay: 0.12)
 
         // 3. The courses — one compact card per quadrant, tap for the full plate
@@ -225,6 +239,7 @@ struct SWOTAnalysisView: View {
 
         // 5. Action Plan CTA
         actionPlanCTA(analysis)
+            .walkInTarget(.tastePlanCTA)
             .cardEntrance(delay: 0.42)
 
         Text("Cooked up \(analysis.createdAt, style: .relative) ago")

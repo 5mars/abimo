@@ -27,6 +27,26 @@ enum DuoTokens {
         static let card: CGFloat = 3
         static let node: CGFloat = 5
     }
+    enum Spacing {
+        static let xs: CGFloat = 4
+        static let s: CGFloat = 8
+        static let m: CGFloat = 12
+        static let l: CGFloat = 16
+        static let xl: CGFloat = 20
+        static let xxl: CGFloat = 24
+        static let xxxl: CGFloat = 32
+    }
+}
+
+// MARK: - Shadow
+
+extension View {
+    /// The single shadow recipe for the rare surfaces that float (banners,
+    /// coach cards). Depth in the Duo language otherwise comes from bottom
+    /// edges, not shadows.
+    func duoShadow() -> some View {
+        shadow(color: .black.opacity(0.10), radius: 12, y: 4)
+    }
 }
 
 // MARK: - Press haptic helper
@@ -185,7 +205,7 @@ extension View {
     func duoInset(padding: CGFloat = 12) -> some View {
         self
             .padding(padding)
-            .background(Color(hex: "F7F7F7"))
+            .background(Color.insetBg)
             .cornerRadius(DuoTokens.Radius.inset)
     }
 }

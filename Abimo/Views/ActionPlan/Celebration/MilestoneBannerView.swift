@@ -25,7 +25,7 @@ struct MilestoneBannerView: View {
             .padding(.vertical, 10)
             .background(Color.brand)
             .cornerRadius(24)
-            .shadow(color: Color.brand.opacity(0.4), radius: 8, y: 4)
+            .duoShadow()
             .padding(.top, 60)
             Spacer()
         }

@@ -31,7 +31,7 @@ struct StreakBannerView: View {
             .padding(.vertical, 10)
             .background(Color.brandAmber)
             .cornerRadius(24)
-            .shadow(color: Color.brandAmber.opacity(0.4), radius: 8, y: 4)
+            .duoShadow()
             .padding(.top, 60)
             Spacer()
         }

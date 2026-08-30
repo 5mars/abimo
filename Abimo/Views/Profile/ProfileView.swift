@@ -70,13 +70,23 @@ struct ProfileView: View {
 
     // MARK: - Sections
 
-    /// One panel: mascot + email + inline stats (ideas / actions / streak).
+    /// One panel: initials avatar + email + inline stats (ideas / actions / streak).
     private var heroCard: some View {
         VStack(spacing: 16) {
-            Image(MascotMood.playful.assetName)
-                .resizable()
-                .scaledToFit()
-                .frame(width: 100, height: 100)
+            ZStack {
+                Circle()
+                    .fill(Color.brand.opacity(0.12))
+                    .frame(width: 72, height: 72)
+                if let initial = authViewModel.currentUser?.email?.first {
+                    Text(String(initial).uppercased())
+                        .font(.system(size: 32, weight: .heavy, design: .rounded))
+                        .foregroundColor(.brand)
+                } else {
+                    Image(systemName: "person.fill")
+                        .font(.system(size: 28, weight: .semibold))
+                        .foregroundColor(.brand)
+                }
+            }
 
             VStack(spacing: 6) {
                 Text("My Account")

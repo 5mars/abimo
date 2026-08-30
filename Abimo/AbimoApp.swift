@@ -29,6 +29,10 @@ struct AbimoApp: App {
     var body: some Scene {
         WindowGroup {
             RootView()
+                // The palette is hardcoded light (white surfaces, fixed hex
+                // text) — force light so system chrome (sheets, alerts,
+                // keyboards) can't come up dark against white cards.
+                .preferredColorScheme(.light)
                 .onOpenURL { url in
                     try? SupabaseService.shared.client.auth.handle(url)
                 }

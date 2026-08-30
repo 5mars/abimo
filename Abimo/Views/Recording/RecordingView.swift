@@ -4,7 +4,7 @@
 //
 //  One giant irresistible mic. You talk, the pipeline does the rest.
 //  No mascot here — status lines only when something needs saying.
-//  (One exception: the first-user walk-in drops a pitch dare while idle.)
+//  (The first-user walk-in spotlights the mic via the root overlay.)
 //
 
 import SwiftUI
@@ -14,10 +14,11 @@ struct RecordingView: View {
     @StateObject private var viewModel = RecordingViewModel()
     @ObservedObject private var pipeline = IdeaPipelineService.shared
     @ObservedObject private var entitlements = EntitlementService.shared
-    @ObservedObject private var walkIn = WalkInDirector.shared
+    private let walkIn = WalkInDirector.shared
     @State private var showPipeline = false
     @State private var showPaywall = false
     @State private var capLine = MascotVoice.moment(for: .ideaCapReached).line
+    @State private var promptIndex = Int.random(in: 0..<RecordingPrompts.pool.count)
 
     private var saveFailed: Bool {
         viewModel.recordingFileURL != nil && !viewModel.isRecording
@@ -118,38 +119,59 @@ struct RecordingView: View {
         } else if capBlocked {
             statusLine(capLine)
                 .transition(.opacity.combined(with: .scale(scale: 0.95)))
-        } else if walkIn.step == .record {
-            // Walk-in beat: a dare for the user's first pitch. Vanishes the
-            // moment recording starts (different branch above).
-            walkInPitchBubble
-                .transition(.opacity.combined(with: .scale(scale: 0.95)))
         } else {
-            // Idle: the mic speaks for itself.
-            Color.clear
+            idleHeader
+                .transition(.opacity.combined(with: .scale(scale: 0.95)))
         }
     }
 
-    private var walkInPitchBubble: some View {
-        VStack(spacing: 8) {
+    // MARK: - Idle header
+
+    private var idleHeader: some View {
+        VStack(spacing: 14) {
             Spacer()
-            HStack(alignment: .center, spacing: 4) {
-                Image("MascotNeutral")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 84, height: 84)
-                MascotSpeechLine(line: WalkInScript.pitchFallback, arrowOffsetY: 30)
-            }
-            Button {
-                walkIn.skip()
-            } label: {
-                Text("Not now")
-                    .font(.duoLabel)
-                    .foregroundColor(.textSec)
-                    .padding(.vertical, 6)
-                    .padding(.horizontal, 12)
-            }
-            .buttonStyle(DuoPressStyle())
+
+            Text("What's cooking?")
+                .font(.duoScreenTitle)
+                .foregroundColor(.textPri)
+
+            Text("Pitch your idea out loud.\nThe critic turns it into a plan.")
+                .font(.system(size: 15))
+                .foregroundColor(.textSec)
+                .multilineTextAlignment(.center)
+                .lineSpacing(4)
+
+            promptChip
+                .padding(.top, 2)
         }
+    }
+
+    /// One example pitch at a time — tap to shuffle. No timers: nothing to
+    /// fight reduce-motion, nothing ticking in a kept-alive tab.
+    private var promptChip: some View {
+        Button {
+            var next = Int.random(in: 0..<RecordingPrompts.pool.count)
+            if next == promptIndex {
+                next = (next + 1) % RecordingPrompts.pool.count
+            }
+            promptIndex = next
+            HapticEngine.selection()
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "dice.fill")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(.brandAmber)
+                Text("Try: \(RecordingPrompts.pool[promptIndex])")
+                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .foregroundColor(.textPri)
+                    .lineLimit(1)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 9)
+            .background(Capsule().fill(Color.white))
+            .overlay(Capsule().strokeBorder(Color.cardEdge, lineWidth: 2))
+        }
+        .buttonStyle(DuoPressStyle())
     }
 
     private func statusLine(_ line: String) -> some View {
@@ -185,7 +207,7 @@ struct RecordingView: View {
                     if viewModel.isSaving {
                         ProgressView().tint(.white).scaleEffect(1.4)
                     } else if viewModel.isRecording {
-                        RoundedRectangle(cornerRadius: 10)
+                        RoundedRectangle(cornerRadius: DuoTokens.Radius.chip)
                             .fill(Color.white)
                             .frame(width: 44, height: 44)
                     } else if capBlocked {
@@ -208,6 +230,18 @@ struct RecordingView: View {
             // capBlocked stays pressable — the press opens the paywall
             .disabled(viewModel.isSaving || viewModel.micDenied || saveFailed)
         }
+        // Spotlight tour target. Inactive whenever tapping the mic wouldn't
+        // start a fresh recording — the spotlight vanishes rather than daring
+        // the user at a disabled or already-recording mic.
+        .walkInTarget(
+            .micButton,
+            isActive: coordinator.selectedTab == .record
+                && !viewModel.isRecording
+                && !viewModel.isSaving
+                && !viewModel.micDenied
+                && !saveFailed
+                && !capBlocked
+        )
     }
 
     // MARK: - Bottom controls
@@ -239,6 +273,11 @@ struct RecordingView: View {
                     .font(.system(size: 13))
                     .foregroundColor(.textSec)
             }
+        } else {
+            Label("Tap to record — tap again when you're done", systemImage: "hand.tap.fill")
+                .font(.system(size: 13, weight: .medium))
+                .foregroundColor(.textSec)
+                .transition(.opacity)
         }
     }
 

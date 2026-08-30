@@ -17,10 +17,14 @@ struct NotificationPermissionView: View {
             VStack(spacing: 28) {
                 Spacer()
 
-                Image("MascotNeutral")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 180, height: 180)
+                ZStack {
+                    Circle()
+                        .fill(Color.brand.opacity(0.12))
+                        .frame(width: 120, height: 120)
+                    Image(systemName: "bell.badge.fill")
+                        .font(.system(size: 64, weight: .semibold))
+                        .foregroundStyle(Color.brand)
+                }
 
                 VStack(spacing: 12) {
                     Text("Stay on track")

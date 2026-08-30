@@ -29,7 +29,7 @@ final class EntitlementService: ObservableObject {
     /// TESTING OVERRIDE — treats debug builds as Abimo Plus without a
     /// purchase. Flip to false to exercise the free tier and paywalls.
     /// Compiled out of release builds entirely.
-    static let debugForcePremium = true
+    static let debugForcePremium = false
     #endif
 
     @Published private(set) var isPremium = false

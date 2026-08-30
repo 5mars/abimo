@@ -74,19 +74,7 @@ struct MainContentView: View {
             .animation(nil, value: coordinator.selectedTab) // Disable animation on content — prevents flash
             CustomTabBar(selectedTab: $coordinator.selectedTab)
         }
-        .overlay(alignment: .bottom) {
-            // Walk-in beat 2: hint bubble above the glowing Record tab.
-            if walkIn.step == .record && coordinator.selectedTab != .record {
-                WalkInHintBubble(
-                    line: WalkInScript.tabHint,
-                    onSkip: { walkIn.skip() },
-                    tailFraction: 0.375  // Record is the 2nd of 4 equal tabs
-                )
-                .frame(maxWidth: 300)
-                .padding(.bottom, 66)  // clear the tab bar
-                .transition(.opacity)
-            }
-        }
+        .walkInSpotlight(spotlightSpec)
         .overlay {
             // Walk-in beat 1: the first-ever welcome. The CTA deliberately
             // does NOT switch tabs — the Record tab starts glowing instead,
@@ -118,6 +106,43 @@ struct MainContentView: View {
         }
         .sheet(isPresented: $showMascotPaywall) {
             PaywallView(context: .ideaCap)
+        }
+    }
+
+    /// The current spotlight beat for tour steps hosted at the root level.
+    /// The taste-test beats live in SWOTAnalysisView — it's a sheet, so it
+    /// hosts its own overlay above the presentation layer.
+    private var spotlightSpec: SpotlightSpec? {
+        switch walkIn.step {
+        case .record where coordinator.selectedTab != .record:
+            // Teach the navigation: the user taps the highlighted tab
+            // themselves (tap-through), nothing switches for them.
+            return SpotlightSpec(
+                target: .recordTab,
+                line: WalkInScript.tabHint,
+                shape: .circle,
+                tapThrough: true
+            )
+        case .record:
+            // On the Record screen: dare the first pitch. Tapping the mic
+            // through the cutout really starts recording; the anchor goes
+            // inactive while recording, so the spotlight vanishes with it.
+            return SpotlightSpec(
+                target: .micButton,
+                line: WalkInScript.pitchFallback,
+                shape: .circle,
+                cutoutPadding: 14,
+                tapThrough: true
+            )
+        case .actionPlan where coordinator.selectedTab == .actions:
+            return SpotlightSpec(
+                target: .firstActionCard,
+                line: WalkInScript.actionsNudge,
+                primaryLabel: WalkInScript.actionsNudgeButton,
+                primaryAction: { WalkInDirector.shared.finishFinalBeat() }
+            )
+        default:
+            return nil
         }
     }
 
