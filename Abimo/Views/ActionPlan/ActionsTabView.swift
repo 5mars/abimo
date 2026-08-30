@@ -6,7 +6,7 @@
 import SwiftUI
 
 struct ActionsTabView: View {
-    @StateObject private var viewModel = ActionsTabViewModel()
+    @EnvironmentObject var viewModel: ActionsTabViewModel
     @EnvironmentObject var coordinator: NavigationCoordinator
     @State private var expandedCommitmentPlanId: UUID? = nil
     @AppStorage(DailyGoalTier.storageKey) private var dailyGoalXP = DailyGoalTier.fallback.rawValue

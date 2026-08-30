@@ -49,6 +49,9 @@ struct MainContentView: View {
     @EnvironmentObject var coordinator: NavigationCoordinator
     @StateObject private var mascot = MascotDirector.shared
     @StateObject private var walkIn = WalkInDirector.shared
+    // One plans/streak view model shared by the Actions tab and Profile —
+    // both used to own separate instances that each refetched every plan.
+    @StateObject private var actionsVM = ActionsTabViewModel()
     @State private var showMascotPaywall = false
 
     var body: some View {
@@ -64,8 +67,10 @@ struct MainContentView: View {
                 NavigationStack { RecordingView() }
                     .tabPage(.record, selected: coordinator.selectedTab)
                 NavigationStack { ActionsTabView() }
+                    .environmentObject(actionsVM)
                     .tabPage(.actions, selected: coordinator.selectedTab)
                 ProfileView()
+                    .environmentObject(actionsVM)
                     .tabPage(.profile, selected: coordinator.selectedTab)
             }
             .animation(nil, value: coordinator.selectedTab) // Disable animation on content — prevents flash

@@ -8,7 +8,7 @@ import SwiftUI
 struct ProfileView: View {
     @EnvironmentObject var authViewModel: AuthViewModel
     @EnvironmentObject var coordinator: NavigationCoordinator
-    @StateObject private var actionsViewModel = ActionsTabViewModel()
+    @EnvironmentObject var actionsViewModel: ActionsTabViewModel
     @ObservedObject private var entitlements = EntitlementService.shared
     @State private var showSignOutAlert = false
     @State private var showPaywall = false
