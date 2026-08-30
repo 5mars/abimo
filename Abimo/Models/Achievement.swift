@@ -101,4 +101,25 @@ enum Achievement: String, CaseIterable, Identifiable {
     static func unlocked(in ctx: AchievementContext) -> Set<Achievement> {
         Set(allCases.filter { $0.isUnlocked(in: ctx) })
     }
+
+    // MARK: - Latch storage (shared by the profile grid and in-session toasts)
+
+    /// UserDefaults key for the earned-badge latch. Latched badges never
+    /// re-lock, even when the underlying stat (a streak) lapses.
+    static let latchStorageKey = "unlocked_achievements"
+
+    static func decodeLatch(_ stored: String) -> Set<Achievement> {
+        Set(stored.split(separator: ",").compactMap { Achievement(rawValue: String($0)) })
+    }
+
+    static func encodeLatch(_ achievements: Set<Achievement>) -> String {
+        achievements.map(\.rawValue).sorted().joined(separator: ",")
+    }
+
+    /// Badges newly earned in `ctx` that aren't in `previous` — the set to
+    /// celebrate and latch. Never returns anything already latched, so a
+    /// zeroed-out context field can only delay a badge, never revoke one.
+    static func freshUnlocks(in ctx: AchievementContext, previous: Set<Achievement>) -> Set<Achievement> {
+        unlocked(in: ctx).subtracting(previous)
+    }
 }

@@ -89,3 +89,48 @@ final class XPEngineTests: XCTestCase {
         XCTAssertEqual(DailyGoalTier(storedXP: 45), .firedUp)
     }
 }
+
+// MARK: - Achievement latch helpers
+
+final class AchievementLatchTests: XCTestCase {
+
+    private func context(actions: Int = 0, streak: Int = 0, xp: Int = 0, plans: Int = 0) -> AchievementContext {
+        AchievementContext(
+            ideaCount: 0,
+            analysisCount: 0,
+            completedActionCount: actions,
+            completedPlanCount: plans,
+            currentStreak: streak,
+            bestScore: nil,
+            completedActionsByAnalysisId: [:],
+            scoresByAnalysisId: [:],
+            totalXP: xp
+        )
+    }
+
+    func testLatchRoundTrip() {
+        let set: Set<Achievement> = [.lineCook, .onFire]
+        XCTAssertEqual(Achievement.decodeLatch(Achievement.encodeLatch(set)), set)
+    }
+
+    func testDecodeGarbageIsEmpty() {
+        XCTAssertEqual(Achievement.decodeLatch(""), [])
+        XCTAssertEqual(Achievement.decodeLatch("bogus,unknown"), [])
+    }
+
+    func testFreshUnlocksExcludesPrevious() {
+        // 5 actions unlocks lineCook; already-latched badges never repeat
+        let fresh = Achievement.freshUnlocks(in: context(actions: 5), previous: [.lineCook])
+        XCTAssertFalse(fresh.contains(.lineCook))
+    }
+
+    func testFreshUnlocksDetectsXPBadge() {
+        let fresh = Achievement.freshUnlocks(in: context(xp: 100), previous: [])
+        XCTAssertTrue(fresh.contains(.prepCook))
+        XCTAssertFalse(fresh.contains(.sousChef))
+    }
+
+    func testZeroedContextUnlocksNothing() {
+        XCTAssertTrue(Achievement.freshUnlocks(in: context(), previous: []).isEmpty)
+    }
+}

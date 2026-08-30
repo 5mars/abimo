@@ -63,6 +63,13 @@ struct ActionPlanDetailView: View {
                     .zIndex(1)
             }
 
+            // Badge-unlocked toast (earned by this completion)
+            if case .achievementUnlocked(let badge) = viewModel.celebrationState {
+                AchievementBannerView(achievement: badge)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .zIndex(1)
+            }
+
             // Plan completion overlay
             if viewModel.celebrationState == .planComplete {
                 PlanCompletionView(viewModel: viewModel, onDismiss: {

@@ -17,6 +17,7 @@ enum CelebrationState: Equatable {
     case milestone(count: Int)            // 3, 5, or 7 — banner + heavier confetti, auto-clears after 2.5s
     case streakExtended(days: Int)        // first completion of the day — flame banner, auto-clears after 2.5s
     case dailyGoalHit(goalXP: Int)        // today's XP crossed the goal — banner, auto-clears after 2.5s
+    case achievementUnlocked(Achievement) // badge earned mid-session — banner, auto-clears after 2.5s
     case planComplete                     // full-screen overlay, user-dismissed via Done button
 }
 
@@ -257,16 +258,19 @@ class ActionPlanViewModel: ObservableObject {
     }
 
     /// Fires the streak-extended flame banner (and the dormant streak-milestone
-    /// notification) on the first completion of the day. Queued behind whatever
-    /// celebration is already on screen; planComplete owns the screen alone.
+    /// notification) on the first completion of the day, then the daily-goal
+    /// banner, then any badge earned by this completion — each queued behind
+    /// whatever is already on screen; planComplete owns the screen alone.
     private func evaluateStreakCelebration() async {
         guard let userId = try? await supabase.getCurrentUser()?.id,
               let allPlans = try? await supabase.fetchAllActionPlans(userId: userId) else { return }
 
         var dates: [Date] = []
+        var completedPlanCount = 0
         for plan in allPlans {
             let actions = (try? await supabase.fetchMicroActions(actionPlanId: plan.id)) ?? []
             dates.append(contentsOf: actions.compactMap(\.completedAt))
+            if !actions.isEmpty, actions.allSatisfy(\.isCompleted) { completedPlanCount += 1 }
         }
 
         let info = Self.streakInfo(completionDates: dates)
@@ -312,6 +316,47 @@ class ActionPlanViewModel: ObservableObject {
                 SoundEngine.whoosh()
                 DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { [weak self] in
                     if case .dailyGoalHit = self?.celebrationState ?? .idle {
+                        self?.celebrationState = .idle
+                    }
+                }
+            }
+            queueDelay += 2.8
+        }
+
+        // Achievement toast: badges this completion just earned, celebrated
+        // where they're earned instead of waiting for a Profile visit. Only
+        // the action/streak/XP-derived badges can trigger here — idea-,
+        // analysis- and score-based fields are zeroed, which can only delay
+        // those badges (the Profile grid still catches them), never unlock
+        // them falsely. Same latch key as the grid, so nothing fires twice.
+        let context = AchievementContext(
+            ideaCount: 0,
+            analysisCount: 0,
+            completedActionCount: dates.count,
+            completedPlanCount: completedPlanCount,
+            currentStreak: info.streak,
+            bestScore: nil,
+            completedActionsByAnalysisId: [:],
+            scoresByAnalysisId: [:],
+            totalXP: XPEngine.totalXP(completionDates: dates)
+        )
+        let previous = Achievement.decodeLatch(
+            UserDefaults.standard.string(forKey: Achievement.latchStorageKey) ?? ""
+        )
+        let fresh = Achievement.freshUnlocks(in: context, previous: previous)
+        if let badge = fresh.sorted(by: { $0.rawValue < $1.rawValue }).first,
+           celebrationState != .planComplete {
+            UserDefaults.standard.set(
+                Achievement.encodeLatch(previous.union(fresh)),
+                forKey: Achievement.latchStorageKey
+            )
+            DispatchQueue.main.asyncAfter(deadline: .now() + queueDelay) { [weak self] in
+                guard let self, self.celebrationState == .idle else { return }
+                self.celebrationState = .achievementUnlocked(badge)
+                HapticEngine.success()
+                SoundEngine.chime()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { [weak self] in
+                    if case .achievementUnlocked = self?.celebrationState ?? .idle {
                         self?.celebrationState = .idle
                     }
                 }

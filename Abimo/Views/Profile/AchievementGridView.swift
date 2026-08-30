@@ -12,11 +12,11 @@ import Lottie
 struct AchievementGridView: View {
     let context: AchievementContext
 
-    @AppStorage("unlocked_achievements") private var unlockedStore = ""
+    @AppStorage(Achievement.latchStorageKey) private var unlockedStore = ""
     @State private var justUnlocked: Achievement?
 
     private var unlockedSet: Set<Achievement> {
-        Set(unlockedStore.split(separator: ",").compactMap { Achievement(rawValue: String($0)) })
+        Achievement.decodeLatch(unlockedStore)
     }
 
     var body: some View {
@@ -104,12 +104,11 @@ struct AchievementGridView: View {
     }
 
     private func detectNewUnlocks() {
-        let computed = Achievement.unlocked(in: context)
         let previously = unlockedSet
-        let fresh = computed.subtracting(previously)
+        let fresh = Achievement.freshUnlocks(in: context, previous: previously)
         guard !fresh.isEmpty else { return }
 
-        unlockedStore = previously.union(fresh).map(\.rawValue).sorted().joined(separator: ",")
+        unlockedStore = Achievement.encodeLatch(previously.union(fresh))
         justUnlocked = fresh.first
         HapticEngine.success()
         SoundEngine.chime()
