@@ -527,7 +527,7 @@ struct ViabilityGaugeView: View {
                     switch verdict {
                     case .burnt, .halfBaked: HapticEngine.impact(style: .rigid)
                     case .simmering, .chefsKiss: HapticEngine.success()
-                    case .needsSeasoning: break
+                    case .needsSeasoning: HapticEngine.impact(style: .soft)
                     }
                 }
             }

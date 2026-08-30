@@ -24,6 +24,10 @@ struct AbimoApp: App {
         ])
         // Start the StoreKit transaction listener before any purchase can occur.
         _ = EntitlementService.shared
+        // Pre-warm the Taptic Engine and audio players so the first
+        // celebration doesn't pay lazy-load latency.
+        HapticEngine.prepare()
+        SoundEngine.prepare()
     }
 
     var body: some Scene {

@@ -142,8 +142,14 @@ struct CardEntranceModifier: ViewModifier {
             .opacity(appeared ? 1 : 0)
             .offset(y: appeared ? 0 : 22)
             .onAppear {
-                withAnimation(.spring(response: 0.5, dampingFraction: 0.78).delay(delay)) {
+                // Reduce motion skips the delay too — a staggered fade with
+                // no movement still reads as motion on long screens.
+                if AnimationPolicy.reduceMotion {
                     appeared = true
+                } else {
+                    withAnimation(.spring(response: 0.5, dampingFraction: 0.78).delay(delay)) {
+                        appeared = true
+                    }
                 }
             }
     }
