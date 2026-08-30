@@ -13,8 +13,29 @@ import SwiftUI
 // MARK: - Scrim shape (even-odd punch-out)
 
 struct SpotlightScrimShape: Shape {
-    let cutout: CGRect
-    let cornerRadius: CGFloat
+    var cutout: CGRect
+    var cornerRadius: CGFloat
+
+    /// Animatable origin + size + radius, so the hole morphs from one
+    /// beat's target to the next instead of snapping.
+    var animatableData: AnimatablePair<
+        AnimatablePair<CGFloat, CGFloat>,
+        AnimatablePair<AnimatablePair<CGFloat, CGFloat>, CGFloat>
+    > {
+        get {
+            AnimatablePair(
+                AnimatablePair(cutout.origin.x, cutout.origin.y),
+                AnimatablePair(AnimatablePair(cutout.size.width, cutout.size.height), cornerRadius)
+            )
+        }
+        set {
+            cutout.origin.x = newValue.first.first
+            cutout.origin.y = newValue.first.second
+            cutout.size.width = newValue.second.first.first
+            cutout.size.height = newValue.second.first.second
+            cornerRadius = newValue.second.second
+        }
+    }
 
     func path(in rect: CGRect) -> Path {
         var p = Path()
@@ -82,6 +103,8 @@ struct SpotlightOverlay: View {
     /// (e.g. the Record tab).
     private var skipAtTop: Bool { cutout.maxY > container.height - 220 }
 
+    @State private var ringPulsing = false
+
     var body: some View {
         ZStack {
             CutoutPassthroughView(cutout: cutout, passthroughEnabled: spec.tapThrough)
@@ -90,7 +113,13 @@ struct SpotlightOverlay: View {
                 .fill(Color.black.opacity(scrimOpacity), style: FillStyle(eoFill: true))
                 .allowsHitTesting(false)
 
+            pulseRing
+
             coachBubble
+                // Beats keep the overlay alive (the cutout morphs between
+                // them); the bubble itself fades out/in per line.
+                .id(spec.line)
+                .transition(.opacity)
                 .frame(
                     maxWidth: .infinity, maxHeight: .infinity,
                     alignment: bubbleBelowCutout ? .top : .bottom
@@ -107,9 +136,31 @@ struct SpotlightOverlay: View {
                 .padding(.trailing, skipAtTop ? 20 : 0)
                 .padding(.bottom, skipAtTop ? 0 : 44)
         }
-        .onAppear { HapticEngine.impact(style: .light) }
+        .onAppear {
+            if !AnimationPolicy.reduceMotion {
+                withAnimation(.easeOut(duration: 1.6).repeatForever(autoreverses: false)) {
+                    ringPulsing = true
+                }
+            }
+        }
     }
 
+    /// Soft ring breathing outward from the cutout edge — draws the eye
+    /// to the hole the way PulseRing does for the mic and active node.
+    @ViewBuilder
+    private var pulseRing: some View {
+        if !AnimationPolicy.reduceMotion {
+            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                .strokeBorder(Color.white.opacity(ringPulsing ? 0 : 0.55), lineWidth: 2)
+                .frame(width: cutout.width, height: cutout.height)
+                .scaleEffect(ringPulsing ? 1.12 : 1.0)
+                .position(x: cutout.midX, y: cutout.midY)
+                .allowsHitTesting(false)
+        }
+    }
+
+    // The onAppear haptic lives on the bubble (re-identified per line via
+    // .id) so every beat taps, not just the overlay's first appearance.
     private var coachBubble: some View {
         VStack(spacing: 14) {
             HStack(alignment: .center, spacing: 6) {
@@ -130,6 +181,7 @@ struct SpotlightOverlay: View {
         }
         .padding(.horizontal, 24)
         .fixedSize(horizontal: false, vertical: true)
+        .onAppear { HapticEngine.impact(style: .light) }
     }
 
     private var skipButton: some View {

@@ -122,6 +122,13 @@ struct JourneyPathView: View {
                 width: width
             )
 
+            JourneyCompletedTrail(
+                layout: layout,
+                actions: viewModel.orderedActions,
+                width: width,
+                justCompletedActionId: viewModel.justCompletedActionId
+            )
+
             ForEach(Array(viewModel.orderedActions.enumerated()), id: \.element.id) { index, action in
                 JourneyNodeView(
                     action: action,

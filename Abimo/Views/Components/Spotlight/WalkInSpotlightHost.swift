@@ -33,7 +33,10 @@ struct WalkInSpotlightHostModifier: ViewModifier {
                         beat(spec, anchors: anchors, proxy: proxy)
                     }
                 }
-                .animation(.easeOut(duration: 0.25), value: spec?.target)
+                .animation(
+                    AnimationPolicy.reduceMotion ? nil : .spring(response: 0.4, dampingFraction: 0.75),
+                    value: spec?.target
+                )
             }
             .ignoresSafeArea()
         }
