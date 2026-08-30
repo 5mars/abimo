@@ -10,6 +10,14 @@ struct ActionsTabView: View {
     @EnvironmentObject var coordinator: NavigationCoordinator
     @State private var expandedCommitmentPlanId: UUID? = nil
     @AppStorage(DailyGoalTier.storageKey) private var dailyGoalXP = DailyGoalTier.fallback.rawValue
+    @AppStorage(DareEngine.latchStorageKey) private var dareLatchStore = ""
+
+    /// Today's XP for the goal ring: action completions plus latched dares.
+    private var xpToday: Int {
+        let latched = DareEngine.decodeLatch(dareLatchStore, for: Date())
+        return XPEngine.xpToday(completionDates: viewModel.allCompletionDates)
+            + DareEngine.xp(latchedCount: latched.count)
+    }
 
     var body: some View {
         ZStack {
@@ -38,11 +46,19 @@ struct ActionsTabView: View {
                                 streak: viewModel.currentStreak,
                                 weekActivity: viewModel.weekActivity,
                                 totalCompletedThisWeek: viewModel.totalCompletedThisWeek,
-                                xpToday: XPEngine.xpToday(completionDates: viewModel.allCompletionDates),
+                                xpToday: xpToday,
                                 dailyGoalXP: $dailyGoalXP
                             )
                             .padding(.horizontal, 16)
                             .cardEntrance(delay: 0)
+
+                            DailyDaresCard(
+                                actionsByPlan: viewModel.microActionsByPlan,
+                                streak: viewModel.currentStreak,
+                                committedActionId: viewModel.activeCommitment?.microActionId
+                            )
+                            .padding(.horizontal, 16)
+                            .cardEntrance(delay: 0.06)
                         }
 
                         topBanner
