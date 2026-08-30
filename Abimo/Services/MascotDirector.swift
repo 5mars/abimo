@@ -21,7 +21,6 @@ final class MascotDirector: ObservableObject {
     private let popupSessionCap = 1
     private var sessionPopupCount = 0
     private let defaults = UserDefaults.standard
-    private let supabase = SupabaseService.shared
 
     /// Minimum gap between showings of the same trigger.
     private func minInterval(for trigger: MascotMomentTrigger) -> TimeInterval {
@@ -83,15 +82,7 @@ final class MascotDirector: ObservableObject {
         guard sessionPopupCount < popupSessionCap, currentMoment == nil,
               passesThrottle(.streakAtRisk(days: 0)) else { return }
 
-        guard let userId = try? await supabase.getCurrentUser()?.id,
-              let allPlans = try? await supabase.fetchAllActionPlans(userId: userId) else { return }
-
-        var dates: [Date] = []
-        for plan in allPlans {
-            let actions = (try? await supabase.fetchMicroActions(actionPlanId: plan.id)) ?? []
-            dates.append(contentsOf: actions.compactMap(\.completedAt))
-        }
-
+        let dates = await CompletionStore.shared.completionDates()
         let atRisk = ActionPlanViewModel.streakEndingYesterday(completionDates: dates)
         guard atRisk >= 2 else { return }
         fire(.streakAtRisk(days: atRisk))

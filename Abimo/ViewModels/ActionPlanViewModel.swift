@@ -262,16 +262,15 @@ class ActionPlanViewModel: ObservableObject {
     /// banner, then any badge earned by this completion — each queued behind
     /// whatever is already on screen; planComplete owns the screen alone.
     private func evaluateStreakCelebration() async {
-        guard let userId = try? await supabase.getCurrentUser()?.id,
-              let allPlans = try? await supabase.fetchAllActionPlans(userId: userId) else { return }
+        // The completion that triggered this just saved — refetch fresh.
+        CompletionStore.shared.invalidate()
+        let actionsByPlan = await CompletionStore.shared.actionsByPlan()
+        guard !actionsByPlan.isEmpty else { return }
 
-        var dates: [Date] = []
-        var completedPlanCount = 0
-        for plan in allPlans {
-            let actions = (try? await supabase.fetchMicroActions(actionPlanId: plan.id)) ?? []
-            dates.append(contentsOf: actions.compactMap(\.completedAt))
-            if !actions.isEmpty, actions.allSatisfy(\.isCompleted) { completedPlanCount += 1 }
-        }
+        let dates = actionsByPlan.values.flatMap { $0 }.compactMap(\.completedAt)
+        let completedPlanCount = actionsByPlan.values
+            .filter { !$0.isEmpty && $0.allSatisfy(\.isCompleted) }
+            .count
 
         let info = Self.streakInfo(completionDates: dates)
 
@@ -653,6 +652,9 @@ class ActionsTabViewModel: ObservableObject {
             }
             plans = fetchedPlans
             microActionsByPlan = fetchedActions
+            // This fetch is the freshest view of every plan — share it so
+            // the mascot/notification streak checks don't refetch.
+            CompletionStore.shared.seed(fetchedActions)
             activeCommitment = try? await supabase.fetchActiveCommitment(userId: userId)
         } catch {
             errorMessage = "Couldn't load your plans: \(error.localizedDescription)"

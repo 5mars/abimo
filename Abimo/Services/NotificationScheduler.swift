@@ -64,14 +64,7 @@ class NotificationScheduler {
         let hour = Calendar.current.component(.hour, from: Date())
         guard hour < 20 else { return }
 
-        let supabase = SupabaseService.shared
-        guard let userId = try? await supabase.getCurrentUser()?.id,
-              let allPlans = try? await supabase.fetchAllActionPlans(userId: userId) else { return }
-        var dates: [Date] = []
-        for plan in allPlans {
-            let actions = (try? await supabase.fetchMicroActions(actionPlanId: plan.id)) ?? []
-            dates.append(contentsOf: actions.compactMap(\.completedAt))
-        }
+        let dates = await CompletionStore.shared.completionDates()
         guard ActionPlanViewModel.streakEndingYesterday(completionDates: dates) >= 2 else { return }
 
         let msg = NotificationCopy.message(for: .streakAtRisk, sass: .playful)
