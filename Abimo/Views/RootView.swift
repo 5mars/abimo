@@ -57,19 +57,16 @@ struct MainContentView: View {
         VStack(spacing: 0) {
             ZStack {
                 // All views stay alive (preserving navigation state).
-                // Opacity switches instantly — no animation to avoid flash/dark flicker.
+                // The ZStack-level animation stays nil (dark-flash guard);
+                // only each page's opacity cross-fades, per-page below.
                 NavigationStack { NotesListView() }
-                    .opacity(coordinator.selectedTab == .ideas ? 1 : 0)
-                    .allowsHitTesting(coordinator.selectedTab == .ideas)
+                    .tabPage(.ideas, selected: coordinator.selectedTab)
                 NavigationStack { RecordingView() }
-                    .opacity(coordinator.selectedTab == .record ? 1 : 0)
-                    .allowsHitTesting(coordinator.selectedTab == .record)
+                    .tabPage(.record, selected: coordinator.selectedTab)
                 NavigationStack { ActionsTabView() }
-                    .opacity(coordinator.selectedTab == .actions ? 1 : 0)
-                    .allowsHitTesting(coordinator.selectedTab == .actions)
+                    .tabPage(.actions, selected: coordinator.selectedTab)
                 ProfileView()
-                    .opacity(coordinator.selectedTab == .profile ? 1 : 0)
-                    .allowsHitTesting(coordinator.selectedTab == .profile)
+                    .tabPage(.profile, selected: coordinator.selectedTab)
             }
             .animation(nil, value: coordinator.selectedTab) // Disable animation on content — prevents flash
             CustomTabBar(selectedTab: $coordinator.selectedTab)
@@ -159,6 +156,22 @@ struct MainContentView: View {
             // No trigger produces this yet; land on the Kitchen as a safe default.
             coordinator.selectedTab = .ideas
         }
+    }
+}
+
+// MARK: - Tab page visibility
+
+private extension View {
+    /// Kept-alive tab page: visible + tappable only when selected, with an
+    /// opacity-only cross-fade. Geometry never animates, so the ZStack's
+    /// nil-animation flash guard stays intact.
+    func tabPage(_ tab: AppTab, selected: AppTab) -> some View {
+        opacity(selected == tab ? 1 : 0)
+            .allowsHitTesting(selected == tab)
+            .animation(
+                AnimationPolicy.reduceMotion ? nil : .easeOut(duration: 0.15),
+                value: selected
+            )
     }
 }
 

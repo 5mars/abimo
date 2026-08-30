@@ -49,14 +49,20 @@ private struct TabBarButton: View {
     let isSelected: Bool
     let action: () -> Void
 
-    @State private var bounceScale: CGFloat = 1.0
-    @State private var bounceRotation: Double = 0.0
+    @State private var bounceTrigger = 0
+
+    /// The icon's 3-beat bounce, expressed as keyframe tracks: scale pops
+    /// and holds while the rotation wags left, right, then settles.
+    private struct BounceValues {
+        var scale: CGFloat = 1.0
+        var rotation: Double = 0.0
+    }
 
     var body: some View {
         Button(action: {
             action()
             if !AnimationPolicy.reduceMotion {
-                triggerBounce()
+                bounceTrigger += 1
             }
         }) {
             ZStack {
@@ -74,8 +80,25 @@ private struct TabBarButton: View {
                 Image(systemName: isSelected ? tab.selectedIconName : tab.iconName)
                     .font(.system(size: 22, weight: .medium))
                     .foregroundColor(isSelected ? .brand : .textSec)
-                    .scaleEffect(bounceScale)
-                    .rotationEffect(.degrees(bounceRotation))
+                    .keyframeAnimator(
+                        initialValue: BounceValues(),
+                        trigger: bounceTrigger
+                    ) { content, values in
+                        content
+                            .scaleEffect(values.scale)
+                            .rotationEffect(.degrees(values.rotation))
+                    } keyframes: { _ in
+                        KeyframeTrack(\.scale) {
+                            SpringKeyframe(1.25, duration: 0.18, spring: Spring(response: 0.18, dampingRatio: 0.5))
+                            LinearKeyframe(1.25, duration: 0.18)
+                            SpringKeyframe(1.0, duration: 0.25, spring: Spring(response: 0.25, dampingRatio: 0.7))
+                        }
+                        KeyframeTrack(\.rotation) {
+                            SpringKeyframe(-8, duration: 0.18, spring: Spring(response: 0.18, dampingRatio: 0.5))
+                            SpringKeyframe(6, duration: 0.18, spring: Spring(response: 0.18, dampingRatio: 0.5))
+                            SpringKeyframe(0, duration: 0.25, spring: Spring(response: 0.25, dampingRatio: 0.7))
+                        }
+                    }
             }
             .frame(maxWidth: .infinity)
             .frame(height: 44)
@@ -84,27 +107,6 @@ private struct TabBarButton: View {
             .walkInTarget(.recordTab, isActive: tab == .record)
         }
         .buttonStyle(.plain)
-    }
-
-    private func triggerBounce() {
-        // Phase 1: scale up + rotate left
-        withAnimation(.spring(response: 0.18, dampingFraction: 0.5)) {
-            bounceScale = 1.25
-            bounceRotation = -8
-        }
-        // Phase 2: rotate right
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) {
-            withAnimation(.spring(response: 0.18, dampingFraction: 0.5)) {
-                bounceRotation = 6
-            }
-        }
-        // Phase 3: return to rest
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.36) {
-            withAnimation(.spring(response: 0.25, dampingFraction: 0.7)) {
-                bounceScale = 1.0
-                bounceRotation = 0
-            }
-        }
     }
 }
 

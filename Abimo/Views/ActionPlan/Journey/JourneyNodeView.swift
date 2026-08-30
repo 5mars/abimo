@@ -38,8 +38,8 @@ struct JourneyNodeView: View {
     var nodeSize: CGFloat = 70
     var celebrationState: CelebrationState = .idle
 
-    @State private var isAnimatingCompletion = false
-    @State private var unlockAnimating = false
+    @State private var completionBounceTrigger = 0
+    @State private var unlockPulseTrigger = 0
     @State private var animatedFillColor: Color = .lockedFace
     @State private var animatedEdgeColor: Color = .lockedEdge
     @State private var startBob = false
@@ -69,8 +69,24 @@ struct JourneyNodeView: View {
                     }
             }
         }
-        .scaleEffect(isAnimatingCompletion ? 1.2 : 1.0)
-        .scaleEffect(unlockAnimating ? 1.15 : 1.0)
+        // Completion bounce: pop to 1.2x and settle, one keyframe pass.
+        .keyframeAnimator(initialValue: 1.0, trigger: completionBounceTrigger) { content, scale in
+            content.scaleEffect(scale)
+        } keyframes: { _ in
+            KeyframeTrack {
+                SpringKeyframe(1.2, duration: 0.15, spring: Spring(response: 0.15, dampingRatio: 0.4))
+                SpringKeyframe(1.0, duration: 0.15, spring: Spring(response: 0.15, dampingRatio: 0.6))
+            }
+        }
+        // Unlock pulse on the next node: swell to 1.15x, then relax.
+        .keyframeAnimator(initialValue: 1.0, trigger: unlockPulseTrigger) { content, scale in
+            content.scaleEffect(scale)
+        } keyframes: { _ in
+            KeyframeTrack {
+                SpringKeyframe(1.15, duration: 0.3, spring: Spring(response: 0.3, dampingRatio: 0.6))
+                SpringKeyframe(1.0, duration: 0.3, spring: Spring(response: 0.3, dampingRatio: 0.7))
+            }
+        }
         .overlay {
             if case .inlineConfetti(let actionId) = celebrationState,
                actionId == action.id {
@@ -84,17 +100,11 @@ struct JourneyNodeView: View {
         }
         .onChange(of: state) { oldValue, newValue in
             if oldValue != .completed && newValue == .completed {
-                // Bounce up + color change simultaneously (coral to green during bounce)
+                // Bounce (keyframes) + color morph coral -> green together
+                if !AnimationPolicy.reduceMotion { completionBounceTrigger += 1 }
                 AnimationPolicy.animate(.spring(response: 0.15, dampingFraction: 0.4)) {
-                    isAnimatingCompletion = true
                     animatedFillColor = .brandGreen
                     animatedEdgeColor = .brandGreenDark
-                }
-                // Bounce back
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                    AnimationPolicy.animate(.spring(response: 0.15, dampingFraction: 0.6)) {
-                        isAnimatingCompletion = false
-                    }
                 }
             } else if oldValue != newValue {
                 // Generic state change (e.g., active->locked on undo) — animate color
@@ -109,18 +119,12 @@ struct JourneyNodeView: View {
                   let completedIndex = actions.firstIndex(where: { $0.id == completedId }),
                   index == completedIndex + 1 else { return }
 
-            // Beat 1: Pulse scale up
-            AnimationPolicy.animate(.spring(response: 0.3, dampingFraction: 0.6)) {
-                unlockAnimating = true
-            }
-
-            // Beat 2: After pulse, scale down + color fade grey->coral
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                AnimationPolicy.animate(.easeInOut(duration: 0.3)) {
-                    unlockAnimating = false
-                    animatedFillColor = .brand
-                    animatedEdgeColor = .brandDark
-                }
+            // Swell (keyframes) while the colors fade grey -> coral once the
+            // pulse peaks — the delay replaces the old asyncAfter beat.
+            if !AnimationPolicy.reduceMotion { unlockPulseTrigger += 1 }
+            AnimationPolicy.animate(.easeInOut(duration: 0.3).delay(AnimationPolicy.reduceMotion ? 0 : 0.3)) {
+                animatedFillColor = .brand
+                animatedEdgeColor = .brandDark
             }
         }
     }
