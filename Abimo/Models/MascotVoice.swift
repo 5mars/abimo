@@ -14,6 +14,8 @@ enum MascotMomentTrigger: Equatable {
     case scoreRevealed(verdict: ScoreVerdict)
     case actionCompleted(count: Int)
     case streakExtended(days: Int)
+    case dailyGoalHit
+    case daresCleared
     case planComplete
     // Popup triggers — the ONLY ones that go through MascotDirector.
     // Popups are rare by design: max one per session, each with an action.
@@ -32,6 +34,8 @@ enum MascotMomentTrigger: Equatable {
         case .scoreRevealed:        return "scoreRevealed"
         case .actionCompleted:      return "actionCompleted"
         case .streakExtended:       return "streakExtended"
+        case .dailyGoalHit:         return "dailyGoalHit"
+        case .daresCleared:         return "daresCleared"
         case .planComplete:         return "planComplete"
         case .walkInWelcome:        return "walkInWelcome"
         case .returnedAfterAbsence: return "returnedAfterAbsence"
@@ -97,8 +101,9 @@ enum MascotVoice {
             return MascotAction(label: "Drop an idea", intent: .goRecord)
         case .streakAtRisk:
             return MascotAction(label: "Save the streak", intent: .openPlans)
-        case .scoreRevealed, .actionCompleted, .streakExtended, .planComplete,
-             .emptyKitchen, .recordPrompt, .launching, .ideaCapReached:
+        case .scoreRevealed, .actionCompleted, .streakExtended, .dailyGoalHit,
+             .daresCleared, .planComplete, .emptyKitchen, .recordPrompt,
+             .launching, .ideaCapReached:
             return nil
         }
     }
@@ -154,6 +159,20 @@ enum MascotVoice {
                 "{days} days straight. Suspiciously consistent.",
                 "A streak! I'd clap, but I'm holding a clipboard.",
                 "{days} days. The kitchen stays hot.",
+            ], .playful)
+
+        case .dailyGoalHit:
+            return ([
+                "Daily goal, plated. The kitchen approves.",
+                "Quota met. Overachieving is allowed. Encouraged, even.",
+                "Goal hit. Tomorrow the menu resets.",
+            ], .playful)
+
+        case .daresCleared:
+            return ([
+                "All three dares. Show-off.",
+                "Dares cleared. I'm running out of things to dare you.",
+                "Three for three. The kitchen's speechless. Briefly.",
             ], .playful)
 
         case .planComplete:

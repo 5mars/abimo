@@ -16,6 +16,7 @@ enum CelebrationState: Equatable {
     case inlineConfetti(actionId: UUID)   // per-action node burst, auto-clears after 1.5s
     case milestone(count: Int)            // 3, 5, or 7 — banner + heavier confetti, auto-clears after 2.5s
     case streakExtended(days: Int)        // first completion of the day — flame banner, auto-clears after 2.5s
+    case dailyGoalHit(goalXP: Int)        // today's XP crossed the goal — banner, auto-clears after 2.5s
     case planComplete                     // full-screen overlay, user-dismissed via Done button
 }
 
@@ -269,28 +270,50 @@ class ActionPlanViewModel: ObservableObject {
         }
 
         let info = Self.streakInfo(completionDates: dates)
-        guard info.completionsToday == 1 else { return }
 
-        if [3, 7, 14, 30].contains(info.streak) {
+        if info.completionsToday == 1, [3, 7, 14, 30].contains(info.streak) {
             NotificationScheduler.shared.sendStreakMilestone(days: info.streak)
         }
 
-        guard info.streak >= 2, celebrationState != .planComplete else { return }
-
-        let delay: TimeInterval
+        var queueDelay: TimeInterval
         switch celebrationState {
-        case .milestone:       delay = 2.7
-        case .inlineConfetti:  delay = 1.7
-        default:               delay = 0.3
+        case .milestone:       queueDelay = 2.7
+        case .inlineConfetti:  queueDelay = 1.7
+        default:               queueDelay = 0.3
         }
-        DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
-            guard let self, self.celebrationState == .idle else { return }
-            self.celebrationState = .streakExtended(days: info.streak)
-            HapticEngine.impact(style: .medium)
-            SoundEngine.whoosh()
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { [weak self] in
-                if case .streakExtended = self?.celebrationState ?? .idle {
-                    self?.celebrationState = .idle
+
+        // Streak banner: first completion of the day, streak of 2+.
+        if info.completionsToday == 1, info.streak >= 2, celebrationState != .planComplete {
+            DispatchQueue.main.asyncAfter(deadline: .now() + queueDelay) { [weak self] in
+                guard let self, self.celebrationState == .idle else { return }
+                self.celebrationState = .streakExtended(days: info.streak)
+                HapticEngine.impact(style: .medium)
+                SoundEngine.whoosh()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { [weak self] in
+                    if case .streakExtended = self?.celebrationState ?? .idle {
+                        self?.celebrationState = .idle
+                    }
+                }
+            }
+            // Anything queued after the streak banner waits out its slot.
+            queueDelay += 2.8
+        }
+
+        // Daily-goal banner: exactly the completion that crossed the goal.
+        let goalXP = UserDefaults.standard.object(forKey: DailyGoalTier.storageKey) as? Int
+            ?? DailyGoalTier.fallback.rawValue
+        if XPEngine.completionCrossesGoal(completionsTodayAfter: info.completionsToday, goal: goalXP),
+           celebrationState != .planComplete {
+            AnalyticsService.shared.log(.dailyGoalHit(tier: DailyGoalTier(storedXP: goalXP).analyticsName))
+            DispatchQueue.main.asyncAfter(deadline: .now() + queueDelay) { [weak self] in
+                guard let self, self.celebrationState == .idle else { return }
+                self.celebrationState = .dailyGoalHit(goalXP: goalXP)
+                HapticEngine.impact(style: .medium)
+                SoundEngine.whoosh()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { [weak self] in
+                    if case .dailyGoalHit = self?.celebrationState ?? .idle {
+                        self?.celebrationState = .idle
+                    }
                 }
             }
         }

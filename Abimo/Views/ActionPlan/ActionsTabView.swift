@@ -9,6 +9,7 @@ struct ActionsTabView: View {
     @StateObject private var viewModel = ActionsTabViewModel()
     @EnvironmentObject var coordinator: NavigationCoordinator
     @State private var expandedCommitmentPlanId: UUID? = nil
+    @AppStorage(DailyGoalTier.storageKey) private var dailyGoalXP = DailyGoalTier.fallback.rawValue
 
     var body: some View {
         ZStack {
@@ -36,7 +37,9 @@ struct ActionsTabView: View {
                             MomentumDashboard(
                                 streak: viewModel.currentStreak,
                                 weekActivity: viewModel.weekActivity,
-                                totalCompletedThisWeek: viewModel.totalCompletedThisWeek
+                                totalCompletedThisWeek: viewModel.totalCompletedThisWeek,
+                                xpToday: XPEngine.xpToday(completionDates: viewModel.allCompletionDates),
+                                dailyGoalXP: $dailyGoalXP
                             )
                             .padding(.horizontal, 16)
                             .cardEntrance(delay: 0)

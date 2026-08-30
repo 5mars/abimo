@@ -56,6 +56,13 @@ struct ActionPlanDetailView: View {
                     .zIndex(1)
             }
 
+            // Daily-goal banner (the completion that crossed today's goal)
+            if case .dailyGoalHit(let goalXP) = viewModel.celebrationState {
+                DailyGoalBannerView(goalXP: goalXP)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .zIndex(1)
+            }
+
             // Plan completion overlay
             if viewModel.celebrationState == .planComplete {
                 PlanCompletionView(viewModel: viewModel, onDismiss: {

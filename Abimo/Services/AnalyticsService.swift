@@ -29,6 +29,10 @@ enum AnalyticsEvent {
     case walkInStepCompleted(step: String)     // WalkInStep rawValue
     case walkInSkipped(step: String)
     case walkInCompleted
+    case dailyGoalHit(tier: String)            // DailyGoalTier analyticsName
+    case goalTierChanged(tier: String)
+    case dareCompleted(kind: String)           // Dare rawValue
+    case daresCleared
 
     var name: String {
         switch self {
@@ -50,6 +54,10 @@ enum AnalyticsEvent {
         case .walkInStepCompleted:    return "walk_in_step_completed"
         case .walkInSkipped:          return "walk_in_skipped"
         case .walkInCompleted:        return "walk_in_completed"
+        case .dailyGoalHit:           return "daily_goal_hit"
+        case .goalTierChanged:        return "goal_tier_changed"
+        case .dareCompleted:          return "dare_completed"
+        case .daresCleared:           return "dares_cleared"
         }
     }
 
@@ -57,8 +65,12 @@ enum AnalyticsEvent {
         switch self {
         case .signUp, .login:
             return [AnalyticsParameterMethod: "email"]
-        case .ideaCreated, .purchaseRestored, .walkInStarted, .walkInCompleted:
+        case .ideaCreated, .purchaseRestored, .walkInStarted, .walkInCompleted, .daresCleared:
             return nil
+        case .dailyGoalHit(let tier), .goalTierChanged(let tier):
+            return ["tier": tier]
+        case .dareCompleted(let kind):
+            return ["kind": kind]
         case .walkInStepCompleted(let step), .walkInSkipped(let step):
             return ["step": step]
         case .pipelineStageCompleted(let stage):

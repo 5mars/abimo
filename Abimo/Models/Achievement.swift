@@ -17,6 +17,8 @@ struct AchievementContext {
     /// Completed-action count per analysis, for score-linked achievements.
     let completedActionsByAnalysisId: [UUID: Int]
     let scoresByAnalysisId: [UUID: Int]
+    /// Lifetime XP (derived via XPEngine), for the XP-tier badges.
+    var totalXP: Int = 0
 }
 
 enum Achievement: String, CaseIterable, Identifiable {
@@ -28,6 +30,8 @@ enum Achievement: String, CaseIterable, Identifiable {
     case fullCourse       // first completed plan
     case chefsKiss        // first 80+ score
     case kitchenComeback  // survive a sub-20 score and still complete an action on it
+    case prepCook         // 100 lifetime XP
+    case sousChef         // 500 lifetime XP
 
     var id: String { rawValue }
 
@@ -41,6 +45,8 @@ enum Achievement: String, CaseIterable, Identifiable {
         case .fullCourse:      return "Full Course"
         case .chefsKiss:       return "Chef's Kiss"
         case .kitchenComeback: return "Kitchen Comeback"
+        case .prepCook:        return "Prep Cook"
+        case .sousChef:        return "Sous Chef"
         }
     }
 
@@ -54,6 +60,8 @@ enum Achievement: String, CaseIterable, Identifiable {
         case .fullCourse:      return "Finish a whole plan"
         case .chefsKiss:       return "Score 80+ from the critic"
         case .kitchenComeback: return "Take action on a Burnt idea"
+        case .prepCook:        return "Earn 100 XP"
+        case .sousChef:        return "Earn 500 XP"
         }
     }
 
@@ -67,6 +75,8 @@ enum Achievement: String, CaseIterable, Identifiable {
         case .fullCourse:      return "trophy.fill"
         case .chefsKiss:       return "star.fill"
         case .kitchenComeback: return "arrow.uturn.up.circle.fill"
+        case .prepCook:        return "carrot.fill"
+        case .sousChef:        return "crown.fill"
         }
     }
 
@@ -83,6 +93,8 @@ enum Achievement: String, CaseIterable, Identifiable {
             return ctx.scoresByAnalysisId.contains { id, score in
                 score < 20 && (ctx.completedActionsByAnalysisId[id] ?? 0) >= 1
             }
+        case .prepCook: return ctx.totalXP >= 100
+        case .sousChef: return ctx.totalXP >= 500
         }
     }
 

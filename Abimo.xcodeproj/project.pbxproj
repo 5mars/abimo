@@ -32,6 +32,8 @@
 		FBA0000000000000000000A3 /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = FBA0000000000000000000A2 /* FirebaseAnalytics */; };
 		FBA0000000000000000000A5 /* FirebaseCrashlytics in Frameworks */ = {isa = PBXBuildFile; productRef = FBA0000000000000000000A4 /* FirebaseCrashlytics */; };
 		G6A7B8C9D0E1F2A3B4C5D6E7 /* RecordingPolishTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = G6A7B8C9D0E1F2A3B4C5D6E8 /* RecordingPolishTests.swift */; };
+		H8A9B0C1D2E3F4A5B6C7D8E1 /* DareEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = H8A9B0C1D2E3F4A5B6C7D8E2 /* DareEngineTests.swift */; };
+		H7A8B9C0D1E2F3A4B5C6D7E1 /* XPEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = H7A8B9C0D1E2F3A4B5C6D7E2 /* XPEngineTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -62,6 +64,8 @@
 		F4A5B6C7D8E9F0A1B2C3D4E6 /* SWOTAutoGenerateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SWOTAutoGenerateTests.swift; sourceTree = "<group>"; };
 		F5A6B7C8D9E0F1A2B3C4D5E7 /* ActionPlanTitleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActionPlanTitleTests.swift; sourceTree = "<group>"; };
 		G6A7B8C9D0E1F2A3B4C5D6E8 /* RecordingPolishTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingPolishTests.swift; sourceTree = "<group>"; };
+		H8A9B0C1D2E3F4A5B6C7D8E2 /* DareEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DareEngineTests.swift; sourceTree = "<group>"; };
+		H7A8B9C0D1E2F3A4B5C6D7E2 /* XPEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XPEngineTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -149,6 +153,8 @@
 				F4A5B6C7D8E9F0A1B2C3D4E6 /* SWOTAutoGenerateTests.swift */,
 				F5A6B7C8D9E0F1A2B3C4D5E7 /* ActionPlanTitleTests.swift */,
 				G6A7B8C9D0E1F2A3B4C5D6E8 /* RecordingPolishTests.swift */,
+				H8A9B0C1D2E3F4A5B6C7D8E2 /* DareEngineTests.swift */,
+				H7A8B9C0D1E2F3A4B5C6D7E2 /* XPEngineTests.swift */,
 			);
 			path = AbimoTests;
 			sourceTree = "<group>";
@@ -320,6 +326,8 @@
 				F4A5B6C7D8E9F0A1B2C3D4E5 /* SWOTAutoGenerateTests.swift in Sources */,
 				F5A6B7C8D9E0F1A2B3C4D5E6 /* ActionPlanTitleTests.swift in Sources */,
 				G6A7B8C9D0E1F2A3B4C5D6E7 /* RecordingPolishTests.swift in Sources */,
+				H8A9B0C1D2E3F4A5B6C7D8E1 /* DareEngineTests.swift in Sources */,
+				H7A8B9C0D1E2F3A4B5C6D7E1 /* XPEngineTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

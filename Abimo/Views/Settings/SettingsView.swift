@@ -18,6 +18,7 @@ struct SettingsView: View {
     @AppStorage("notif_idea_nudge") private var ideaNudgeEnabled = true
     @AppStorage("notif_streak") private var streakEnabled = true
     @AppStorage("sound_enabled") private var soundEnabled = true
+    @AppStorage(DailyGoalTier.storageKey) private var dailyGoalXP = DailyGoalTier.fallback.rawValue
 
     @Environment(\.requestReview) private var requestReview
     @EnvironmentObject var authViewModel: AuthViewModel
@@ -45,6 +46,43 @@ struct SettingsView: View {
                         notificationToggle(icon: "flame", title: "Streak Alerts", color: .brand, isOn: $streakEnabled)
                     }
                     .cardEntrance(delay: 0.05)
+
+                    // Daily goal section
+                    settingsSection(title: "Daily Goal") {
+                        ForEach(DailyGoalTier.allCases) { tier in
+                            Button {
+                                guard dailyGoalXP != tier.rawValue else { return }
+                                dailyGoalXP = tier.rawValue
+                                HapticEngine.selection()
+                                AnalyticsService.shared.log(.goalTierChanged(tier: tier.analyticsName))
+                            } label: {
+                                HStack {
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(tier.title)
+                                            .font(.system(size: 15, weight: .semibold))
+                                            .foregroundColor(.textPri)
+                                        Text(tier.subtitle)
+                                            .font(.system(size: 12))
+                                            .foregroundColor(.textSec)
+                                    }
+                                    Spacer()
+                                    if dailyGoalXP == tier.rawValue {
+                                        Image(systemName: "checkmark.circle.fill")
+                                            .font(.system(size: 18, weight: .semibold))
+                                            .foregroundColor(.brandGreen)
+                                    }
+                                }
+                                .padding(.vertical, 10)
+                                .padding(.horizontal, 14)
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                            if tier != DailyGoalTier.allCases.last {
+                                Divider().overlay(Color.cardEdge)
+                            }
+                        }
+                    }
+                    .cardEntrance(delay: 0.08)
 
                     // Sounds section
                     settingsSection(title: "Sounds") {

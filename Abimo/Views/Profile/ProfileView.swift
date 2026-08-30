@@ -109,7 +109,9 @@ struct ProfileView: View {
             HStack(spacing: 0) {
                 inlineStat(value: "\(ideaCount ?? 0)", label: "ideas", color: .brandBlue)
                 Divider().overlay(Color.cardEdge).frame(height: 36)
-                inlineStat(value: "\(completedActionCount)", label: "actions done", color: .brandGreen)
+                inlineStat(value: "\(totalXP)", label: "XP", color: .brandGreen)
+                Divider().overlay(Color.cardEdge).frame(height: 36)
+                inlineStat(value: "\(completedActionCount)", label: "actions", color: .brandGreen)
                 Divider().overlay(Color.cardEdge).frame(height: 36)
                 inlineStat(
                     value: "\(actionsViewModel.currentStreak)",
@@ -246,8 +248,13 @@ struct ProfileView: View {
             currentStreak: actionsViewModel.currentStreak,
             bestScore: bestScore,
             completedActionsByAnalysisId: completedByAnalysis,
-            scoresByAnalysisId: scoresByAnalysisId
+            scoresByAnalysisId: scoresByAnalysisId,
+            totalXP: totalXP
         )
+    }
+
+    private var totalXP: Int {
+        XPEngine.totalXP(completionDates: actionsViewModel.allCompletionDates)
     }
 
     private func loadStats() async {
