@@ -42,9 +42,11 @@ struct MarketIntelDetailSheet: View {
                         }
                     }
                     .duoPanel()
+                    .cardEntrance(delay: 0.05)
 
                     if let comparables = insights.comparables, !comparables.isEmpty {
                         comparablesPanel(comparables)
+                            .cardEntrance(delay: 0.12)
                     }
                 }
                 .padding(.horizontal, 16)

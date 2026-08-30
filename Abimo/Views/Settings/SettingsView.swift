@@ -44,11 +44,13 @@ struct SettingsView: View {
                         Divider().overlay(Color.cardEdge)
                         notificationToggle(icon: "flame", title: "Streak Alerts", color: .brand, isOn: $streakEnabled)
                     }
+                    .cardEntrance(delay: 0.05)
 
                     // Sounds section
                     settingsSection(title: "Sounds") {
                         notificationToggle(icon: "speaker.wave.2", title: "Celebration Sounds", color: .brandGreen, isOn: $soundEnabled)
                     }
+                    .cardEntrance(delay: 0.10)
 
                     // Subscription section — reviewers expect Restore outside the paywall too
                     settingsSection(title: "Subscription") {
@@ -62,6 +64,7 @@ struct SettingsView: View {
                             settingsRow(icon: "creditcard", title: "Manage Subscription", color: .brandGreen)
                         }
                     }
+                    .cardEntrance(delay: 0.15)
 
                     // Data & Privacy section
                     settingsSection(title: "Data & Privacy") {
@@ -85,6 +88,7 @@ struct SettingsView: View {
                             settingsRow(icon: "doc.text", title: "Terms of Use", color: .brandBlue)
                         }
                     }
+                    .cardEntrance(delay: 0.20)
 
                     // About section
                     settingsSection(title: "About") {
@@ -104,6 +108,7 @@ struct SettingsView: View {
                             settingsRow(icon: "envelope", title: "Send Feedback", color: .brandBlue)
                         }
                     }
+                    .cardEntrance(delay: 0.25)
 
                     Spacer()
                 }

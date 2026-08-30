@@ -5,6 +5,7 @@
 
 import SwiftUI
 import Vortex
+import Lottie
 
 struct PlanCompletionView: View {
     @ObservedObject var viewModel: ActionPlanViewModel
@@ -42,12 +43,26 @@ struct PlanCompletionView: View {
                 MascotCalloutLine(line: moment?.line ?? "No complaints. This is new.")
                     .padding(.horizontal, 32)
 
-                // Champion message
-                Text("\u{1F3C6} All \(viewModel.completedCount) actions done in \(viewModel.completedMinutes) min \u{1F525}")
-                    .font(.system(size: 18, weight: .bold, design: .rounded))
-                    .foregroundColor(.textPri)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 24)
+                // Trophy moment — animated cup when motion is allowed,
+                // the emoji stays as the reduce-motion fallback.
+                if AnimationPolicy.reduceMotion {
+                    Text("\u{1F3C6} All \(viewModel.completedCount) actions done in \(viewModel.completedMinutes) min \u{1F525}")
+                        .font(.system(size: 18, weight: .bold, design: .rounded))
+                        .foregroundColor(.textPri)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 24)
+                } else {
+                    LottieView(animation: .named("trophy"))
+                        .playing(loopMode: .playOnce)
+                        .frame(width: 110, height: 110)
+                        .allowsHitTesting(false)
+
+                    Text("All \(viewModel.completedCount) actions done in \(viewModel.completedMinutes) min \u{1F525}")
+                        .font(.system(size: 18, weight: .bold, design: .rounded))
+                        .foregroundColor(.textPri)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 24)
+                }
 
                 // Plan title
                 if let plan = viewModel.actionPlan {

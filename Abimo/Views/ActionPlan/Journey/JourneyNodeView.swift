@@ -169,6 +169,12 @@ struct JourneyNodeView: View {
             Image(systemName: "checkmark")
                 .font(.system(size: 24, weight: .bold))
                 .foregroundColor(.white)
+                // Only the freshly completed node's checkmark pops — the
+                // Bool stays false (no value change, no bounce) elsewhere.
+                .symbolEffect(
+                    .bounce,
+                    value: !AnimationPolicy.reduceMotion && justCompletedActionId == action.id
+                )
         }
     }
 }

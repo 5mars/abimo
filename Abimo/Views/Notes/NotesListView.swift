@@ -126,7 +126,7 @@ struct NotesListView: View {
 
             // Ideas — cards are self-evident, no section header needed
             Section {
-                ForEach(viewModel.notes) { note in
+                ForEach(Array(viewModel.notes.enumerated()), id: \.element.id) { index, note in
                     let isCooking = pipeline.isCooking(noteId: note.id)
                     NavigationLink(destination: NoteDetailView(note: note)) {
                         IdeaCardView(
@@ -135,6 +135,8 @@ struct NotesListView: View {
                             cookingStepTitle: isCooking ? pipeline.currentStepTitle : nil
                         )
                     }
+                    // Staggered load-in, capped so deep rows don't lag
+                    .cardEntrance(delay: min(Double(index), 8) * 0.04)
                     .disabled(isCooking)   // no peeking while the kitchen works
                     .listRowBackground(Color.appBg)
                     .listRowSeparator(.hidden)

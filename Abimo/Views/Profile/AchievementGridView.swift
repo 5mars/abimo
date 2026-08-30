@@ -4,6 +4,7 @@
 //
 
 import SwiftUI
+import Lottie
 
 /// 2-column badge grid. Unlocks persist in UserDefaults so streak-based
 /// badges never re-lock when a streak lapses; newly earned badges get a
@@ -56,6 +57,10 @@ struct AchievementGridView: View {
                 Image(systemName: achievement.icon)
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundColor(unlocked ? .brandAmber : .textSec.opacity(0.4))
+                    .symbolEffect(
+                        .bounce,
+                        value: !AnimationPolicy.reduceMotion && justUnlocked == achievement
+                    )
             }
             VStack(alignment: .leading, spacing: 2) {
                 Text(achievement.title)
@@ -88,6 +93,14 @@ struct AchievementGridView: View {
         .opacity(unlocked ? 1 : 0.55)
         .scaleEffect(justUnlocked == achievement ? 1.06 : 1)
         .animation(.spring(response: 0.4, dampingFraction: 0.6), value: justUnlocked)
+        .overlay {
+            if justUnlocked == achievement && !AnimationPolicy.reduceMotion {
+                LottieView(animation: .named("starburst"))
+                    .playing(loopMode: .playOnce)
+                    .frame(width: 110, height: 110)
+                    .allowsHitTesting(false)
+            }
+        }
     }
 
     private func detectNewUnlocks() {

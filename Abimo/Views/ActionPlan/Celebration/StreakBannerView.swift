@@ -20,6 +20,7 @@ struct StreakBannerView: View {
                     .font(.system(size: 15, weight: .bold))
                     .foregroundColor(.white)
                     .scaleEffect(appeared ? 1 : 0.4)
+                    .symbolEffect(.bounce, value: !AnimationPolicy.reduceMotion && appeared)
                 Text(moment?.line ?? "\(days)-day streak!")
                     .font(.system(size: 15, weight: .bold, design: .rounded))
                     .foregroundColor(.white)

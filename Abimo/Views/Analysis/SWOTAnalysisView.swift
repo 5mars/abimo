@@ -492,6 +492,7 @@ struct ViabilityGaugeView: View {
                 Image(systemName: "gauge.with.needle")
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(.brand)
+                    .symbolEffect(.pulse, options: .nonRepeating, isActive: !AnimationPolicy.reduceMotion)
                 Text("Critic's Score")
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundColor(.textPri)
@@ -507,11 +508,13 @@ struct ViabilityGaugeView: View {
                 GaugeArc(progress: animatedScore / 100)
                     .stroke(verdict.color, style: StrokeStyle(lineWidth: 14, lineCap: .round))
 
-                // Center label
+                // Center label — digits roll up on the same 1.2s clock as
+                // the arc sweep instead of snapping to the final value.
                 VStack(spacing: 4) {
-                    Text("\(score)")
+                    Text("\(Int(animatedScore.rounded()))")
                         .font(.system(size: 44, weight: .bold, design: .rounded))
                         .foregroundColor(verdict.color)
+                        .contentTransition(.numericText(value: animatedScore))
                     Text(verdict.label)
                         .font(.system(size: 13, weight: .medium))
                         .foregroundColor(.textSec)
@@ -520,10 +523,15 @@ struct ViabilityGaugeView: View {
             .frame(height: 150)
             .padding(.horizontal, 32)
             .onAppear {
-                withAnimation(.easeOut(duration: 1.2)) {
+                if AnimationPolicy.reduceMotion {
                     animatedScore = Double(score)
+                } else {
+                    withAnimation(.easeOut(duration: 1.2)) {
+                        animatedScore = Double(score)
+                    }
                 }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                let hapticDelay = AnimationPolicy.reduceMotion ? 0.0 : 1.2
+                DispatchQueue.main.asyncAfter(deadline: .now() + hapticDelay) {
                     switch verdict {
                     case .burnt, .halfBaked: HapticEngine.impact(style: .rigid)
                     case .simmering, .chefsKiss: HapticEngine.success()

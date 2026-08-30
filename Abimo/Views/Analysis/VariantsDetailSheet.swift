@@ -26,9 +26,11 @@ struct VariantsDetailSheet: View {
                         .foregroundColor(.textSec)
                         .lineSpacing(4)
                         .frame(maxWidth: .infinity, alignment: .leading)
+                        .cardEntrance(delay: 0.05)
 
-                    ForEach(variants) { variant in
+                    ForEach(Array(variants.enumerated()), id: \.element.id) { index, variant in
                         variantCard(variant)
+                            .cardEntrance(delay: 0.10 + Double(index) * 0.05)
                     }
                 }
                 .padding(.horizontal, 16)

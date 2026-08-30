@@ -27,15 +27,19 @@ struct ProfileView: View {
 
                         heroCard
                             .padding(.horizontal, 16)
+                            .cardEntrance(delay: 0.05)
 
                         plusSection
                             .padding(.horizontal, 16)
+                            .cardEntrance(delay: 0.10)
 
                         AchievementGridView(context: achievementContext)
                             .padding(.horizontal, 16)
+                            .cardEntrance(delay: 0.15)
 
                         signOutButton
                             .padding(.horizontal, 16)
+                            .cardEntrance(delay: 0.20)
 
                         Spacer().frame(height: 24)
                     }

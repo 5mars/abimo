@@ -60,29 +60,35 @@ struct PaywallView: View {
 
                     mascotHeader
                         .padding(.top, 4)
+                        .cardEntrance(delay: 0.05)
 
                     Spacer().frame(height: 12)
 
-                    Text("Abimo Plus")
-                        .font(.duoScreenTitle)
-                        .foregroundColor(.textPri)
+                    Group {
+                        Text("Abimo Plus")
+                            .font(.duoScreenTitle)
+                            .foregroundColor(.textPri)
 
-                    Text(context.subtitle)
-                        .font(.duoBody)
-                        .foregroundColor(.textSec)
-                        .multilineTextAlignment(.center)
-                        .padding(.top, 6)
-                        .padding(.horizontal, 32)
+                        Text(context.subtitle)
+                            .font(.duoBody)
+                            .foregroundColor(.textSec)
+                            .multilineTextAlignment(.center)
+                            .padding(.top, 6)
+                            .padding(.horizontal, 32)
+                    }
+                    .cardEntrance(delay: 0.10)
 
                     Spacer().frame(height: 24)
 
                     benefitsPanel
                         .padding(.horizontal, 24)
+                        .cardEntrance(delay: 0.15)
 
                     Spacer().frame(height: 20)
 
                     plansSection
                         .padding(.horizontal, 24)
+                        .cardEntrance(delay: 0.20)
 
                     if let error = entitlements.lastError {
                         Text(error)
@@ -103,6 +109,7 @@ struct PaywallView: View {
                             buySelected()
                         }
                         .padding(.horizontal, 24)
+                        .cardEntrance(delay: 0.25)
                     }
 
                     Spacer().frame(height: 20)

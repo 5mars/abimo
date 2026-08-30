@@ -23,6 +23,7 @@ struct QuadrantDetailSheet: View {
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 16) {
                     header
+                        .cardEntrance(delay: 0.05)
 
                     if course.items.isEmpty {
                         Text(course.kind.emptyLine)
@@ -31,10 +32,12 @@ struct QuadrantDetailSheet: View {
                             .italic()
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .duoPanel()
+                            .cardEntrance(delay: 0.10)
                     } else {
                         // Top item — the free taste, always in full
                         SWOTItemRow(item: course.items[0], color: course.kind.color)
                             .duoPanel(padding: 16)
+                            .cardEntrance(delay: 0.10)
 
                         if course.items.count > 1 {
                             VStack(alignment: .leading, spacing: 14) {
@@ -51,6 +54,7 @@ struct QuadrantDetailSheet: View {
                             .plusLocked(!entitlements.isPremium) {
                                 showPaywall = true
                             }
+                            .cardEntrance(delay: 0.15)
                         }
                     }
 
@@ -70,6 +74,7 @@ struct QuadrantDetailSheet: View {
                         }
                         .buttonStyle(Duo3DGradientButtonStyle(fill: .record))
                         .padding(.top, 4)
+                        .cardEntrance(delay: 0.20)
                     }
                 }
                 .padding(.horizontal, 16)
