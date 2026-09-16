@@ -32,6 +32,11 @@ struct MascotView: View {
     let mood: MascotMood
     var size: CGFloat
     var motion: Motion = .idle
+    /// Force a specific pose regardless of tone (e.g. `.sitting` while
+    /// waiting). nil = the pose mapped to `mood` in MascotMood.expression.
+    var expression: MascotExpression? = nil
+
+    private var resolvedExpression: MascotExpression { expression ?? mood.expression }
 
     @State private var entered = false
     @State private var breathing = false
@@ -45,13 +50,13 @@ struct MascotView: View {
 
     var body: some View {
         ZStack {
-            Image(mood.assetName)
+            Image(resolvedExpression.assetName)
                 .resizable()
                 .scaledToFit()
                 .transition(.opacity)
-                .id(mood.assetName)
+                .id(resolvedExpression.assetName)
         }
-        .animation(AnimationPolicy.reduceMotion ? nil : .easeInOut(duration: 0.25), value: mood)
+        .animation(AnimationPolicy.reduceMotion ? nil : .easeInOut(duration: 0.25), value: resolvedExpression)
         .frame(width: size, height: size)
         .scaleEffect(y: breathing ? 1.02 : 1.0, anchor: .bottom)
         .scaleEffect(entranceScale)
@@ -101,7 +106,7 @@ struct MascotView: View {
     }
 }
 
-#Preview {
+#Preview("Motion presets") {
     VStack(spacing: 32) {
         MascotView(mood: .neutral, size: 140, motion: .idle)
         MascotView(mood: .playful, size: 160, motion: .entrance)
@@ -109,5 +114,30 @@ struct MascotView: View {
         MascotView(mood: .grumpy, size: 40, motion: .none)
     }
     .padding()
+    .background(Color.appBg)
+}
+
+/// Every pose in the catalog, labeled — the quickest way to decide which
+/// expression should carry which mood (see MascotMood.expression).
+#Preview("Expression gallery") {
+    ScrollView {
+        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 20) {
+            ForEach(MascotExpression.allCases, id: \.self) { expression in
+                VStack(spacing: 6) {
+                    MascotView(mood: .neutral, size: 130, motion: .none, expression: expression)
+                    Text(expression.rawValue)
+                        .font(.duoLabel)
+                        .foregroundColor(.textSec)
+                    Text(MascotMood.allCases.filter { $0.expression == expression }
+                            .map(\.rawValue).joined(separator: ", "))
+                        .font(.duoCaption)
+                        .foregroundColor(.brand)
+                }
+                .padding(12)
+                .duoPanel()
+            }
+        }
+        .padding()
+    }
     .background(Color.appBg)
 }

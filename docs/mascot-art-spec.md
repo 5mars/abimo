@@ -1,46 +1,65 @@
-# Mascot expression art — drop-in spec
+# Mascot art — how poses get into the app
 
-The app's mood system is fully wired: `MascotMood.assetName` looks for the
-image sets below and silently falls back to `MascotNeutral` for any that
-don't exist yet. Moods can ship **one image at a time** — no code changes
-needed, ever.
+The mascot is the horse from `docs/mascot/horse-sheet.jpg`. Five poses from
+the sheet's bottom row are live (see `docs/mascot/current-poses.png`):
 
-## What to generate
-
-Three expression variants of the existing mascot (master art:
-`neutral.svg` at the repo root — 1024×1024, transparent background):
-
-| Asset catalog name | Mood | Used for | Expression direction |
+| Asset catalog imageset | `MascotExpression` | What it shows | Carries mood(s) / used for |
 |---|---|---|---|
-| `MascotPlayful` | playful | good scores (simmering/chef's kiss), celebrations, milestones, sign-up | Open smile, bright wide eyes, maybe one raised brow — delighted but still the critic |
-| `MascotGrumpy` | grumpy | bad scores (burnt/half-baked) | Furrowed brows, flat or downturned zigzag mouth, half-lidded eyes |
-| `MascotSassy` | sassy | mid scores (needs seasoning), paywall, streak-at-risk, returned-after-absence | One brow arched high, smirk, side-eye pupils |
+| `MascotNeutral` | `.neutral` | standing, half-lidded, flat mouth | `.neutral` — launch screen, login, record prompt |
+| `MascotGrumpy` | `.grumpy` | arms crossed, scowl | `.grumpy` — burnt / half-baked scores |
+| `MascotThumbsUp` | `.thumbsUp` | smug thumbs-up | `.sassy` — needs-seasoning, paywall, streak-at-risk |
+| `MascotWaving` | `.waving` | eyes-closed grin, waving | `.playful` — good scores, every celebration |
+| `MascotSitting` | `.sitting` | slumped on the floor, bored | loading screens, empty states (not a mood) |
 
-## Consistency rules (important for AI generation)
+## Two layers (Abimo/Models/MascotMood.swift)
 
-- **Same character, same pose, same framing** as the neutral master — only
-  the face changes (eyes, brows, mouth). Body, horns, arms, feet identical.
-- Same flat-cartoon style: solid coral/red fill, dark outline, same line
-  weight, no gradients, no shadow.
-- Transparent background, subject centered with the same margins as
-  `neutral.svg` (the app renders 40–260 pt; consistent margins keep every
-  size swap seamless).
-- Tip: give the image model the neutral PNG
-  (`Abimo/Assets.xcassets/MascotNeutral.imageset/mascot_3x.png`) as the
-  reference image and ask for "same character, change only the expression".
+- **`MascotExpression`** = what the picture shows. One case per imageset;
+  the imageset name is `"Mascot" + CapitalizedCaseName`. Missing art falls
+  back to `MascotNeutral`, so a new case can ship before its image exists.
+- **`MascotMood`** = the critic's tone of voice (drives the line pools in
+  `MascotVoice`). **`MascotMood.expression` is the one table that decides
+  which pose carries which tone** — to move an emotion, edit that switch.
+- Screens that want a fixed pose regardless of tone pass it explicitly:
+  `MascotView(mood:size:motion:expression: .sitting)` (loading + empty
+  states do this today).
 
-## Export & install
+Xcode Previews → `MascotView.swift` → **"Expression gallery"** shows every
+pose with the moods currently mapped to it.
 
-For each mood, export PNG at 120 / 240 / 360 px (1x/2x/3x) and add an
-image set in `Abimo/Assets.xcassets` named exactly as in the table
-(match `MascotNeutral.imageset`'s structure). A single 1024 px PNG in an
-image set with "Single Scale" also works.
+## Adding a pose
 
-That's it — the next build picks them up at every mascot surface,
-including the pipeline's per-stage moods and the score-reveal face.
+1. Add a case to `MascotExpression` (e.g. `case shocked`).
+2. Produce `MascotShocked.imageset` (below) — or don't yet; it falls back.
+3. Map it: in `MascotMood.expression`, or pass `expression: .shocked` where
+   you want it.
 
-## Later (optional)
+## Slicing sprites from a sheet
 
-If a variant ever ships as layered vector art (separate eye/mouth layers),
-`MascotView.swift` can add blinking and mood-morph animation — see the
-note at the top of that file.
+`tools/slice-mascot-sheet.swift` does the whole job: keys the light
+background by flood-filling from the borders (eye whites survive, ground
+shadows are removed), un-blends the anti-aliased outline, finds the
+sprites in a horizontal band, puts them on a shared bottom-aligned square
+canvas (so the character stays the same size when moods cross-fade), and
+writes 1x/2x/3x PNGs at 120/240/360 px.
+
+```bash
+swift tools/slice-mascot-sheet.swift docs/mascot/horse-sheet.jpg /tmp/out <bandMinY> name1 name2 ...
+```
+
+`bandMinY` is the pixel row above which sprites are ignored (560 selects
+the bottom row of the current sheet); names are given left-to-right and
+become the file prefixes. Then create `Mascot<Name>.imageset` with the
+three PNGs and a `Contents.json` like the existing ones.
+
+For sprites from another row of the sheet (the six face-only heads, the
+three body poses in row two), run it with a different band — heads will
+need their own canvas treatment since they have no feet baseline.
+
+## Quality note
+
+The sheet is 1024 px wide, so each sprite is ~230 px tall natively; the 3x
+export is an upscale and will look soft on the biggest surfaces (260 pt
+loading mascot, 220 pt plan-completion podium). When you regenerate art,
+ask for each pose at ≥ 800 px on a transparent background and drop it in
+with the same imageset names — nothing else changes. The 1x image also sets
+the native launch screen's mascot size (120 pt); keep 1x at 120 px.

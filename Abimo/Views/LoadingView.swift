@@ -18,6 +18,8 @@ struct MascotLoadingView: View {
     var rotatingMessages: [String] = []
     var subtitle: String? = nil
     var mood: MascotMood = .neutral
+    /// Waiting is a sit-down job for the critic. Pass nil to follow `mood`.
+    var expression: MascotExpression? = .sitting
 
     @State private var appeared = false
     @State private var spinning = false
@@ -56,7 +58,7 @@ struct MascotLoadingView: View {
                 .animation(.linear(duration: 0.8).repeatForever(autoreverses: false), value: spinning)
 
             // Mascot
-            MascotView(mood: mood, size: mode == .fullscreen ? 260 : 200)
+            MascotView(mood: mood, size: mode == .fullscreen ? 260 : 200, expression: expression)
 
             // Text
             VStack(spacing: 8) {
