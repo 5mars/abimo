@@ -7,6 +7,8 @@ import SwiftUI
 
 struct NotesListView: View {
     @EnvironmentObject var coordinator: NavigationCoordinator
+    /// Shared with the Actions tab and Profile — supplies per-idea plan progress.
+    @EnvironmentObject var actionsVM: ActionsTabViewModel
     @StateObject private var viewModel = NotesViewModel()
     @ObservedObject private var entitlements = EntitlementService.shared
     @ObservedObject private var pipeline = IdeaPipelineService.shared
@@ -46,7 +48,10 @@ struct NotesListView: View {
         } message: {
             if let error = viewModel.errorMessage { Text(error) }
         }
-        .task { await viewModel.fetchNotes() }
+        .task {
+            await viewModel.fetchNotes()
+            if !actionsVM.hasLoadedOnce { await actionsVM.loadAllPlans() }
+        }
         .sheet(isPresented: $showPaywall) {
             PaywallView(
                 context: viewModel.notes.count >= EntitlementService.freeIdeaLimit ? .ideaCap : .general
@@ -54,7 +59,10 @@ struct NotesListView: View {
         }
         .onChange(of: coordinator.selectedTab) { _, newTab in
             if newTab == .ideas {
-                Task { await viewModel.fetchNotes() }
+                Task {
+                    await viewModel.fetchNotes()
+                    await actionsVM.loadAllPlans()   // keep the progress rings honest
+                }
             }
         }
         .onChange(of: pipeline.stage) { _, newStage in
@@ -109,6 +117,15 @@ struct NotesListView: View {
         .padding(.horizontal, 32)
     }
 
+    /// "3/6" for the note's plan, if it has one.
+    private func planProgress(for note: VoiceNote) -> (completed: Int, total: Int)? {
+        guard let analysisId = note.analysisId,
+              let plan = actionsVM.plans.first(where: { $0.analysisId == analysisId }) else { return nil }
+        let total = actionsVM.totalCount(for: plan.id)
+        guard total > 0 else { return nil }
+        return (actionsVM.completedCount(for: plan.id), total)
+    }
+
     // MARK: - Idea List
 
     private var ideaList: some View {
@@ -132,7 +149,8 @@ struct NotesListView: View {
                         IdeaCardView(
                             note: note,
                             viewModel: viewModel,
-                            cookingStepTitle: isCooking ? pipeline.currentStepTitle : nil
+                            cookingStepTitle: isCooking ? pipeline.currentStepTitle : nil,
+                            planProgress: planProgress(for: note)
                         )
                     }
                     // Staggered load-in, capped so deep rows don't lag
@@ -231,6 +249,9 @@ struct IdeaCardView: View {
     /// Non-nil while the pipeline is actively cooking this note — the card
     /// shows live progress and NotesListView disables navigation into it.
     var cookingStepTitle: String? = nil
+    /// Action-plan progress for an analyzed idea; replaces the "Analyzed"
+    /// pill with a ring so the Kitchen shows there are steps waiting.
+    var planProgress: (completed: Int, total: Int)? = nil
 
     private var isAnalyzed: Bool { note.analysisId != nil }
     private var isCooking: Bool { cookingStepTitle != nil }
@@ -265,6 +286,8 @@ struct IdeaCardView: View {
                 // Status tag
                 if isCooking {
                     StatusPill(text: "Cooking", tint: .brandAmber, showsSpinner: true)
+                } else if let planProgress, planProgress.total > 0 {
+                    planRing(planProgress)
                 } else if isAnalyzed {
                     StatusPill(text: "Analyzed", tint: .brandGreen)
                 } else {
@@ -310,6 +333,27 @@ struct IdeaCardView: View {
         .padding(.vertical, 16)
         .duoCard(padding: 0)
     }
+
+    private func planRing(_ progress: (completed: Int, total: Int)) -> some View {
+        let done = progress.completed == progress.total
+        let fraction = Double(progress.completed) / Double(max(progress.total, 1))
+        return HStack(spacing: 6) {
+            ZStack {
+                Circle()
+                    .stroke((done ? Color.brandAmber : Color.brandGreen).opacity(0.2), lineWidth: 3)
+                Circle()
+                    .trim(from: 0, to: fraction)
+                    .stroke(done ? Color.brandAmber : Color.brandGreen, style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                    .rotationEffect(.degrees(-90))
+            }
+            .frame(width: 22, height: 22)
+            Text("\(progress.completed)/\(progress.total)")
+                .font(.system(size: 12, weight: .bold, design: .rounded))
+                .foregroundColor(done ? .brandAmberDark : .brandGreenDark)
+                .contentTransition(.numericText())
+        }
+        .accessibilityLabel("\(progress.completed) of \(progress.total) steps done")
+    }
 }
 
 #Preview {
@@ -317,4 +361,5 @@ struct IdeaCardView: View {
         NotesListView()
     }
     .environmentObject(NavigationCoordinator())
+    .environmentObject(ActionsTabViewModel())
 }

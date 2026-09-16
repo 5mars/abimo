@@ -63,6 +63,7 @@ struct MainContentView: View {
                 // The ZStack-level animation stays nil (dark-flash guard);
                 // only each page's opacity cross-fades, per-page below.
                 NavigationStack { NotesListView() }
+                    .environmentObject(actionsVM)   // Kitchen cards show plan progress
                     .tabPage(.ideas, selected: coordinator.selectedTab)
                 NavigationStack { RecordingView() }
                     .tabPage(.record, selected: coordinator.selectedTab)

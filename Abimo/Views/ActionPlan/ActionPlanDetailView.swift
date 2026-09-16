@@ -10,11 +10,10 @@ struct ActionPlanDetailView: View {
     let analysisId: UUID
 
     @StateObject private var viewModel = ActionPlanViewModel()
-    @State private var pickerMode: PickerMode = .browse
 
     var body: some View {
         ZStack {
-            Color.appBg.ignoresSafeArea()
+            Color.journeyBg.ignoresSafeArea()
 
             if viewModel.isLoading {
                 LoadingView(text: "Loading your plan...")
@@ -82,10 +81,22 @@ struct ActionPlanDetailView: View {
         }
         .animation(.easeInOut(duration: 0.3), value: viewModel.celebrationState)
         .animation(.easeInOut(duration: 0.25), value: viewModel.errorMessage)
+        .navigationTitle(viewModel.actionPlan?.title ?? "")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbarBackground(Color.appBg, for: .navigationBar)
+        .toolbarBackground(Color.journeyBg, for: .navigationBar)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button {
+                    viewModel.presentPicker(.browse)
+                } label: {
+                    Label("All steps", systemImage: "list.bullet")
+                        .font(.system(size: 14, weight: .semibold))
+                }
+                .tint(.brand)
+            }
+        }
         .sheet(isPresented: $viewModel.showActionPicker) {
-            ActionPickerSheet(viewModel: viewModel, mode: pickerMode)
+            ActionPickerSheet(viewModel: viewModel, mode: viewModel.pickerMode)
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
                 .presentationBackground(Color.appBg)
@@ -99,7 +110,6 @@ struct ActionPlanDetailView: View {
         .task {
             SoundEngine.prepare()
             await viewModel.loadActionPlan(analysisId: analysisId)
-            pickerMode = viewModel.userOrderedIds.isEmpty ? .firstVisit : .browse
         }
     }
 

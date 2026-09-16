@@ -33,6 +33,7 @@ extension Color {
 
     // Surfaces
     static let appBg               = Color.white
+    static let journeyBg           = Color(hex: "FFF8F0")  // Warm cream — the action-plan path lives here
     static let cardBg              = Color.white            // White card (alias)
     static let cardSurface         = Color.white            // White card
     static let cardSurfaceElevated = Color.white            // White elevated card

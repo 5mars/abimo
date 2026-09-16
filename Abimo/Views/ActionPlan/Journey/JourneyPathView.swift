@@ -2,6 +2,11 @@
 //  JourneyPathView.swift
 //  Abimo
 //
+//  The plan as a path that READS: a header with the plan's purpose and
+//  progress, the next step as a hero card, then chapters — each a colored
+//  band of zigzag nodes with their titles and minutes beside them. Tapping
+//  a node opens StepDetailSheet; completion runs after the sheet dismisses.
+//
 
 import SwiftUI
 
@@ -10,191 +15,189 @@ import SwiftUI
 struct JourneyPathView: View {
     @ObservedObject var viewModel: ActionPlanViewModel
 
-    @State private var activeBubbleId: UUID? = nil
+    @State private var selectedAction: MicroAction?
+    @State private var pendingCompletion: (id: UUID, outcome: String, note: String?)?
+    @State private var pendingPick: UUID?
+    @State private var pendingUndo: UUID?
+    @State private var heroLine = MascotVoice.moment(for: .nextStepNudge).line
+
     private let layout = JourneyLayout()
+    private let pathTopInset: CGFloat = 36   // room for the bobbing NEXT pill above the first node
+    private let pathBottomInset: CGFloat = 12
 
     var body: some View {
         ScrollView(showsIndicators: false) {
             ScrollViewReader { proxy in
-                VStack(spacing: 28) {
-                    unitHeader
-                        .padding(.horizontal, 16)
-                        .padding(.top, 12)
+                VStack(spacing: 20) {
+                    JourneyHeaderCard(
+                        summary: viewModel.actionPlan?.summary ?? "",
+                        completed: viewModel.completedCount,
+                        total: viewModel.totalCount,
+                        remainingMinutes: viewModel.remainingMinutes,
+                        streak: viewModel.streak,
+                        xpToday: viewModel.xpToday
+                    )
+                    .padding(.horizontal, 16)
+                    .padding(.top, 12)
+                    .cardEntrance(delay: 0.02)
 
-                    // The path — header lives OUTSIDE the coordinate space,
-                    // so node/bubble math can't drift when the title wraps.
-                    GeometryReader { geo in
-                        pathArea(width: geo.size.width, proxy: proxy)
+                    if let next = viewModel.nextRecommendedAction {
+                        NextStepHeroCard(
+                            action: next,
+                            xpPreview: viewModel.nextStepXP,
+                            mascotLine: heroLine,
+                            onStart: { selectedAction = next },
+                            onPickAnother: {
+                                let fresh = viewModel.userOrderedIds.isEmpty && viewModel.completedCount == 0
+                                viewModel.presentPicker(fresh ? .firstVisit : .browse)
+                            }
+                        )
+                        .padding(.horizontal, 16)
+                        .cardEntrance(delay: 0.08)
                     }
-                    .frame(height: layout.contentHeight(count: viewModel.orderedActions.count))
+
+                    ForEach(Array(viewModel.chapters.enumerated()), id: \.element.id) { chapterIndex, chapter in
+                        VStack(spacing: 12) {
+                            if chapter.kind != .steps {
+                                ChapterBannerView(chapter: chapter, index: chapterIndex)
+                                    .padding(.horizontal, 16)
+                            }
+                            chapterBand(chapter, proxy: proxy)
+                        }
+                        .cardEntrance(delay: 0.14 + Double(chapterIndex) * 0.06)
+                    }
                 }
                 .padding(.bottom, 140)
                 .task {
                     // Defer scroll to after first layout pass
-                    try? await Task.sleep(nanoseconds: 50_000_000) // 50ms
-                    if let activeAction = viewModel.orderedActions.first(where: { !$0.isCompleted }) {
+                    try? await Task.sleep(nanoseconds: 80_000_000)
+                    if let next = viewModel.nextRecommendedAction, viewModel.completedCount > 0 {
                         AnimationPolicy.animate(.easeInOut(duration: 0.5)) {
-                            proxy.scrollTo(activeAction.id, anchor: .center)
+                            proxy.scrollTo(next.id, anchor: .center)
                         }
                     }
                 }
             }
         }
-        .simultaneousGesture(
-            DragGesture(minimumDistance: 10).onChanged { _ in
-                if activeBubbleId != nil {
-                    AnimationPolicy.animate(.easeOut(duration: 0.2)) {
-                        activeBubbleId = nil
-                    }
-                }
+        .background(
+            ZStack {
+                Color.journeyBg
+                DotGridBackground()
             }
+            .ignoresSafeArea()
         )
-        .onTapGesture {
-            if activeBubbleId != nil {
-                AnimationPolicy.animate(.easeOut(duration: 0.2)) {
-                    activeBubbleId = nil
-                }
-            }
+        .sheet(item: $selectedAction, onDismiss: runPending) { action in
+            StepDetailSheet(
+                action: action,
+                state: nodeState(for: action, nextId: viewModel.nextRecommendedAction?.id),
+                chapter: viewModel.chapters.first { $0.actions.contains { $0.id == action.id } },
+                xpPreview: viewModel.nextStepXP,
+                onPickAsNext: { pendingPick = action.id },
+                onComplete: { outcome, note in pendingCompletion = (action.id, outcome, note) },
+                onUndo: { pendingUndo = action.id }
+            )
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
+            .presentationBackground(Color.journeyBg)
         }
     }
 
-    // MARK: - Unit Header
-
-    private var unitHeader: some View {
-        let completed = viewModel.completedCount
-        let total = viewModel.totalCount
-        let shape = RoundedRectangle(cornerRadius: DuoTokens.Radius.card, style: .continuous)
-
-        return VStack(alignment: .leading, spacing: 14) {
-            HStack(alignment: .top, spacing: 12) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(completed == total && total > 0
-                         ? "PLAN COMPLETE"
-                         : "STEP \(min(completed + 1, max(total, 1))) OF \(total)")
-                        .font(.system(size: 12, weight: .black, design: .rounded))
-                        .foregroundColor(.white.opacity(0.75))
-                    Text(viewModel.actionPlan?.title ?? "Your plan")
-                        .font(.system(size: 20, weight: .bold, design: .rounded))
-                        .foregroundColor(.white)
-                        .lineLimit(2)
-                        .multilineTextAlignment(.leading)
-                }
-                Spacer()
-                Button {
-                    viewModel.showActionPicker = true
-                } label: {
-                    Image(systemName: "list.bullet")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(.white)
-                        .padding(10)
-                        .background(Color.white.opacity(0.2))
-                        .clipShape(Circle())
-                }
-                .buttonStyle(DuoPressStyle())
-            }
-
-            // Progress bar
-            GeometryReader { geo in
-                ZStack(alignment: .leading) {
-                    Capsule().fill(Color.white.opacity(0.25))
-                    Capsule()
-                        .fill(Color.white)
-                        .frame(width: max(8, geo.size.width * viewModel.progress))
-                }
-            }
-            .frame(height: 8)
-            .animation(.spring(response: 0.5, dampingFraction: 0.8), value: viewModel.progress)
+    /// Runs whatever the step sheet asked for — after it has fully dismissed,
+    /// so the congrats sheet never fights it for the presentation slot.
+    private func runPending() {
+        if let p = pendingCompletion {
+            pendingCompletion = nil
+            Task { await viewModel.completeAction(id: p.id, outcome: p.outcome, note: p.note) }
         }
-        .padding(20)
-        .background(shape.fill(Color.brand))
-        .background(shape.fill(Color.brandDark).offset(y: DuoTokens.Edge.card))
-        .padding(.bottom, DuoTokens.Edge.card)
+        if let id = pendingPick {
+            pendingPick = nil
+            viewModel.pickAction(id: id)
+        }
+        if let id = pendingUndo {
+            pendingUndo = nil
+            Task { await viewModel.toggleMicroAction(id: id, isCompleted: false) }
+        }
     }
 
-    // MARK: - Path Area
+    // MARK: - Chapter band
+
+    private func chapterBand(_ chapter: JourneyChapter, proxy: ScrollViewProxy) -> some View {
+        let pathHeight = layout.contentHeight(count: chapter.actions.count)
+        return GeometryReader { geo in
+            pathArea(chapter, width: geo.size.width)
+                .frame(width: geo.size.width, height: pathHeight, alignment: .topLeading)
+                .offset(y: pathTopInset)
+        }
+        .frame(height: pathHeight + pathTopInset + pathBottomInset)
+        .padding(.horizontal, 12)
+        .background(
+            RoundedRectangle(cornerRadius: DuoTokens.Radius.card, style: .continuous)
+                .fill(chapter.kind.bandColor)
+        )
+        .padding(.horizontal, 16)
+    }
 
     @ViewBuilder
-    private func pathArea(width: CGFloat, proxy: ScrollViewProxy) -> some View {
+    private func pathArea(_ chapter: JourneyChapter, width: CGFloat) -> some View {
+        let nextId = viewModel.nextRecommendedAction?.id
+
         ZStack(alignment: .topLeading) {
-            JourneyRouteCanvas(
-                layout: layout,
-                actions: viewModel.orderedActions,
-                width: width
-            )
+            JourneyRouteCanvas(layout: layout, actions: chapter.actions, width: width)
 
             JourneyCompletedTrail(
                 layout: layout,
-                actions: viewModel.orderedActions,
+                actions: chapter.actions,
                 width: width,
                 justCompletedActionId: viewModel.justCompletedActionId
             )
 
-            ForEach(Array(viewModel.orderedActions.enumerated()), id: \.element.id) { index, action in
+            ForEach(Array(chapter.actions.enumerated()), id: \.element.id) { index, action in
+                let state = nodeState(for: action, nextId: nextId)
+                let label = layout.labelFrame(index, width: width)
+
+                JourneyNodeLabel(
+                    action: action,
+                    state: state,
+                    alignLeading: layout.isLeft(index),
+                    xpPreview: state == .next ? viewModel.nextStepXP : nil
+                )
+                .frame(width: label.width, height: label.height)
+                .position(x: label.midX, y: label.midY)
+
                 JourneyNodeView(
                     action: action,
-                    state: nodeState(at: index, actions: viewModel.orderedActions),
-                    onTap: {
-                        let isOpening = activeBubbleId != action.id
-                        AnimationPolicy.animate(.spring(response: 0.3, dampingFraction: 0.6)) {
-                            activeBubbleId = isOpening ? action.id : nil
-                        }
-                        if isOpening {
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                                withAnimation(.easeInOut(duration: 0.3)) {
-                                    proxy.scrollTo(action.id, anchor: .top)
-                                }
-                            }
-                        }
-                    },
+                    state: state,
+                    onTap: { selectedAction = action },
                     justCompletedActionId: viewModel.justCompletedActionId,
-                    index: index,
-                    actions: viewModel.orderedActions,
                     nodeSize: layout.nodeSize,
                     celebrationState: viewModel.celebrationState
                 )
                 .position(layout.center(index, width: width))
                 .id(action.id)
-                .cardEntrance(delay: Double(index) * 0.05)
             }
-
-            bubbleView(width: width)
         }
     }
+}
 
-    // MARK: - Bubble
+// MARK: - Dot grid
 
-    @ViewBuilder
-    private func bubbleView(width: CGFloat) -> some View {
-        if let id = activeBubbleId,
-           let index = viewModel.orderedActions.firstIndex(where: { $0.id == id }) {
-            let action = viewModel.orderedActions[index]
-            let state = nodeState(at: index, actions: viewModel.orderedActions)
-
-            let center = layout.center(index, width: width)
-            let bubbleWidth = min(width - 48, 340)
-            let yPos = center.y + layout.nodeSize / 2 + DuoTokens.Edge.node + 6
-            let rawX = center.x - bubbleWidth / 2
-            let xPos = max(8, min(width - bubbleWidth - 8, rawX))
-            let arrowOffset = center.x - xPos
-
-            NodeBubbleView(
-                action: action,
-                state: state,
-                arrowOffset: arrowOffset,
-                onComplete: {
-                    activeBubbleId = nil
-                    Task { await viewModel.toggleMicroAction(id: action.id, isCompleted: true) }
-                },
-                onDismiss: {
-                    activeBubbleId = nil
+/// Faint dot texture so the cream ground reads as a surface, not a void.
+private struct DotGridBackground: View {
+    var body: some View {
+        Canvas { context, size in
+            let step: CGFloat = 22
+            let dot = Path(ellipseIn: CGRect(x: 0, y: 0, width: 2, height: 2))
+            var y: CGFloat = 8
+            while y < size.height {
+                var x: CGFloat = 8
+                while x < size.width {
+                    context.fill(dot.offsetBy(dx: x, dy: y), with: .color(Color.textSec.opacity(0.14)))
+                    x += step
                 }
-            )
-            .frame(width: bubbleWidth)
-            .offset(x: xPos, y: yPos)
-            .transition(.scale(scale: 0.01, anchor: .top).combined(with: .opacity))
-            .zIndex(10)
-            .id("bubble-\(id)")
+                y += step
+            }
         }
+        .allowsHitTesting(false)
     }
 }
 
@@ -206,5 +209,4 @@ struct JourneyPathView: View {
     return JourneyPathView(
         viewModel: viewModel
     )
-    .background(Color.appBg)
 }

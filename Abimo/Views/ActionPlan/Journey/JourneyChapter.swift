@@ -1,0 +1,153 @@
+//
+//  JourneyChapter.swift
+//  Abimo
+//
+//  Chapters give the path a shape without touching the schema: actions are
+//  grouped by the SWOT quadrant they serve, in the same order the plan
+//  prompt already uses (weakness → opportunity → strength → threat). Pure
+//  and unit-tested; the view is just a projection of `orderedActions`.
+//
+
+import SwiftUI
+
+enum JourneyChapterKind: String, CaseIterable {
+    case fixWeakSpot   // weakness
+    case proveDemand   // opportunity
+    case playYourEdge  // strength
+    case watchRisks    // threat
+    case steps         // fallback: no usable quadrant data
+
+    var title: String {
+        switch self {
+        case .fixWeakSpot:  return "Fix the weak spot"
+        case .proveDemand:  return "Prove demand"
+        case .playYourEdge: return "Play your edge"
+        case .watchRisks:   return "Watch the risks"
+        case .steps:        return "Your steps"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .fixWeakSpot:  return .brand
+        case .proveDemand:  return .brandBlue
+        case .playYourEdge: return .brandGreen
+        case .watchRisks:   return .brandAmber
+        case .steps:        return .brand
+        }
+    }
+
+    var edgeColor: Color {
+        switch self {
+        case .fixWeakSpot:  return .brandDark
+        case .proveDemand:  return .brandBlueDark
+        case .playYourEdge: return .brandGreenDark
+        case .watchRisks:   return .brandAmberDark
+        case .steps:        return .brandDark
+        }
+    }
+
+    /// Tinted band behind the chapter's stretch of path.
+    var bandColor: Color {
+        switch self {
+        case .fixWeakSpot:  return .cardDarkRed
+        case .proveDemand:  return .cardDarkBlue
+        case .playYourEdge: return .cardDarkTeal
+        case .watchRisks:   return .cardDarkOrange
+        case .steps:        return .insetBg
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .fixWeakSpot:  return "bandage.fill"
+        case .proveDemand:  return "person.2.wave.2.fill"
+        case .playYourEdge: return "bolt.fill"
+        case .watchRisks:   return "eye.fill"
+        case .steps:        return "list.bullet"
+        }
+    }
+
+    /// The plan prompt's quadrant vocabulary → chapter.
+    init?(quadrant: String?) {
+        switch quadrant?.lowercased() {
+        case "weakness", "weaknesses":       self = .fixWeakSpot
+        case "opportunity", "opportunities": self = .proveDemand
+        case "strength", "strengths":        self = .playYourEdge
+        case "threat", "threats":            self = .watchRisks
+        default:                             return nil
+        }
+    }
+}
+
+struct JourneyChapter: Identifiable, Equatable {
+    let kind: JourneyChapterKind
+    let title: String
+    let actions: [MicroAction]
+
+    var id: String { kind.rawValue }
+    var completedCount: Int { actions.filter(\.isCompleted).count }
+    var totalMinutes: Int { actions.reduce(0) { $0 + $1.timeEstimateMinutes } }
+    var isComplete: Bool { !actions.isEmpty && actions.allSatisfy(\.isCompleted) }
+
+    static func == (lhs: JourneyChapter, rhs: JourneyChapter) -> Bool {
+        lhs.kind == rhs.kind && lhs.title == rhs.title && lhs.actions.map(\.id) == rhs.actions.map(\.id)
+    }
+}
+
+enum JourneyChapterBuilder {
+    private static let order: [JourneyChapterKind] = [.fixWeakSpot, .proveDemand, .playYourEdge, .watchRisks]
+
+    /// Groups `actions` (already in display order) into 1-3 chapters.
+    /// - Every action needs a recognizable quadrant and at least two distinct
+    ///   quadrants must appear; otherwise a single "Your steps" chapter is
+    ///   returned so old plans (quadrant NULL) render unchanged.
+    /// - A lone strength and a lone threat merge into one chapter.
+    /// - Never more than three chapters: trailing single-action chapters fold
+    ///   into the one before them.
+    static func build(from actions: [MicroAction]) -> [JourneyChapter] {
+        guard !actions.isEmpty else { return [] }
+
+        var buckets: [JourneyChapterKind: [MicroAction]] = [:]
+        for action in actions {
+            guard let kind = JourneyChapterKind(quadrant: action.quadrant) else {
+                return [JourneyChapter(kind: .steps, title: JourneyChapterKind.steps.title, actions: actions)]
+            }
+            buckets[kind, default: []].append(action)
+        }
+        guard buckets.keys.count >= 2 else {
+            return [JourneyChapter(kind: .steps, title: JourneyChapterKind.steps.title, actions: actions)]
+        }
+
+        var chapters: [JourneyChapter] = order.compactMap { kind in
+            guard let group = buckets[kind], !group.isEmpty else { return nil }
+            return JourneyChapter(kind: kind, title: kind.title, actions: group)
+        }
+
+        // A single strength next to a single threat is one beat, not two.
+        if let s = chapters.firstIndex(where: { $0.kind == .playYourEdge }),
+           let t = chapters.firstIndex(where: { $0.kind == .watchRisks }),
+           chapters[s].actions.count == 1, chapters[t].actions.count == 1 {
+            let merged = JourneyChapter(
+                kind: .playYourEdge,
+                title: "Play your edge, watch the risks",
+                actions: chapters[s].actions + chapters[t].actions
+            )
+            chapters.remove(at: t)
+            chapters[s] = merged
+        }
+
+        // Cap at three: fold trailing singletons back into the previous chapter.
+        while chapters.count > 3, let last = chapters.last, chapters.count >= 2 {
+            let prev = chapters[chapters.count - 2]
+            chapters.removeLast()
+            chapters[chapters.count - 1] = JourneyChapter(
+                kind: prev.kind,
+                title: prev.title,
+                actions: prev.actions + last.actions
+            )
+        }
+
+        return chapters
+    }
+}

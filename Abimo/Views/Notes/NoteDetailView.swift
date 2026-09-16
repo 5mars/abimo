@@ -459,7 +459,7 @@ struct NoteDetailView: View {
                     HStack(spacing: 8) {
                         Image(systemName: "bolt.fill")
                             .font(.system(size: 13))
-                        Text("Continue")
+                        Text(ActionPlanViewModel.journeyCTA(completed: progress.completed, committed: false))
                             .font(.system(size: 15, weight: .bold))
                     }
                     .foregroundColor(.white)

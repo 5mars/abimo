@@ -8,41 +8,40 @@ import Vortex
 
 // MARK: - NodeState
 
+/// Honest states. Micro-actions are independent by construction (the plan
+/// prompt has no dependency concept), so nothing is "locked": exactly one
+/// step is the recommended `next`, everything else undone is `open` and can
+/// be done — or promoted to next — at will.
 enum NodeState {
-    case locked
-    case active
-    case completed
+    case done
+    case next
+    case open
 }
 
 // MARK: - State Helper
 
-func nodeState(at index: Int, actions: [MicroAction]) -> NodeState {
-    let action = actions[index]
-    if action.isCompleted { return .completed }
-    let firstIncompleteIndex = actions.firstIndex(where: { !$0.isCompleted })
-    if firstIncompleteIndex == index { return .active }
-    return .locked
+func nodeState(for action: MicroAction, nextId: UUID?) -> NodeState {
+    if action.isCompleted { return .done }
+    return action.id == nextId ? .next : .open
 }
 
 // MARK: - JourneyNodeView
 
 /// A single 3D path node. Positioning is the parent's job (JourneyLayout);
-/// this view only renders the bubble-shaped node and its state animations.
+/// this view only renders the circle and its state animations.
 struct JourneyNodeView: View {
     let action: MicroAction
     let state: NodeState
     let onTap: () -> Void
     let justCompletedActionId: UUID?
-    let index: Int
-    let actions: [MicroAction]
-    var nodeSize: CGFloat = 70
+    var nodeSize: CGFloat = 64
     var celebrationState: CelebrationState = .idle
 
     @State private var completionBounceTrigger = 0
     @State private var unlockPulseTrigger = 0
-    @State private var animatedFillColor: Color = .lockedFace
-    @State private var animatedEdgeColor: Color = .lockedEdge
-    @State private var startBob = false
+    @State private var animatedFillColor: Color = .white
+    @State private var animatedEdgeColor: Color = .cardEdge
+    @State private var nextBob = false
 
     var body: some View {
         Button(action: onTap) {
@@ -51,19 +50,19 @@ struct JourneyNodeView: View {
         }
         .buttonStyle(Duo3DCircleButtonStyle(fill: animatedFillColor, edge: animatedEdgeColor))
         .background {
-            if state == .active {
+            if state == .next {
                 PulseRing(color: .brand)
                     .frame(width: nodeSize, height: nodeSize)
             }
         }
         .overlay(alignment: .top) {
-            if state == .active {
-                startPill
-                    .offset(y: startBob ? -34 : -38)
+            if state == .next {
+                nextPill
+                    .offset(y: nextBob ? -32 : -36)
                     .onAppear {
                         if !AnimationPolicy.reduceMotion {
                             withAnimation(.easeInOut(duration: 0.9).repeatForever(autoreverses: true)) {
-                                startBob = true
+                                nextBob = true
                             }
                         }
                     }
@@ -78,7 +77,7 @@ struct JourneyNodeView: View {
                 SpringKeyframe(1.0, duration: 0.15, spring: Spring(response: 0.15, dampingRatio: 0.6))
             }
         }
-        // Unlock pulse on the next node: swell to 1.15x, then relax.
+        // Becoming `next`: swell to 1.15x, then relax.
         .keyframeAnimator(initialValue: 1.0, trigger: unlockPulseTrigger) { content, scale in
             content.scaleEffect(scale)
         } keyframes: { _ in
@@ -99,32 +98,27 @@ struct JourneyNodeView: View {
             animatedEdgeColor = edgeColor
         }
         .onChange(of: state) { oldValue, newValue in
-            if oldValue != .completed && newValue == .completed {
-                // Bounce (keyframes) + color morph coral -> green together
+            if oldValue != .done && newValue == .done {
+                // Bounce (keyframes) + color morph to green together
                 if !AnimationPolicy.reduceMotion { completionBounceTrigger += 1 }
                 AnimationPolicy.animate(.spring(response: 0.15, dampingFraction: 0.4)) {
                     animatedFillColor = .brandGreen
                     animatedEdgeColor = .brandGreenDark
                 }
+            } else if newValue == .next && oldValue != .next {
+                // The path moved on to this step: swell while the colors turn
+                // coral once the pulse peaks. Works across chapters — it keys
+                // on state, not on array position.
+                if !AnimationPolicy.reduceMotion { unlockPulseTrigger += 1 }
+                AnimationPolicy.animate(.easeInOut(duration: 0.3).delay(AnimationPolicy.reduceMotion ? 0 : 0.3)) {
+                    animatedFillColor = .brand
+                    animatedEdgeColor = .brandDark
+                }
             } else if oldValue != newValue {
-                // Generic state change (e.g., active->locked on undo) — animate color
                 AnimationPolicy.animate(.easeInOut(duration: 0.3)) {
                     animatedFillColor = fillColor
                     animatedEdgeColor = edgeColor
                 }
-            }
-        }
-        .onChange(of: justCompletedActionId) { _, completedId in
-            guard let completedId = completedId,
-                  let completedIndex = actions.firstIndex(where: { $0.id == completedId }),
-                  index == completedIndex + 1 else { return }
-
-            // Swell (keyframes) while the colors fade grey -> coral once the
-            // pulse peaks — the delay replaces the old asyncAfter beat.
-            if !AnimationPolicy.reduceMotion { unlockPulseTrigger += 1 }
-            AnimationPolicy.animate(.easeInOut(duration: 0.3).delay(AnimationPolicy.reduceMotion ? 0 : 0.3)) {
-                animatedFillColor = .brand
-                animatedEdgeColor = .brandDark
             }
         }
     }
@@ -133,22 +127,22 @@ struct JourneyNodeView: View {
 
     private var fillColor: Color {
         switch state {
-        case .locked:    return .lockedFace
-        case .active:    return .brand
-        case .completed: return .brandGreen
+        case .open: return .white
+        case .next: return .brand
+        case .done: return .brandGreen
         }
     }
 
     private var edgeColor: Color {
         switch state {
-        case .locked:    return .lockedEdge
-        case .active:    return .brandDark
-        case .completed: return .brandGreenDark
+        case .open: return .cardEdge
+        case .next: return .brandDark
+        case .done: return .brandGreenDark
         }
     }
 
-    private var startPill: some View {
-        Text("START")
+    private var nextPill: some View {
+        Text("NEXT")
             .font(.system(size: 12, weight: .black, design: .rounded))
             .foregroundColor(.brand)
             .padding(.horizontal, 12)
@@ -162,16 +156,16 @@ struct JourneyNodeView: View {
     @ViewBuilder
     private var nodeContent: some View {
         switch state {
-        case .locked:
-            Image(systemName: "lock.fill")
-                .font(.system(size: 22, weight: .semibold))
-                .foregroundColor(.textSec.opacity(0.5))
-        case .active:
+        case .open:
             Text(ActionIconMapper.icon(for: action.actionType).emoji)
-                .font(.system(size: 28))
-        case .completed:
+                .font(.system(size: 26))
+                .opacity(0.7)
+        case .next:
+            Text(ActionIconMapper.icon(for: action.actionType).emoji)
+                .font(.system(size: 26))
+        case .done:
             Image(systemName: "checkmark")
-                .font(.system(size: 24, weight: .bold))
+                .font(.system(size: 22, weight: .bold))
                 .foregroundColor(.white)
                 // Only the freshly completed node's checkmark pops — the
                 // Bool stays false (no value change, no bounce) elsewhere.
@@ -186,95 +180,20 @@ struct JourneyNodeView: View {
 // MARK: - Preview
 
 #Preview {
-    let actions: [MicroAction] = [
+    let make: (String, Bool) -> MicroAction = { type, done in
         MicroAction(
-            id: UUID(),
-            actionPlanId: UUID(),
-            text: "Send email",
-            doneCriteria: "Email sent",
-            timeEstimateMinutes: 5,
-            priority: 1,
-            quadrant: nil,
-            template: nil,
-            actionType: "email",
-            deepLinkData: nil,
-            isCompleted: true,
-            completedAt: Date(),
-            isCommitted: false,
-            committedAt: nil,
-            scheduledFor: nil,
-            completionOutcome: nil,
-            completionNote: nil,
-            createdAt: Date()
-        ),
-        MicroAction(
-            id: UUID(),
-            actionPlanId: UUID(),
-            text: "Search online",
-            doneCriteria: "Found resources",
-            timeEstimateMinutes: 10,
-            priority: 2,
-            quadrant: nil,
-            template: nil,
-            actionType: "search",
-            deepLinkData: nil,
-            isCompleted: false,
-            completedAt: nil,
-            isCommitted: false,
-            committedAt: nil,
-            scheduledFor: nil,
-            completionOutcome: nil,
-            completionNote: nil,
-            createdAt: Date()
-        ),
-        MicroAction(
-            id: UUID(),
-            actionPlanId: UUID(),
-            text: "Post update",
-            doneCriteria: "Post published",
-            timeEstimateMinutes: 15,
-            priority: 3,
-            quadrant: nil,
-            template: nil,
-            actionType: "post",
-            deepLinkData: nil,
-            isCompleted: false,
-            completedAt: nil,
-            isCommitted: false,
-            committedAt: nil,
-            scheduledFor: nil,
-            completionOutcome: nil,
-            completionNote: nil,
-            createdAt: Date()
-        ),
-    ]
-
-    VStack(spacing: 50) {
-        JourneyNodeView(
-            action: actions[0],
-            state: .completed,
-            onTap: {},
-            justCompletedActionId: nil,
-            index: 0,
-            actions: actions
-        )
-        JourneyNodeView(
-            action: actions[1],
-            state: .active,
-            onTap: {},
-            justCompletedActionId: nil,
-            index: 1,
-            actions: actions
-        )
-        JourneyNodeView(
-            action: actions[2],
-            state: .locked,
-            onTap: {},
-            justCompletedActionId: nil,
-            index: 2,
-            actions: actions
+            id: UUID(), actionPlanId: UUID(), text: "Step", doneCriteria: "Done",
+            timeEstimateMinutes: 10, priority: 1, quadrant: nil, template: nil,
+            actionType: type, deepLinkData: nil, isCompleted: done,
+            completedAt: done ? Date() : nil, isCommitted: false, committedAt: nil,
+            scheduledFor: nil, completionOutcome: nil, completionNote: nil, createdAt: Date()
         )
     }
-    .padding(50)
-    .background(Color.appBg)
+    HStack(spacing: 40) {
+        JourneyNodeView(action: make("email", true), state: .done, onTap: {}, justCompletedActionId: nil)
+        JourneyNodeView(action: make("search", false), state: .next, onTap: {}, justCompletedActionId: nil)
+        JourneyNodeView(action: make("post", false), state: .open, onTap: {}, justCompletedActionId: nil)
+    }
+    .padding(60)
+    .background(Color.journeyBg)
 }

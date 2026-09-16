@@ -140,7 +140,7 @@ struct ActionPickerSheet: View {
         switch mode {
         case .firstVisit: return "Commit to your first step"
         case .postCompletion: return "What's your next move?"
-        case .browse: return "All Actions"
+        case .browse: return "All steps"
         }
     }
 
@@ -189,11 +189,16 @@ struct ActionPickerSheet: View {
                     Text(ActionIconMapper.icon(for: action.actionType).emoji)
                         .font(.system(size: 24))
 
-                    Text(action.text)
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundColor(action.isCompleted ? .textSec : .textPri)
-                        .lineLimit(isExpanded ? nil : 2)
-                        .multilineTextAlignment(.leading)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(action.text)
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundColor(action.isCompleted ? .textSec : .textPri)
+                            .lineLimit(isExpanded ? nil : 2)
+                            .multilineTextAlignment(.leading)
+                        Text("\(action.timeEstimateMinutes) min · \(ActionDeepLink.typeLabel(for: action))")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(.textSec)
+                    }
 
                     Spacer()
 
@@ -317,7 +322,7 @@ struct ActionPickerSheet: View {
                     viewModel.pickAction(id: action.id)
                     dismiss()
                 } label: {
-                    Text("Select as next")
+                    Text("Do this one next")
                         .font(.system(size: 15, weight: .bold))
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)

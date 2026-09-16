@@ -93,6 +93,43 @@ class ActionPlanViewModel: ObservableObject {
         orderedActions.first(where: { !$0.isCompleted })
     }
 
+    /// Chapters are a pure projection of orderedActions (see JourneyChapterBuilder).
+    var chapters: [JourneyChapter] { JourneyChapterBuilder.build(from: orderedActions) }
+
+    /// Minutes still on the plate — the "45 min left" in the journey header.
+    var remainingMinutes: Int {
+        microActions.filter { !$0.isCompleted }.reduce(0) { $0 + $1.timeEstimateMinutes }
+    }
+
+    /// Streak and today's XP for the journey header. Sourced from
+    /// CompletionStore because ActionsTabViewModel is NOT in the environment
+    /// when this screen is pushed from the Kitchen.
+    @Published var streak: Int = 0
+    @Published var xpToday: Int = 0
+
+    /// What completing the next step is worth right now.
+    var nextStepXP: Int { XPEngine.actionXP + (xpToday == 0 ? XPEngine.firstOfDayBonus : 0) }
+
+    func refreshMomentum() async {
+        let dates = await CompletionStore.shared.completionDates()
+        streak = Self.streakInfo(completionDates: dates).streak
+        xpToday = XPEngine.xpToday(completionDates: dates)
+    }
+
+    /// Which picker the sheet shows; `showActionPicker` stays the presentation
+    /// flag (tests pin it). Always present through here so the two agree.
+    @Published var pickerMode: PickerMode = .browse
+
+    func presentPicker(_ mode: PickerMode) {
+        pickerMode = mode
+        showActionPicker = true
+    }
+
+    /// One CTA rule for every door into the journey.
+    static func journeyCTA(completed: Int, committed: Bool) -> String {
+        completed == 0 && !committed ? "Start your plan" : "Continue your plan"
+    }
+
     var committedAction: MicroAction? {
         guard let commitment = activeCommitment else { return nil }
         return microActions.first(where: { $0.id == commitment.microActionId })
@@ -113,7 +150,7 @@ class ActionPlanViewModel: ObservableObject {
             )
             actionPlan = plan
             microActions = actions
-            showActionPicker = true
+            presentPicker(.firstVisit)
         } catch {
             errorMessage = "Failed to generate action plan: \(error.localizedDescription)"
         }
@@ -137,6 +174,7 @@ class ActionPlanViewModel: ObservableObject {
 
             computeNudges()
             mergeUserOrder(planId: plan.id)
+            await refreshMomentum()
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -146,32 +184,40 @@ class ActionPlanViewModel: ObservableObject {
 
     func toggleMicroAction(id: UUID, isCompleted: Bool) async {
         if isCompleted {
-            // First check-off completes the walk-in tour (no-op otherwise)
-            WalkInDirector.shared.microActionCompleted()
-
-            // Cancel nudge for completed action + streak-risk
-            NotificationScheduler.shared.cancelActionNudge(actionId: id)
-            NotificationService.shared.cancelNotification(id: "streak-risk")
-
-            // Auto-confirm with default outcome, then show post-completion sheet
-            await confirmCompletion(id: id, outcome: "did_it", note: nil)
-            completingActionId = id
-
-            // Only show congrats sheet if there are remaining actions (not plan complete)
-            let hasRemaining = microActions.contains(where: { !$0.isCompleted && $0.id != id })
-            if hasRemaining {
-                if postCompletionSheet == nil {
-                    postCompletionSheet = .congrats(actionId: id)
-                } else {
-                    // Previous sheet still animating out — defer one runloop tick
-                    DispatchQueue.main.async { [weak self] in
-                        self?.postCompletionSheet = .congrats(actionId: id)
-                    }
-                }
-            }
+            await completeAction(id: id, outcome: "did_it", note: nil)
         } else {
             // Unchecking — just toggle directly
             await performToggle(id: id, isCompleted: false)
+        }
+    }
+
+    /// Completes a step with the founder's own verdict on it — "did_it" or
+    /// "didnt_work" — and an optional note. A step that was tried and failed
+    /// is still a completed step: it earns the same XP and the same streak
+    /// day, and the outcome is shown on the path so the plan reads as a log.
+    func completeAction(id: UUID, outcome: String, note: String?) async {
+        // First check-off completes the walk-in tour (no-op otherwise)
+        WalkInDirector.shared.microActionCompleted()
+
+        // Cancel nudge for completed action + streak-risk
+        NotificationScheduler.shared.cancelActionNudge(actionId: id)
+        NotificationService.shared.cancelNotification(id: "streak-risk")
+
+        let trimmed = note?.trimmingCharacters(in: .whitespacesAndNewlines)
+        await confirmCompletion(id: id, outcome: outcome, note: (trimmed?.isEmpty ?? true) ? nil : trimmed)
+        completingActionId = id
+
+        // Only show congrats sheet if there are remaining actions (not plan complete)
+        let hasRemaining = microActions.contains(where: { !$0.isCompleted && $0.id != id })
+        if hasRemaining {
+            if postCompletionSheet == nil {
+                postCompletionSheet = .congrats(actionId: id)
+            } else {
+                // Previous sheet still animating out — defer one runloop tick
+                DispatchQueue.main.async { [weak self] in
+                    self?.postCompletionSheet = .congrats(actionId: id)
+                }
+            }
         }
     }
 
@@ -273,6 +319,8 @@ class ActionPlanViewModel: ObservableObject {
             .count
 
         let info = Self.streakInfo(completionDates: dates)
+        streak = info.streak
+        xpToday = XPEngine.xpToday(completionDates: dates)
 
         if info.completionsToday == 1, [3, 7, 14, 30].contains(info.streak) {
             NotificationScheduler.shared.sendStreakMilestone(days: info.streak)

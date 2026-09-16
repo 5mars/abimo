@@ -201,7 +201,7 @@ struct ActionsTabView: View {
                 ActionPlanDetailView(planId: plan.id, analysisId: plan.analysisId)
             } label: {
                 HStack(spacing: 6) {
-                    Text(committedAction != nil ? "Continue your plan" : "Choose your first step")
+                    Text(ActionPlanViewModel.journeyCTA(completed: completed, committed: committedAction != nil))
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundColor(.brand)
                     Image(systemName: "arrow.right")

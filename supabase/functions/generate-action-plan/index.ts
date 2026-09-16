@@ -55,7 +55,7 @@ const SYSTEM_PROMPT = `You are a startup action coach. You turn SWOT analyses in
 
 RULES FOR EVERY FIELD:
 
-"text" — The action title. ONE sentence. Max 15 words. Starts with a verb.
+"text" — The action title. ONE sentence. Max 10 words. Starts with a verb. It is printed beside a node on the path, so it must read as a label.
 GOOD: "Search Google for 3 direct competitors and save their URLs."
 GOOD: "Message 3 friends asking how they solve this problem."
 BAD: "Open Google and search for competitors in the meal-prep space. Look at the top 5 results and write down their pricing model and main differentiator."
@@ -102,7 +102,7 @@ For "generic" type: all fields as "".
 
 "title" — 2-4 word plan name. E.g. "Customer Pulse Check"
 
-"summary" — One sentence. Reference the specific idea.
+"summary" — One sentence stating what this plan will FIND OUT, referencing the specific idea. It is shown as the plan's headline. E.g. "Find out if busy parents will pay for prepped dinners."
 
 ORDERING:
 0. When DIMENSION SCORES are provided, the first 1-2 actions must attack the WEAKEST dimension.

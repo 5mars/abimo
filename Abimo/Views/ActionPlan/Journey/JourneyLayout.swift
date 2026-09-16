@@ -10,9 +10,12 @@
 import SwiftUI
 
 struct JourneyLayout {
-    var nodeSize: CGFloat = 70
-    var stride: CGFloat = 120        // node-center to node-center Y
-    private let maxAmplitude: CGFloat = 70
+    var nodeSize: CGFloat = 64
+    var stride: CGFloat = 112        // node-center to node-center Y
+    var mascotSize: CGFloat = 56
+    private let maxAmplitude: CGFloat = 56
+    private let labelGutter: CGFloat = 12
+    private let edgeInset: CGFloat = 8
 
     /// Zigzag ±x from the centerline, clamped so nodes keep a margin on
     /// narrow devices.
@@ -25,11 +28,31 @@ struct JourneyLayout {
         return index.isMultiple(of: 2) ? -a : a
     }
 
+    /// Even nodes sit left of center, odd nodes right.
+    func isLeft(_ index: Int) -> Bool { index.isMultiple(of: 2) }
+
     func center(_ index: Int, width: CGFloat) -> CGPoint {
         CGPoint(
             x: width / 2 + xOffset(index, width: width),
             y: nodeSize / 2 + CGFloat(index) * stride
         )
+    }
+
+    /// Where a node's title/meta label goes: the inner side of the zigzag,
+    /// from the node's edge to the opposite margin, one stride tall.
+    func labelFrame(_ index: Int, width: CGFloat) -> CGRect {
+        let c = center(index, width: width)
+        let nodeEdge = nodeSize / 2 + labelGutter
+        let minX = isLeft(index) ? c.x + nodeEdge : edgeInset
+        let maxX = isLeft(index) ? width - edgeInset : c.x - nodeEdge
+        return CGRect(x: minX, y: c.y - stride / 2, width: max(0, maxX - minX), height: stride)
+    }
+
+    /// Where the mascot stands: the outer side of the node, feet on its centerline.
+    func mascotCenter(_ index: Int, width: CGFloat) -> CGPoint {
+        let c = center(index, width: width)
+        let dx = nodeSize / 2 + 6 + mascotSize / 2
+        return CGPoint(x: isLeft(index) ? c.x - dx : c.x + dx, y: c.y)
     }
 
     func contentHeight(count: Int) -> CGFloat {

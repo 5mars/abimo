@@ -16,6 +16,7 @@ enum MascotMomentTrigger: Equatable {
     case streakExtended(days: Int)
     case dailyGoalHit
     case daresCleared
+    case nextStepNudge                   // journey hero card, beside the next step
     case planComplete
     // Popup triggers — the ONLY ones that go through MascotDirector.
     // Popups are rare by design: max one per session, each with an action.
@@ -36,6 +37,7 @@ enum MascotMomentTrigger: Equatable {
         case .streakExtended:       return "streakExtended"
         case .dailyGoalHit:         return "dailyGoalHit"
         case .daresCleared:         return "daresCleared"
+        case .nextStepNudge:        return "nextStepNudge"
         case .planComplete:         return "planComplete"
         case .walkInWelcome:        return "walkInWelcome"
         case .returnedAfterAbsence: return "returnedAfterAbsence"
@@ -102,8 +104,8 @@ enum MascotVoice {
         case .streakAtRisk:
             return MascotAction(label: "Save the streak", intent: .openPlans)
         case .scoreRevealed, .actionCompleted, .streakExtended, .dailyGoalHit,
-             .daresCleared, .planComplete, .emptyKitchen, .recordPrompt,
-             .launching, .ideaCapReached:
+             .daresCleared, .nextStepNudge, .planComplete, .emptyKitchen,
+             .recordPrompt, .launching, .ideaCapReached:
             return nil
         }
     }
@@ -174,6 +176,15 @@ enum MascotVoice {
                 "Dares cleared. I'm running out of things to dare you.",
                 "Three for three. The kitchen's speechless. Briefly.",
             ], .playful)
+
+        case .nextStepNudge:
+            return ([
+                "Ten minutes. That's a coffee.",
+                "I'd start here. Not that you asked.",
+                "Small bite. Then we talk.",
+                "This one's ready to serve. The rest can wait.",
+                "Do it badly if you must. Just do it.",
+            ], .neutral)
 
         case .planComplete:
             return ([
