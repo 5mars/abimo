@@ -1,11 +1,11 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { gate, jsonError, CORS_HEADERS } from "../_shared/gate.ts";
 import {
-  bandFor,
-  computeScoreV1,
+  computeScoreV2,
   deriveResearchFacts,
-  evidenceStrength,
   flattenDims,
+  NO_FOUNDER_EVIDENCE,
+  SCORING_VERSION,
   sha256Hex,
 } from "../_shared/scoring.ts";
 
@@ -63,6 +63,21 @@ const SWOT_SCHEMA = {
     ideaTitle:     { type: "string" },
     verdictBand:   { type: "string", enum: ["burnt", "half_baked", "needs_seasoning", "simmering", "chefs_kiss"] },
     verdictReason: { type: "string" },
+    // Facts before judgment: the founder's concrete numbers are extracted
+    // here so the code (not the model) decides what they unlock.
+    founderEvidence: {
+      type: "object",
+      properties: {
+        citesConcreteNumbers: { type: "boolean" },
+        quotes:    { type: "array", items: { type: "string" } },
+        strongest: {
+          type: "string",
+          enum: ["none", "anecdote", "personal_experience", "community_size", "poll", "waitlist", "prepayments", "revenue"],
+        },
+      },
+      required: ["citesConcreteNumbers", "quotes", "strongest"],
+      additionalProperties: false,
+    },
     scoring: {
       type: "object",
       properties: {
@@ -113,7 +128,7 @@ const SWOT_SCHEMA = {
     summary: { type: "string" },
   },
   required: [
-    "ideaTitle", "verdictBand", "verdictReason", "scoring",
+    "ideaTitle", "verdictBand", "verdictReason", "founderEvidence", "scoring",
     "fatalFlaw", "fatalFlawReason", "scoreRationale",
     "strengths", "weaknesses", "opportunities", "threats",
     "marketContext", "marketInsights", "ideaVariants", "summary",
@@ -148,16 +163,18 @@ TONE RULES
 
 RESEARCH DIGEST
 
-The user message may include a RESEARCH DIGEST: real small businesses and demand signals found by live web search.
+The user message may include a RESEARCH DIGEST from live web search, with a "market" block of numbers.
 
-When a digest is PRESENT:
-- Treat it as ground truth. Ground your demandEvidence and marketQuality scores in it.
-- Copy its comparables into marketInsights.comparables (you may tighten wording; never change names, pricing, or status).
-- Real small players doing this successfully is a GOOD sign for demand ("this has been done small and it works") — and a differentiation question at the same time.
+When a digest is PRESENT: treat it as ground truth. It can raise OR lower a score:
+- market.paid_comparables_found of 2 or more, with prices → demandEvidence may reach 7-8.
+- paid_comparables_found 0 with search_quality ok or rich → demandEvidence at most 4: we looked, and nobody is paying.
+- saturation "dominated" or giant_blocks_niche yes → marketQuality at most 4. "crowded" → at most 5. free_alternatives_dominate yes → at most 4.
+- small_players_making_money yes → marketQuality may reach 7-8; otherwise at most 6.
+- a strong negative signal caps demandEvidence at 5.
+Code enforces these caps after you score; score honestly within them and cite the digest field in your evidence sentence. Real small players making money here is a GOOD sign for demand ("this has been done small and it works") — and a differentiation question at the same time.
+Copy the digest's comparables into marketInsights.comparables (tighten wording; never change names, prices, or status).
 
-When the digest is ABSENT or empty:
-- Score from the transcript alone.
-- Return an empty comparables array. NEVER invent company names, pricing, or market statistics. An empty plate beats a fake one.
+When the digest is ABSENT or empty: score from the transcript alone. Without research, demandEvidence and marketQuality are capped at 5 unless the founder cites concrete numbers. Return an empty comparables array. NEVER invent company names, pricing, or market statistics. An empty plate beats a fake one.
 
 --------------------------------------------------
 
@@ -172,6 +189,17 @@ Pick exactly one verdictBand:
 - "chefs_kiss" (80-95): Proven demand (real signals, not vibes), a clear underserved niche, and the founder can reach it. You would tell a friend to start this weekend.
 
 Sitting on the fence is a failure. If you are torn between two bands, the evidence is insufficient — pick the LOWER one and say why in verdictReason.
+
+Your band is a commitment and a sanity check. The final number is computed by code from your five dimension scores and the evidence rules; it will not be forced into your band.
+
+--------------------------------------------------
+
+STEP 1.5 — EXTRACT FOUNDER EVIDENCE (facts, not judgment)
+
+Pull every concrete number the founder states about demand into founderEvidence.quotes, verbatim: group sizes, poll counts, waitlist sign-ups, pre-payments, revenue, what people pay today. Set strongest to the best kind present:
+- "My sister complains" → anecdote. "I do this every week" → personal_experience. "A 2,000-member group" → community_size.
+- "140 said they'd pay" → poll. "210 joined the waitlist" → waitlist. "30 pre-paid $49" → prepayments. "40 sold at $19" → revenue.
+Numbers unlock higher demand rows; adjectives do not. No numbers → citesConcreteNumbers false, strongest none or anecdote.
 
 --------------------------------------------------
 
@@ -190,14 +218,14 @@ demandEvidence — What signals suggest people would use or pay for this?
   0-2: Pure speculation; the founder is guessing
   3-4: Plausible, but zero evidence in the transcript or research
   5-6: Analogous small products succeed, or founder cites real personal experience
-  7-8: Research shows small players charging real money, or clear existing spend
-  9-10: Concrete demand signals: waitlists, communities begging, proven willingness to pay
+  7-8: The research digest shows 2+ small players charging real money (prices in the digest), or the founder cites a poll or waitlist with numbers
+  9-10: Founder cites pre-payments, revenue, or a waitlist of 50+ — numbers, not vibes
 
 marketQuality — Is the BEACHHEAD NICHE worth entering? (Not the global market — the first few hundred customers this founder could actually reach.)
   0-2: The niche is tiny AND shrinking, or served well for free
-  3-4: Crowded niche with no visible gap for a newcomer
+  3-4: Crowded niche with no visible gap for a newcomer, or the digest says dominated / free alternatives dominate
   5-6: Viable niche; competitive but with visible gaps a small player can fill
-  7-8: Underserved niche where small players already make a living
+  7-8: Underserved niche where the digest shows small_players_making_money yes and saturation sparse or competitive
   9-10: Hungry, reachable niche with an obvious opening right now
 
 feasibility — Can a first-time solo founder realistically build and distribute this?
@@ -214,10 +242,8 @@ differentiation — Why this instead of what already exists?
   7-8: Distinct approach or audience that competitors ignore
   9-10: Genuinely novel insight or unfair advantage
 
-Your dimension scores must be consistent with your verdictBand — as a rough guide:
-burnt: dims mostly 0-3 · half_baked: mostly 2-4 with maybe one 5-6 · needs_seasoning: mostly 4-6 · simmering: mostly 6-8 · chefs_kiss: mostly 7-9.
-If your dims average a band higher than your verdict, one of them is wrong — reread the evidence and fix whichever is lying.
-Real ideas are jagged — strong somewhere, weak somewhere else. Five 5s is a refusal to judge, not a judgment.
+Real ideas are jagged — strong somewhere, weak somewhere else. A flat profile with every dimension in 4-6 is a hedge, not a judgment: code docks it 4 points and the app labels it "the critic hedged". If you genuinely see a 4-6 idea, find the dimension that is actually a 3 or a 7 and say why.
+Rough band guide: burnt → dims mostly 0-3 · half_baked → mostly 2-4 · needs_seasoning → mostly 4-6 with a real strength or weakness · simmering → mostly 6-8 · chefs_kiss → mostly 7-9.
 
 fatalFlaw: true only if one issue kills the idea AS DESCRIBED (no possible buyer, illegal, impossible economics, already free and ubiquitous). Name it in fatalFlawReason and the summary; otherwise fatalFlawReason is "".
 
@@ -232,26 +258,26 @@ A. "I want to build an app that uses AI to help people be more productive, like 
    A wish, not an idea. No user, no problem, competing with everyone.
 
 B. "An app where you book dog walkers, like Uber but for dogs."
-   → half_baked. problem 5, demand 3, market 2, feasibility 4, differentiation 1. Final ~30.
+   → half_baked. problem 5, demand 3, market 2, feasibility 4, differentiation 1. Final ~23.
    Real problem, but Rover and Wag already own it and there is no angle.
 
 C. "A meal planning app for busy parents — my sister always complains about deciding what to cook."
-   → half_baked. problem 4, demand 3, market 3, feasibility 5, differentiation 2. Final ~32.
+   → half_baked. problem 4, demand 3, market 3, feasibility 5, differentiation 2. Final ~29.
    Real annoyance, one anecdote, brutally crowded, no wedge yet.
 
 D. "Freelance designers hate chasing overdue invoices — I do it every week and it's humiliating. Existing tools bury the reminder feature in $40/mo suites. I'd build just the polite-nagging bit for $8/mo and I know three designers who'd try it."
-   → needs_seasoning. problem 7, demand 4, market 4, feasibility 7, differentiation 5. Final ~57.
-   Founder lives the problem, sharp wedge, demand still anecdotal.
+   → needs_seasoning. problem 7, demand 4, market 5, feasibility 7, differentiation 5. Final ~55.
+   Founder lives the problem (personal_experience), sharp wedge in a gap the $40 suites leave open, demand still anecdotal.
 
 E. "I run a pool service route. The scheduling software we all use costs $300/mo and everyone in my 2,000-member trade Facebook group complains monthly. I'd build a $29/mo routes-only tool; four other techs already said they'd switch tomorrow."
-   → simmering. problem 8, demand 6, market 6, feasibility 6, differentiation 6. Final ~73.
-   Insider founder, priced-out users, named channel, early hand-raisers.
+   → simmering. problem 8, demand 6, market 6, feasibility 6, differentiation 6. Final ~71.
+   Insider founder, priced-out users, named channel (community_size 2,000), early hand-raisers.
 
 F. "My newsletter for wedding photographers has 4,000 subscribers. I posted a mockup of a client-gallery-delivery tool and 210 people joined the waitlist; 30 pre-paid $49. Current options cost $600/yr and photographers hate them."
-   → chefs_kiss. problem 8, demand 8, market 8, feasibility 7, differentiation 7. Final ~89.
-   Pre-payments, a waitlist, and owned distribution. Almost nothing scores here.
+   → chefs_kiss. problem 8, demand 8, market 8, feasibility 7, differentiation 7. Final ~89 (86 + 3 for the pre-payments).
+   Pre-payments (founderEvidence prepayments), a waitlist, and owned distribution. Almost nothing scores here.
 
-DISTRIBUTION MANDATE: across many ideas your finals must actually spread — empty wishes 10-25, plausible guesses 25-45, real problems with a credible wedge 45-65, evidence-backed ideas 65-80, proven demand 80+. Do not park ideas in the middle out of caution. Deliver low scores with wit, not cruelty — the words can smile while the number frowns.
+DISTRIBUTION MANDATE: across many ideas your finals must actually spread — empty wishes 5-20, plausible guesses 20-40, real problems with a credible wedge 40-62, evidence-backed ideas 62-80, proven demand 80+. Do not park ideas in the middle out of caution. Deliver low scores with wit, not cruelty — the words can smile while the number frowns.
 
 --------------------------------------------------
 
@@ -311,7 +337,7 @@ serve(async (req) => {
   if (g instanceof Response) return g;
 
   try {
-    const { transcription, research, pivot } = await req.json();
+    const { transcription, research, pivot, calibration } = await req.json();
 
     if (!transcription || typeof transcription !== "string") {
       return jsonError("transcription field required", 400);
@@ -329,12 +355,37 @@ serve(async (req) => {
     if (pivot && typeof pivot.title === "string") {
       userMessage += `FOUNDER'S PIVOT — the founder tasted the original and chose this remix instead. Analyze THE REMIX as the idea; the transcript above is background context only. ideaTitle must reflect the remix.\nRemix: ${pivot.title}\nPitch: ${pivot.pitch ?? ""}\nDifferentiator: ${pivot.differentiator ?? ""}\n\n`;
     }
-    const hasResearch = research &&
-      ((research.comparables?.length ?? 0) > 0 ||
-       (research.niche_notes ?? "") !== "" ||
-       (research.demand_signals?.length ?? 0) > 0);
+    // Prefer the structured (v2) digest. Older app builds forward only the
+    // prose fields, so fall back to the digest research-market cached for
+    // this transcript within the last hour.
+    const pivotTitle: string | undefined =
+      pivot && typeof pivot.title === "string" ? pivot.title : undefined;
+    const digestHash = await sha256Hex(
+      pivotTitle ? `${transcription}\n#pivot:${pivotTitle}` : transcription,
+    );
+    let digest = research ?? null;
+    let facts = deriveResearchFacts(digest);
+    if (facts.present && !facts.structured) {
+      const since = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+      const { data: cached } = await g.supabase
+        .from("research_digests")
+        .select("digest")
+        .eq("transcription_sha256", digestHash)
+        .gte("created_at", since)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (cached?.digest) {
+        const cachedFacts = deriveResearchFacts(cached.digest);
+        if (cachedFacts.structured) {
+          digest = cached.digest;
+          facts = cachedFacts;
+        }
+      }
+    }
+    const hasResearch = facts.present;
     if (hasResearch) {
-      userMessage += `RESEARCH DIGEST (from live web search — treat as ground truth):\n${JSON.stringify(research, null, 2)}\n\n`;
+      userMessage += `RESEARCH DIGEST (from live web search — treat as ground truth; the "market" block holds the numbers):\n${JSON.stringify(digest, null, 2)}\n\n`;
     } else {
       userMessage += `RESEARCH DIGEST: none available for this run. Score from the transcript alone and return an empty comparables array.\n\n`;
     }
@@ -348,7 +399,10 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         model: MODEL,
-        temperature: 0.4,
+        temperature: 0.3,
+        // Calibration batches pin the seed so run-to-run noise is the
+        // model's, not the sampler's.
+        ...(calibration === true ? { seed: 42 } : {}),
         max_tokens: 4096,
         response_format: {
           type: "json_schema",
@@ -391,19 +445,25 @@ serve(async (req) => {
     // The band, reasons and per-dimension evidence are kept (and audited) so
     // the number can be explained and the distribution measured.
     const rawDims = flattenDims(result.scoring as Record<string, { score: number }>);
-    result.viabilityScore = computeScoreV1({
+    const founder = result.founderEvidence ?? NO_FOUNDER_EVIDENCE;
+    const { score, meta } = computeScoreV2({
       dims: rawDims,
       verdictBand: result.verdictBand,
       fatalFlaw: result.fatalFlaw,
+      founder,
+      research: facts,
+      comparableCount: digest?.comparables?.length ?? 0,
     });
-    result.dimensionScores = rawDims;
+    result.viabilityScore = score;
+    result.dimensionScores = meta.cappedDims;      // what the app shows
+    result.rawDimensionScores = rawDims;           // what the model said
     result.dimensionEvidence = Object.fromEntries(
       Object.entries(result.scoring as Record<string, { evidence: string }>)
         .map(([k, v]) => [k, v.evidence])
     );
-    result.scoringVersion = 1;
-    const researchFacts = deriveResearchFacts(research);
-    result.evidenceStrength = evidenceStrength(researchFacts, research?.comparables?.length ?? 0);
+    result.scoreMeta = meta;
+    result.evidenceStrength = meta.evidenceStrength;
+    result.scoringVersion = SCORING_VERSION;
     delete result.scoring;
 
     // Server-side audit row — independent of whether the client saves the
@@ -413,20 +473,21 @@ serve(async (req) => {
         .from("score_audits")
         .insert({
           user_id: g.user.id,
-          transcription_sha256: await sha256Hex(transcription),
-          scoring_version: result.scoringVersion,
-          viability_score: result.viabilityScore,
+          transcription_sha256: digestHash,
+          scoring_version: SCORING_VERSION,
+          viability_score: score,
           verdict_band: result.verdictBand,
-          computed_band: bandFor(result.viabilityScore),
-          dimension_scores: result.dimensionScores,
+          computed_band: meta.computedBand,
+          dimension_scores: meta.cappedDims,
           raw_dimension_scores: rawDims,
           dimension_evidence: result.dimensionEvidence,
-          research_digest: hasResearch ? research : null,
-          evidence_strength: result.evidenceStrength,
-          score_meta: { version: 1 },
+          founder_evidence: founder,
+          research_digest: hasResearch ? digest : null,
+          evidence_strength: meta.evidenceStrength,
+          score_meta: meta,
           model: MODEL,
           is_pivot: Boolean(pivot),
-          is_calibration: Boolean(g.limitExempt),
+          is_calibration: Boolean(g.limitExempt) || calibration === true,
         })
         .select("id")
         .single();
