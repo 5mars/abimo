@@ -17,6 +17,14 @@ export function jsonError(msg: string, status: number, code?: string): Response 
 export interface GateResult {
   user: { id: string };
   supabase: SupabaseClient;
+  /** True for calibration accounts listed in AI_LIMIT_EXEMPT_USER_IDS — no
+   *  daily budget, and their scoring audits are flagged is_calibration. */
+  limitExempt: boolean;
+}
+
+function isLimitExempt(userId: string): boolean {
+  const raw = Deno.env.get("AI_LIMIT_EXEMPT_USER_IDS") ?? "";
+  return raw.split(",").map((s) => s.trim()).filter(Boolean).includes(userId);
 }
 
 /**
@@ -44,6 +52,11 @@ export async function gate(
   const { data: { user }, error } = await supabase.auth.getUser();
   if (error || !user) return jsonError("Invalid or expired session", 401);
 
+  // Calibration accounts skip the budget so a 30-run batch can complete.
+  if (isLimitExempt(user.id)) {
+    return { user: { id: user.id }, supabase, limitExempt: true };
+  }
+
   const { data: allowed, error: rpcErr } = await supabase.rpc("consume_ai_credit", {
     p_fn: fn,
     p_limit: dailyLimit,
@@ -56,5 +69,5 @@ export async function gate(
     return jsonError("Daily AI budget reached — try again tomorrow.", 429, "rate_limited");
   }
 
-  return { user: { id: user.id }, supabase };
+  return { user: { id: user.id }, supabase, limitExempt: false };
 }

@@ -1,7 +1,16 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { gate, jsonError, CORS_HEADERS } from "../_shared/gate.ts";
+import {
+  bandFor,
+  computeScoreV1,
+  deriveResearchFacts,
+  evidenceStrength,
+  flattenDims,
+  sha256Hex,
+} from "../_shared/scoring.ts";
 
 const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY")!;
+const MODEL = "gpt-4o";
 
 const DAILY_LIMIT = 20;
 const MAX_TRANSCRIPTION_CHARS = 8000;
@@ -112,45 +121,9 @@ const SWOT_SCHEMA = {
   additionalProperties: false,
 };
 
-// Final score bands matching the app's ScoreVerdict. 96-100 is reserved —
-// nothing earns it from a voice note.
-const BAND_RANGES: Record<string, [number, number]> = {
-  burnt:           [5, 19],
-  half_baked:      [20, 39],
-  needs_seasoning: [40, 59],
-  simmering:       [60, 79],
-  chefs_kiss:      [80, 95],
-};
-
-// The model commits to a verdict band FIRST (categorical — resists the pull
-// to the middle), then scores five dimensions with evidence. The weighted
-// average positions the score, a 1.35x stretch undoes averaging compression,
-// and the band clamp keeps number and verdict consistent. Hard caps win.
-function computeViabilityScore(result: {
-  scoring: Record<string, { score: number }>;
-  verdictBand: string;
-  fatalFlaw: boolean;
-}): number {
-  const d: Record<string, number> = Object.fromEntries(
-    Object.entries(result.scoring).map(([k, v]) => [k, v.score])
-  );
-  const raw =
-    (d.problemSeverity * 0.30 +
-     d.demandEvidence  * 0.25 +
-     d.marketQuality   * 0.20 +
-     d.feasibility     * 0.15 +
-     d.differentiation * 0.10) * 10;
-
-  let score = Math.round(45 + (raw - 45) * 1.35);
-
-  const [lo, hi] = BAND_RANGES[result.verdictBand] ?? [0, 100];
-  score = Math.max(lo, Math.min(hi, score));
-
-  if (Math.min(...Object.values(d)) <= 1) score = Math.min(score, 35);
-  if (result.fatalFlaw) score = Math.min(score, 20);
-
-  return Math.max(0, Math.min(100, score));
-}
+// Scoring math lives in ../_shared/scoring.ts (unit-tested, versioned).
+// The model commits to a verdict band FIRST (categorical commitment), then
+// scores five dimensions with evidence; code aggregates.
 
 const SYSTEM_PROMPT = `You are a brutally honest startup analyst — part Y Combinator partner, part sharp-tongued food critic reviewing ideas like dishes. You have actually built and launched small products, and you have sent plenty of undercooked ideas back to the kitchen.
 
@@ -374,7 +347,7 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gpt-4o",
+        model: MODEL,
         temperature: 0.4,
         max_tokens: 4096,
         response_format: {
@@ -414,17 +387,54 @@ serve(async (req) => {
 
     const result = JSON.parse(content);
 
-    // Flatten for the client: five plain ints, computed final score, and the
-    // scaffolding fields the model needed but the app doesn't.
-    result.viabilityScore = computeViabilityScore(result);
-    result.dimensionScores = Object.fromEntries(
-      Object.entries(result.scoring as Record<string, { score: number }>)
-        .map(([k, v]) => [k, v.score])
+    // Flatten for the client: five plain ints + the computed final score.
+    // The band, reasons and per-dimension evidence are kept (and audited) so
+    // the number can be explained and the distribution measured.
+    const rawDims = flattenDims(result.scoring as Record<string, { score: number }>);
+    result.viabilityScore = computeScoreV1({
+      dims: rawDims,
+      verdictBand: result.verdictBand,
+      fatalFlaw: result.fatalFlaw,
+    });
+    result.dimensionScores = rawDims;
+    result.dimensionEvidence = Object.fromEntries(
+      Object.entries(result.scoring as Record<string, { evidence: string }>)
+        .map(([k, v]) => [k, v.evidence])
     );
+    result.scoringVersion = 1;
+    const researchFacts = deriveResearchFacts(research);
+    result.evidenceStrength = evidenceStrength(researchFacts, research?.comparables?.length ?? 0);
     delete result.scoring;
-    delete result.verdictBand;
-    delete result.verdictReason;
-    delete result.fatalFlawReason;
+
+    // Server-side audit row — independent of whether the client saves the
+    // analysis. Best-effort: an audit failure must never fail the tasting.
+    try {
+      const { data: audit, error: auditErr } = await g.supabase
+        .from("score_audits")
+        .insert({
+          user_id: g.user.id,
+          transcription_sha256: await sha256Hex(transcription),
+          scoring_version: result.scoringVersion,
+          viability_score: result.viabilityScore,
+          verdict_band: result.verdictBand,
+          computed_band: bandFor(result.viabilityScore),
+          dimension_scores: result.dimensionScores,
+          raw_dimension_scores: rawDims,
+          dimension_evidence: result.dimensionEvidence,
+          research_digest: hasResearch ? research : null,
+          evidence_strength: result.evidenceStrength,
+          score_meta: { version: 1 },
+          model: MODEL,
+          is_pivot: Boolean(pivot),
+          is_calibration: Boolean(g.limitExempt),
+        })
+        .select("id")
+        .single();
+      if (auditErr) console.error("score_audits insert failed:", auditErr.message);
+      else result.scoreAuditId = audit?.id ?? null;
+    } catch (auditErr) {
+      console.error("score_audits insert threw:", auditErr);
+    }
 
     return new Response(JSON.stringify(result), {
       headers: { ...CORS_HEADERS, "Content-Type": "application/json" },

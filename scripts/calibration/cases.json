@@ -1,0 +1,179 @@
+[
+  {
+    "id": "T0",
+    "label": "wish, not an idea",
+    "target": [5, 15],
+    "transcript": "An app that uses AI to make your whole life better — health, money, relationships, everything. Like one assistant for all of it. Nobody's done all of it together.",
+    "fixture": {
+      "comparables": [
+        { "name": "Notion AI", "what": "AI features inside a general notes and planning workspace.", "pricing": "$10/mo add-on", "status": "giant", "url": "https://www.notion.so", "price_amount": 10, "price_currency": "USD", "price_period": "month", "charges_money": "yes", "size": "giant", "user_count_hint": 0, "user_count_source": "", "last_active": "2025_or_later" }
+      ],
+      "niche_notes": "There is no niche here — every big assistant already claims 'everything', and people pick one they already use.",
+      "demand_signals": ["Posts asking for an all-in-one life AI mostly get told to use ChatGPT."],
+      "signals": [
+        { "text": "Reddit threads asking for an all-in-one life assistant are answered with 'just use ChatGPT'", "url": "", "source_type": "reddit", "direction": "negative", "strength": "moderate", "recency": "2025_or_later", "count_hint": 60 }
+      ],
+      "market": { "paid_comparables_found": 1, "free_alternatives_dominate": "yes", "saturation": "dominated", "small_players_making_money": "no", "giant_blocks_niche": "yes", "giant_name": "ChatGPT", "typical_price_low": 0, "typical_price_high": 20, "price_currency": "USD", "search_quality": "rich", "queries_run": ["ai life assistant app", "all in one ai assistant pricing"] }
+    }
+  },
+  {
+    "id": "T1",
+    "label": "terrible: social network for everything",
+    "target": [8, 20],
+    "transcript": "Okay so, hear me out — an app that's like, a social network but for everything. AI powered. People can post stuff, buy stuff, date, find jobs, everything in one app. Nobody's done all of it together.",
+    "fixture": {
+      "comparables": [],
+      "niche_notes": "Super-apps exist in Asia and are owned by giants; in the West nobody small has made one work.",
+      "demand_signals": [],
+      "signals": [
+        { "text": "HN discussions on Western super-apps conclude users prefer separate apps", "url": "", "source_type": "forum", "direction": "negative", "strength": "moderate", "recency": "2023_2024", "count_hint": 120 }
+      ],
+      "market": { "paid_comparables_found": 0, "free_alternatives_dominate": "yes", "saturation": "dominated", "small_players_making_money": "no", "giant_blocks_niche": "yes", "giant_name": "Meta", "typical_price_low": 0, "typical_price_high": 0, "price_currency": "", "search_quality": "ok", "queries_run": ["super app everything social commerce dating", "all in one social app pricing"] }
+    }
+  },
+  {
+    "id": "T2",
+    "label": "mediocre: campus food-truck lines",
+    "target": [22, 38],
+    "transcript": "An app where college students can rate campus food trucks and see which ones have short lines. Students are always complaining about lines at lunch.",
+    "fixture": {
+      "comparables": [
+        { "name": "Yelp", "what": "Reviews for restaurants and food trucks.", "pricing": "free", "status": "giant", "url": "https://www.yelp.com", "price_amount": 0, "price_currency": "", "price_period": "free", "charges_money": "no", "size": "giant", "user_count_hint": 0, "user_count_source": "", "last_active": "2025_or_later" },
+        { "name": "Street Food Finder", "what": "Locates food trucks by GPS.", "pricing": "free", "status": "small team", "url": "https://streetfoodfinder.com", "price_amount": 0, "price_currency": "", "price_period": "free", "charges_money": "no", "size": "small_team", "user_count_hint": 0, "user_count_source": "", "last_active": "2023_2024" }
+      ],
+      "niche_notes": "Students already use Yelp, Instagram and group chats for this, all free. Nobody small charges money for campus food-truck info.",
+      "demand_signals": ["Students complain about lunch lines in campus subreddits but ask friends rather than an app."],
+      "signals": [
+        { "text": "Campus subreddit threads about lunch lines; replies suggest texting friends", "url": "", "source_type": "reddit", "direction": "negative", "strength": "weak", "recency": "2025_or_later", "count_hint": 15 }
+      ],
+      "market": { "paid_comparables_found": 0, "free_alternatives_dominate": "yes", "saturation": "competitive", "small_players_making_money": "no", "giant_blocks_niche": "no", "giant_name": "", "typical_price_low": 0, "typical_price_high": 0, "price_currency": "", "search_quality": "ok", "queries_run": ["campus food truck app", "food truck wait time app", "college food truck ratings"] }
+    }
+  },
+  {
+    "id": "T2b",
+    "label": "crowded clone: habit tracker with mascot",
+    "target": [18, 32],
+    "transcript": "A habit tracker app but with streaks and a cute mascot. People love streaks. I'd charge like five bucks a month.",
+    "fixture": {
+      "comparables": [
+        { "name": "Habitica", "what": "Gamified habit tracker with avatars and quests.", "pricing": "free, $5/mo premium", "status": "small team", "url": "https://habitica.com", "price_amount": 5, "price_currency": "USD", "price_period": "month", "charges_money": "yes", "size": "small_team", "user_count_hint": 4000000, "user_count_source": "press coverage", "last_active": "2025_or_later" },
+        { "name": "Finch", "what": "Self-care pet app with streaks.", "pricing": "free, $10/mo premium", "status": "small team", "url": "https://finchcare.com", "price_amount": 10, "price_currency": "USD", "price_period": "month", "charges_money": "yes", "size": "small_team", "user_count_hint": 0, "user_count_source": "", "last_active": "2025_or_later" },
+        { "name": "Streaks", "what": "Paid habit tracker for iOS.", "pricing": "$5 one-time", "status": "solo", "url": "https://streaksapp.com", "price_amount": 5, "price_currency": "USD", "price_period": "one_time", "charges_money": "yes", "size": "solo", "user_count_hint": 0, "user_count_source": "", "last_active": "2025_or_later" }
+      ],
+      "niche_notes": "Habit trackers with mascots and streaks are one of the most crowded indie categories; small players do make money but the space has dozens of near-identical apps.",
+      "demand_signals": ["r/productivity threads list ten habit trackers with mascots."],
+      "signals": [
+        { "text": "r/productivity 'best habit tracker' threads list 10+ mascot/streak apps", "url": "", "source_type": "reddit", "direction": "negative", "strength": "moderate", "recency": "2025_or_later", "count_hint": 300 }
+      ],
+      "market": { "paid_comparables_found": 3, "free_alternatives_dominate": "no", "saturation": "crowded", "small_players_making_money": "yes", "giant_blocks_niche": "no", "giant_name": "", "typical_price_low": 5, "typical_price_high": 10, "price_currency": "USD", "search_quality": "rich", "queries_run": ["habit tracker mascot streaks app", "habit tracker app pricing", "site:reddit.com best habit tracker"] }
+    }
+  },
+  {
+    "id": "T2c",
+    "label": "fatal flaw: resell leftover prescriptions",
+    "target": [0, 20],
+    "transcript": "Buy prescription meds cheaper by having people resell their leftover pills through an app. Everyone has half-used bottles and drugs are expensive.",
+    "fixture": {
+      "comparables": [],
+      "niche_notes": "Peer-to-peer resale of prescription medication is illegal in the US and most countries; no legitimate comparable exists.",
+      "demand_signals": [],
+      "signals": [
+        { "text": "News coverage of prosecutions for reselling prescription medication", "url": "", "source_type": "news", "direction": "negative", "strength": "strong", "recency": "2023_2024", "count_hint": 0 }
+      ],
+      "market": { "paid_comparables_found": 0, "free_alternatives_dominate": "unknown", "saturation": "empty", "small_players_making_money": "no", "giant_blocks_niche": "no", "giant_name": "", "typical_price_low": 0, "typical_price_high": 0, "price_currency": "", "search_quality": "ok", "queries_run": ["resell prescription medication app", "peer to peer medication marketplace legal"] }
+    }
+  },
+  {
+    "id": "T3",
+    "label": "decent: wedding-DJ FAQ tool",
+    "target": [44, 60],
+    "transcript": "I'm a wedding DJ. Couples email me the same 40 questions before every gig, and I retype answers every time. I want a little tool that builds a shareable FAQ-plus-questionnaire page for event vendors, like ten bucks a month. Every DJ I know has this problem and we all hack it with Google Docs.",
+    "fixture": {
+      "comparables": [
+        { "name": "HoneyBook", "what": "All-in-one client management for event pros including questionnaires.", "pricing": "$36/mo", "status": "company", "url": "https://www.honeybook.com", "price_amount": 36, "price_currency": "USD", "price_period": "month", "charges_money": "yes", "size": "company", "user_count_hint": 0, "user_count_source": "", "last_active": "2025_or_later" },
+        { "name": "Vibo", "what": "Wedding DJ music planning and client questionnaire app.", "pricing": "$19/mo", "status": "small team", "url": "https://vibodj.com", "price_amount": 19, "price_currency": "USD", "price_period": "month", "charges_money": "yes", "size": "small_team", "user_count_hint": 0, "user_count_source": "", "last_active": "2025_or_later" }
+      ],
+      "niche_notes": "Wedding vendors pay $19-40/mo for client-management suites that include questionnaires; a cheaper single-purpose FAQ tool has visible room but sits next to heavy suites.",
+      "demand_signals": ["DJ forum threads complain about repeating answers and about suite pricing."],
+      "signals": [
+        { "text": "DJ forum threads complaining about answering the same couple questions repeatedly", "url": "", "source_type": "forum", "direction": "positive", "strength": "moderate", "recency": "2023_2024", "count_hint": 40 },
+        { "text": "Reviews of HoneyBook calling it overpriced for solo vendors", "url": "", "source_type": "review", "direction": "positive", "strength": "moderate", "recency": "2025_or_later", "count_hint": 25 }
+      ],
+      "market": { "paid_comparables_found": 2, "free_alternatives_dominate": "no", "saturation": "competitive", "small_players_making_money": "yes", "giant_blocks_niche": "no", "giant_name": "", "typical_price_low": 19, "typical_price_high": 36, "price_currency": "USD", "search_quality": "ok", "queries_run": ["wedding dj client questionnaire tool", "event vendor faq page software pricing", "site:reddit.com wedding dj same questions couples"] }
+    }
+  },
+  {
+    "id": "T3b",
+    "label": "hedge bait: local seed swap",
+    "target": [36, 52],
+    "transcript": "An app for people who like gardening to swap seeds locally. There are gardening groups everywhere and people already trade seeds at meetups. Maybe a small fee to list rare seeds.",
+    "fixture": {
+      "comparables": [
+        { "name": "Seed Savers Exchange", "what": "Nonprofit seed exchange with a member listing.", "pricing": "$50/yr membership", "status": "company", "url": "https://exchange.seedsavers.org", "price_amount": 50, "price_currency": "USD", "price_period": "year", "charges_money": "yes", "size": "company", "user_count_hint": 0, "user_count_source": "", "last_active": "2025_or_later" }
+      ],
+      "niche_notes": "Seed swapping happens for free in Facebook groups and local meetups; one nonprofit charges a membership. Small paid players are hard to find.",
+      "demand_signals": ["Facebook seed-swap groups have tens of thousands of members and trade for free."],
+      "signals": [
+        { "text": "Seed swap Facebook groups with 20k+ members trading for free", "url": "", "source_type": "social", "direction": "negative", "strength": "moderate", "recency": "2025_or_later", "count_hint": 20000 }
+      ],
+      "market": { "paid_comparables_found": 1, "free_alternatives_dominate": "yes", "saturation": "sparse", "small_players_making_money": "no", "giant_blocks_niche": "no", "giant_name": "", "typical_price_low": 50, "typical_price_high": 50, "price_currency": "USD", "search_quality": "ok", "queries_run": ["seed swap app", "local seed exchange app pricing", "site:reddit.com seed swap"] }
+    }
+  },
+  {
+    "id": "T4",
+    "label": "strong: tutor billing with poll",
+    "target": [65, 82],
+    "transcript": "I run a 3,000-member Facebook group for private math tutors. Every week someone asks how to handle parent billing — the current tool everyone names costs 50 dollars a month and does 90 things tutors don't need. I polled the group: 140 tutors said they'd pay 12 dollars a month for just invoicing plus session notes, and 25 gave me their emails for early access. I could announce it in the group tomorrow.",
+    "fixture": {
+      "comparables": [
+        { "name": "TutorBird", "what": "Tutor scheduling and billing suite.", "pricing": "$15-50/mo", "status": "small team", "url": "https://www.tutorbird.com", "price_amount": 15, "price_currency": "USD", "price_period": "month", "charges_money": "yes", "size": "small_team", "user_count_hint": 0, "user_count_source": "", "last_active": "2025_or_later" },
+        { "name": "Teachworks", "what": "Tutoring business management software.", "pricing": "$16/mo+", "status": "small team", "url": "https://teachworks.com", "price_amount": 16, "price_currency": "USD", "price_period": "month", "charges_money": "yes", "size": "small_team", "user_count_hint": 0, "user_count_source": "", "last_active": "2025_or_later" },
+        { "name": "TutorCruncher", "what": "Tutoring CRM and invoicing.", "pricing": "$30/mo+", "status": "small team", "url": "https://tutorcruncher.com", "price_amount": 30, "price_currency": "USD", "price_period": "month", "charges_money": "yes", "size": "small_team", "user_count_hint": 0, "user_count_source": "", "last_active": "2025_or_later" }
+      ],
+      "niche_notes": "Several small companies charge $15-50/mo for tutor billing suites; solo tutors complain the suites are bloated, leaving room for a cheaper single-purpose tool.",
+      "demand_signals": ["Tutor forums regularly ask for simpler, cheaper invoicing.", "Reviews call the leading suites overbuilt for solo tutors."],
+      "signals": [
+        { "text": "Tutor subreddit threads asking for simple invoicing without the full suite", "url": "", "source_type": "reddit", "direction": "positive", "strength": "moderate", "recency": "2025_or_later", "count_hint": 80 },
+        { "text": "App-store reviews of tutor suites: 'too much for a solo tutor'", "url": "", "source_type": "review", "direction": "positive", "strength": "moderate", "recency": "2025_or_later", "count_hint": 30 }
+      ],
+      "market": { "paid_comparables_found": 3, "free_alternatives_dominate": "no", "saturation": "competitive", "small_players_making_money": "yes", "giant_blocks_niche": "no", "giant_name": "", "typical_price_low": 15, "typical_price_high": 50, "price_currency": "USD", "search_quality": "rich", "queries_run": ["private tutor invoicing software", "tutor billing app pricing", "site:reddit.com tutor invoicing parents"] }
+    }
+  },
+  {
+    "id": "T4b",
+    "label": "revenue-backed: wedding-planner Notion templates",
+    "target": [70, 85],
+    "transcript": "I sell Notion templates for wedding planners on Gumroad — 40 sold at 19 dollars in two months with zero marketing. I want to turn the top template into a 9 dollar a month web app; 12 buyers have already asked for exactly that.",
+    "fixture": {
+      "comparables": [
+        { "name": "Aisle Planner", "what": "Wedding planner business software.", "pricing": "$40/mo+", "status": "company", "url": "https://www.aisleplanner.com", "price_amount": 40, "price_currency": "USD", "price_period": "month", "charges_money": "yes", "size": "company", "user_count_hint": 0, "user_count_source": "", "last_active": "2025_or_later" },
+        { "name": "Timeline Genius", "what": "Wedding day timeline builder for planners.", "pricing": "$15/mo", "status": "small team", "url": "https://timelinegenius.com", "price_amount": 15, "price_currency": "USD", "price_period": "month", "charges_money": "yes", "size": "small_team", "user_count_hint": 0, "user_count_source": "", "last_active": "2025_or_later" }
+      ],
+      "niche_notes": "Wedding planners pay $15-40/mo for planning tools and buy templates on Gumroad and Etsy; small single-feature tools make money here.",
+      "demand_signals": ["Etsy and Gumroad show hundreds of paid wedding-planner template listings."],
+      "signals": [
+        { "text": "Gumroad/Etsy wedding planner template listings with hundreds of sales", "url": "", "source_type": "marketplace", "direction": "positive", "strength": "strong", "recency": "2025_or_later", "count_hint": 400 }
+      ],
+      "market": { "paid_comparables_found": 2, "free_alternatives_dominate": "no", "saturation": "competitive", "small_players_making_money": "yes", "giant_blocks_niche": "no", "giant_name": "", "typical_price_low": 15, "typical_price_high": 40, "price_currency": "USD", "search_quality": "rich", "queries_run": ["wedding planner notion template", "wedding planner software pricing", "gumroad wedding planner template"] }
+    }
+  },
+  {
+    "id": "T5",
+    "label": "chef's kiss: photographer gallery tool with pre-payments",
+    "target": [82, 93],
+    "transcript": "My newsletter for wedding photographers has 4,000 subscribers. I posted a mockup of a client-gallery-delivery tool and 210 people joined the waitlist; 30 pre-paid 49 dollars. Current options cost 600 dollars a year and photographers hate them.",
+    "fixture": {
+      "comparables": [
+        { "name": "Pixieset", "what": "Client gallery delivery for photographers.", "pricing": "$10-40/mo", "status": "company", "url": "https://pixieset.com", "price_amount": 10, "price_currency": "USD", "price_period": "month", "charges_money": "yes", "size": "company", "user_count_hint": 0, "user_count_source": "", "last_active": "2025_or_later" },
+        { "name": "ShootProof", "what": "Galleries, sales and contracts for photographers.", "pricing": "$15-60/mo", "status": "company", "url": "https://www.shootproof.com", "price_amount": 15, "price_currency": "USD", "price_period": "month", "charges_money": "yes", "size": "company", "user_count_hint": 0, "user_count_source": "", "last_active": "2025_or_later" },
+        { "name": "Pic-Time", "what": "Gallery and store for pro photographers.", "pricing": "$8-50/mo", "status": "small team", "url": "https://www.pic-time.com", "price_amount": 8, "price_currency": "USD", "price_period": "month", "charges_money": "yes", "size": "small_team", "user_count_hint": 0, "user_count_source": "", "last_active": "2025_or_later" }
+      ],
+      "niche_notes": "Photographers already pay $100-600/yr for gallery tools and complain about pricing and complexity; multiple small players make a living here.",
+      "demand_signals": ["Photography forums are full of gallery-tool pricing complaints."],
+      "signals": [
+        { "text": "Photography forum threads complaining about gallery tool pricing and bloat", "url": "", "source_type": "forum", "direction": "positive", "strength": "strong", "recency": "2025_or_later", "count_hint": 250 }
+      ],
+      "market": { "paid_comparables_found": 3, "free_alternatives_dominate": "no", "saturation": "competitive", "small_players_making_money": "yes", "giant_blocks_niche": "no", "giant_name": "", "typical_price_low": 8, "typical_price_high": 60, "price_currency": "USD", "search_quality": "rich", "queries_run": ["client gallery delivery photographers", "photographer gallery software pricing", "site:reddit.com photographers gallery delivery hate"] }
+    }
+  }
+]

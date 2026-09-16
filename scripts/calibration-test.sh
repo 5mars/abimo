@@ -1,43 +1,116 @@
 #!/bin/bash
 #
 # Calibration test for the analyze-swot edge function.
-# Runs 4 canned transcripts (terrible → strong) N times each and prints the
-# viability scores. Pass criteria:
-#   T1 (vague AI-everything app)      →  5-20
-#   T2 (campus food truck ratings)    → 22-39
-#   T3 (wedding-DJ FAQ tool)          → 42-59
-#   T4 (tutor billing, real evidence) → 62-82
-#   Gap between T2 and T4 means ≥ 25 points.
-#   Also watch for band-edge pinning: repeated exact 39/59/79 across
-#   DIFFERENT ideas means dims are overshooting the verdict band.
 #
-# Usage: ./scripts/calibration-test.sh [runs-per-transcript, default 3]
+# Runs every case in scripts/calibration/cases.json N times and reports the
+# score distribution against each case's target range. Research comes from
+# the case's canned digest by default (--research fixture) so scoring is not
+# confounded by web-search variance; --research live calls research-market
+# first; --research none scores from the transcript alone.
+#
+# Pass criteria (scoring v2):
+#   - each case in its target range in >= 2 of 3 runs
+#   - per-case SD <= 6
+#   - <= 25% of ALL runs in 50-65
+#   - no exact value holds > 10% of runs; <= 2 runs at 58 or 59
+#   - mean(T4) - mean(T2) >= 30
+#
+# Auth: a dedicated calibration user (password grant). Put in .env (gitignored):
+#   SUPABASE_URL=https://xxx.supabase.co
+#   SUPABASE_ANON_KEY=sb_publishable_...
+#   CALIB_EMAIL=calibration@example.com
+#   CALIB_PASSWORD=...
+# and list that user's id in the AI_LIMIT_EXEMPT_USER_IDS secret of the
+# Supabase project so the 30-run batch clears the daily budget.
+#
+# Usage: ./scripts/calibration-test.sh [--runs N] [--research fixture|live|none] [--only T3,T4]
 #
 set -euo pipefail
 
-URL="https://ymbfqlrarlnqtzatgfah.supabase.co/functions/v1/analyze-swot"
-ANON_KEY="sb_publishable_HUIZRQ5EfaFU3EV-1IzqNQ_8uOBDJ39"
-RUNS="${1:-3}"
+cd "$(dirname "$0")/.."
+[ -f .env ] && set -a && source .env && set +a
 
-T1="Okay so, hear me out — an app that's like, a social network but for everything. AI powered. People can post stuff, buy stuff, date, find jobs, everything in one app. Nobody's done all of it together."
-T2="An app where college students can rate campus food trucks and see which ones have short lines. Students are always complaining about lines at lunch."
-T3="I'm a wedding DJ. Couples email me the same 40 questions before every gig, and I retype answers every time. I want a little tool that builds a shareable FAQ-plus-questionnaire page for event vendors, like ten bucks a month. Every DJ I know has this problem and we all hack it with Google Docs."
-T4="I run a 3,000-member Facebook group for private math tutors. Every week someone asks how to handle parent billing — the current tool everyone names costs 50 dollars a month and does 90 things tutors don't need. I polled the group: 140 tutors said they'd pay 12 dollars a month for just invoicing plus session notes, and 25 gave me their emails for early access. I could announce it in the group tomorrow."
+: "${SUPABASE_URL:?set SUPABASE_URL in .env}"
+: "${SUPABASE_ANON_KEY:?set SUPABASE_ANON_KEY in .env}"
+: "${CALIB_EMAIL:?set CALIB_EMAIL in .env}"
+: "${CALIB_PASSWORD:?set CALIB_PASSWORD in .env}"
 
-run_one() {
-  local label="$1" transcript="$2"
-  for i in $(seq 1 "$RUNS"); do
-    score=$(curl -s "$URL" \
-      -H "Authorization: Bearer $ANON_KEY" \
-      -H "Content-Type: application/json" \
-      -d "$(jq -n --arg t "$transcript" '{transcription: $t}')" \
-      | jq -r '.viabilityScore // "ERROR: \(.error // "no score")"')
-    echo "$label run $i: $score"
-  done
+RUNS=3
+RESEARCH=fixture
+ONLY=""
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --runs) RUNS="$2"; shift 2 ;;
+    --research) RESEARCH="$2"; shift 2 ;;
+    --only) ONLY="$2"; shift 2 ;;
+    *) echo "unknown arg $1"; exit 2 ;;
+  esac
+done
+
+CASES=scripts/calibration/cases.json
+OUT=$(mktemp -t abimo-calib)
+trap 'rm -f "$OUT"' EXIT
+
+echo "→ signing in as $CALIB_EMAIL"
+TOKEN=$(curl -s "$SUPABASE_URL/auth/v1/token?grant_type=password" \
+  -H "apikey: $SUPABASE_ANON_KEY" -H "Content-Type: application/json" \
+  -d "$(jq -n --arg e "$CALIB_EMAIL" --arg p "$CALIB_PASSWORD" '{email:$e,password:$p}')" \
+  | jq -r '.access_token // empty')
+[ -n "$TOKEN" ] || { echo "✗ sign-in failed"; exit 1; }
+
+AUTH=(-H "Authorization: Bearer $TOKEN" -H "apikey: $SUPABASE_ANON_KEY" -H "Content-Type: application/json")
+
+score_one() {
+  local id="$1" transcript="$2" fixture="$3"
+  local research="null"
+  case "$RESEARCH" in
+    fixture) research="$fixture" ;;
+    live)
+      research=$(curl -s "$SUPABASE_URL/functions/v1/research-market" "${AUTH[@]}" \
+        -d "$(jq -n --arg t "$transcript" '{transcription:$t}')")
+      ;;
+    none) research="null" ;;
+  esac
+  curl -s "$SUPABASE_URL/functions/v1/analyze-swot" "${AUTH[@]}" \
+    -d "$(jq -n --arg t "$transcript" --argjson r "$research" '{transcription:$t, research:$r, calibration:true}')" \
+    | jq -c '{score: .viabilityScore, band: .verdictBand, dims: .dimensionScores, hedged: (.scoreMeta.hedged // false), caps: ((.scoreMeta.caps // []) | length), error: .error}'
 }
 
-echo "=== Calibration test ($RUNS runs each; expect T1 8-20, T2 22-38, T3 44-60, T4 65-82) ==="
-run_one "T1 (terrible) " "$T1"
-run_one "T2 (mediocre) " "$T2"
-run_one "T3 (decent)   " "$T3"
-run_one "T4 (strong)   " "$T4"
+echo "→ $RUNS runs per case, research=$RESEARCH"
+jq -c '.[]' "$CASES" | while read -r c; do
+  id=$(jq -r .id <<<"$c")
+  if [ -n "$ONLY" ] && ! grep -q "\b$id\b" <<<"$ONLY"; then continue; fi
+  label=$(jq -r .label <<<"$c")
+  lo=$(jq -r '.target[0]' <<<"$c"); hi=$(jq -r '.target[1]' <<<"$c")
+  transcript=$(jq -r .transcript <<<"$c")
+  fixture=$(jq -c .fixture <<<"$c")
+  for i in $(seq 1 "$RUNS"); do
+    r=$(score_one "$id" "$transcript" "$fixture")
+    s=$(jq -r '.score // "ERR"' <<<"$r")
+    printf "%-4s run %d: %-4s  %s\n" "$id" "$i" "$s" "$(jq -c 'del(.score)' <<<"$r")"
+    echo "$id $lo $hi $s" >> "$OUT"
+  done
+done
+
+echo
+echo "=== Summary ==="
+awk '
+  $4 ~ /^[0-9]+$/ {
+    n[$1]++; sum[$1]+=$4; sq[$1]+=$4*$4; lo[$1]=$2; hi[$1]=$3
+    if ($4>=$2 && $4<=$3) inrange[$1]++
+    all++; if ($4>=50 && $4<=65) mid++
+    exact[$4]++; if ($4==58 || $4==59) seam++
+    if ($1=="T2") { t2s+=$4; t2n++ } ; if ($1=="T4") { t4s+=$4; t4n++ }
+  }
+  END {
+    for (id in n) {
+      mean=sum[id]/n[id]; sd=sqrt(sq[id]/n[id]-mean*mean)
+      ok=(inrange[id]>=2||inrange[id]==n[id])?"PASS":"FAIL"
+      printf "%-4s target %2d-%-2d  mean %5.1f  sd %4.1f  in-range %d/%d  %s\n", id, lo[id], hi[id], mean, sd, inrange[id], n[id], ok
+    }
+    printf "\nmid-cluster (50-65): %d/%d = %.0f%%  %s\n", mid, all, 100*mid/all, (mid/all<=0.25?"PASS":"FAIL")
+    printf "seam values 58/59:   %d  %s\n", seam, (seam<=2?"PASS":"FAIL")
+    top=0; for (v in exact) if (exact[v]>top) { top=exact[v]; tv=v }
+    printf "most common exact:   %s x%d  %s\n", tv, top, (top/all<=0.10?"PASS":"FAIL")
+    if (t2n>0 && t4n>0) printf "T4 - T2 mean gap:    %.1f  %s\n", t4s/t4n - t2s/t2n, ((t4s/t4n - t2s/t2n)>=30?"PASS":"FAIL")
+  }' "$OUT" | sort
