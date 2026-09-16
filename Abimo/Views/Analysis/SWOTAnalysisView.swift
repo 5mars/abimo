@@ -20,6 +20,7 @@ struct SWOTAnalysisView: View {
     @State private var showMarketSheet = false
     @State private var showVariantsSheet = false
     @State private var showPaywall = false
+    @State private var showReceipt = false
     @State private var pendingRetaste: IdeaVariant?
 
     init(transcription: Transcription, preloadedAnalysis: SWOTAnalysis? = nil, noteTitle: String = "") {
@@ -82,9 +83,12 @@ struct SWOTAnalysisView: View {
                 if Self.shouldAutoGenerate(analysis: viewModel.analysis, errorMessage: viewModel.errorMessage) {
                     await viewModel.generateAnalysis(transcription: transcription, noteTitle: noteTitle)
                 }
-                if let score = viewModel.analysis?.viabilityScore {
+                if let analysis = viewModel.analysis, let score = analysis.viabilityScore {
                     let band = score >= 70 ? "high" : score >= 40 ? "mid" : "low"
-                    AnalyticsService.shared.log(.analysisViewed(scoreBand: band))
+                    AnalyticsService.shared.log(.analysisViewed(
+                        scoreBand: band,
+                        scoringVersion: analysis.scoringVersion ?? 1
+                    ))
                 }
             }
             .sheet(item: $activeCourse) { course in
@@ -109,6 +113,11 @@ struct SWOTAnalysisView: View {
             }
             .sheet(isPresented: $showPaywall) {
                 PaywallView(context: .fullAnalysis)
+            }
+            .sheet(isPresented: $showReceipt) {
+                if let analysis = viewModel.analysis {
+                    EvidenceReceiptSheet(analysis: analysis)
+                }
             }
             .alert("Re-taste as \"\(pendingRetaste?.title ?? "")\"?", isPresented: Binding(
                 get: { pendingRetaste != nil },
@@ -202,7 +211,22 @@ struct SWOTAnalysisView: View {
         ViabilityGaugeView(
             score: analysis.viabilityScore ?? 0,
             dimensions: analysis.dimensionScores,
-            rationale: analysis.scoreRationale
+            rationale: analysis.scoreRationale,
+            evidence: analysis.dimensionEvidence,
+            meta: analysis.scoreMeta,
+            evidenceStrength: analysis.evidenceStrength,
+            fatalFlaw: analysis.fatalFlaw ?? false,
+            fatalFlawReason: analysis.fatalFlawReason,
+            isLegacyScoring: analysis.isLegacyScoring,
+            receiptLocked: !entitlements.isPremium,
+            onShowReceipt: {
+                if entitlements.isPremium {
+                    showReceipt = true
+                } else {
+                    AnalyticsService.shared.log(.gateHit(gate: "swot_lock"))
+                    showPaywall = true
+                }
+            }
         )
         .walkInTarget(.tasteScore)
         .cardEntrance(delay: 0.05)
@@ -482,6 +506,15 @@ struct ViabilityGaugeView: View {
     let score: Int
     var dimensions: DimensionScores? = nil
     var rationale: String? = nil
+    // Scoring v2 receipt (all nil/false for rows scored with the old recipe)
+    var evidence: DimensionEvidence? = nil
+    var meta: ScoreMeta? = nil
+    var evidenceStrength: String? = nil
+    var fatalFlaw: Bool = false
+    var fatalFlawReason: String? = nil
+    var isLegacyScoring: Bool = false
+    var receiptLocked: Bool = true
+    var onShowReceipt: (() -> Void)? = nil
     @State private var animatedScore: Double = 0
 
     private var verdict: ScoreVerdict { ScoreVerdict(score: score) }
@@ -555,18 +588,72 @@ struct ViabilityGaugeView: View {
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 8)
 
+            // The single most memorable thing the critic can say — it caps
+            // the score at 20 server-side, so it had better be on screen.
+            if fatalFlaw {
+                HStack(alignment: .top, spacing: 8) {
+                    Image(systemName: "flame.fill")
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundColor(.brand)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Fatal flaw, as described")
+                            .font(.system(size: 12, weight: .bold, design: .rounded))
+                            .foregroundColor(.brand)
+                        if let fatalFlawReason, !fatalFlawReason.isEmpty {
+                            Text(fatalFlawReason)
+                                .font(.system(size: 12))
+                                .foregroundColor(.textPri)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                    Spacer(minLength: 0)
+                }
+                .padding(10)
+                .background(
+                    RoundedRectangle(cornerRadius: DuoTokens.Radius.inset, style: .continuous)
+                        .fill(Color.brand.opacity(0.10))
+                )
+            }
+
             // The receipt behind the number — free for everyone, because a
             // harsh score without a "why" just feels arbitrary.
             if let dimensions {
-                ScoreBreakdownView(dimensions: dimensions, rationale: rationale, color: verdict.color)
-                    .padding(.horizontal, 4)
+                ScoreBreakdownView(
+                    dimensions: dimensions,
+                    rationale: rationale,
+                    color: verdict.color,
+                    evidence: evidence,
+                    meta: meta,
+                    evidenceStrength: evidenceStrength,
+                    isLegacy: isLegacyScoring
+                )
+                .padding(.horizontal, 4)
             }
 
-            Text("Scores run the full range — the plan below is the recipe to raise yours.")
-                .font(.system(size: 11, weight: .medium))
-                .foregroundColor(.textSec.opacity(0.7))
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 12)
+            if isLegacyScoring {
+                Text("Scored with the critic's old recipe. Re-taste for the evidence-backed number — it will probably move.")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundColor(.textSec.opacity(0.7))
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 12)
+            } else {
+                if let onShowReceipt {
+                    Button(action: onShowReceipt) {
+                        Label(
+                            receiptLocked ? "Evidence receipt · Plus" : "See the evidence receipt",
+                            systemImage: receiptLocked ? "lock.fill" : "doc.text.magnifyingglass"
+                        )
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(.brandBlue)
+                    }
+                    .buttonStyle(DuoPressStyle())
+                }
+                Text("Scores run the full range — the plan below is the recipe to raise yours.")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundColor(.textSec.opacity(0.7))
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 12)
+            }
         }
         .duoPanel(fill: .cardDarkMint, padding: 24)
     }
@@ -574,47 +661,59 @@ struct ViabilityGaugeView: View {
 
 // MARK: - Score Breakdown
 
-/// Five labeled bars showing the sub-scores behind the viability number,
-/// plus the critic's one-line rationale for the weakest link.
+/// Five labeled bars showing the sub-scores behind the viability number.
+/// With scoring v2 each row also carries its weight, any evidence cap, and
+/// expands on tap to the critic's evidence sentence plus "what would raise
+/// this" — the reasons are free; the sources live in the Evidence Receipt.
 struct ScoreBreakdownView: View {
     let dimensions: DimensionScores
     let rationale: String?
     let color: Color
+    var evidence: DimensionEvidence? = nil
+    var meta: ScoreMeta? = nil
+    var evidenceStrength: String? = nil
+    var isLegacy: Bool = false
 
-    private var rows: [(label: String, value: Int)] {
-        [
-            ("Problem",   dimensions.problemSeverity),
-            ("Demand",    dimensions.demandEvidence),
-            ("Market",    dimensions.marketQuality),
-            ("Buildable", dimensions.feasibility),
-            ("Different", dimensions.differentiation),
-        ]
-    }
+    @State private var expanded: DimensionKey? = nil
+
+    private var canExpand: Bool { !isLegacy && (evidence != nil || meta != nil) }
 
     var body: some View {
         VStack(spacing: 9) {
-            ForEach(rows, id: \.label) { row in
-                HStack(spacing: 10) {
-                    Text(row.label)
-                        .font(.duoCaption)
-                        .foregroundColor(.textSec)
-                        .frame(width: 74, alignment: .leading)
-
-                    GeometryReader { geo in
-                        ZStack(alignment: .leading) {
-                            Capsule().fill(Color.black.opacity(0.06))
-                            Capsule()
-                                .fill(color)
-                                .frame(width: max(8, geo.size.width * CGFloat(row.value) / 10))
-                        }
-                    }
-                    .frame(height: 8)
-
-                    Text("\(row.value)/10")
-                        .font(.duoCaption)
-                        .foregroundColor(color)
-                        .frame(width: 36, alignment: .trailing)
+            if !isLegacy, let pill = DimensionRubric.evidenceStrengthCopy(evidenceStrength) {
+                HStack(alignment: .top, spacing: 6) {
+                    Image(systemName: pill.icon)
+                        .font(.system(size: 11, weight: .semibold))
+                    Text(pill.text)
+                        .font(.system(size: 11, weight: .medium))
+                        .fixedSize(horizontal: false, vertical: true)
+                    Spacer(minLength: 0)
                 }
+                .foregroundColor(evidenceStrength == "none" || evidenceStrength == "thin" ? .brandAmberDark : .brandGreenDark)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 7)
+                .background(
+                    RoundedRectangle(cornerRadius: DuoTokens.Radius.chip, style: .continuous)
+                        .fill((evidenceStrength == "none" || evidenceStrength == "thin" ? Color.brandAmber : Color.brandGreen).opacity(0.12))
+                )
+                .padding(.bottom, 2)
+            }
+
+            ForEach(DimensionKey.allCases) { key in
+                row(for: key)
+            }
+
+            if meta?.hedged == true {
+                HStack(spacing: 6) {
+                    Image(systemName: "scale.3d")
+                        .font(.system(size: 11, weight: .semibold))
+                    Text("The critic hedged — every dimension sat in 4-6, so the number was docked 4.")
+                        .font(.system(size: 11, weight: .medium))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .foregroundColor(.textSec)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.top, 2)
             }
 
             if let rationale, !rationale.isEmpty {
@@ -628,6 +727,111 @@ struct ScoreBreakdownView: View {
             }
         }
         .padding(.top, 4)
+    }
+
+    @ViewBuilder
+    private func row(for key: DimensionKey) -> some View {
+        let value = dimensions.value(for: key)
+        let cap = meta?.cap(for: key)
+        let isOpen = expanded == key
+
+        VStack(spacing: 6) {
+            Button {
+                guard canExpand else { return }
+                HapticEngine.selection()
+                AnimationPolicy.animate(.spring(response: 0.3, dampingFraction: 0.75)) {
+                    expanded = isOpen ? nil : key
+                }
+            } label: {
+                HStack(spacing: 10) {
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(key.label)
+                            .font(.duoCaption)
+                            .foregroundColor(.textSec)
+                        if let w = DimensionRubric.weightLabel(meta?.weight(for: key)) {
+                            Text(w)
+                                .font(.system(size: 9, weight: .semibold, design: .rounded))
+                                .foregroundColor(.textSec.opacity(0.6))
+                        }
+                    }
+                    .frame(width: 74, alignment: .leading)
+
+                    GeometryReader { geo in
+                        ZStack(alignment: .leading) {
+                            Capsule().fill(Color.black.opacity(0.06))
+                            Capsule()
+                                .fill(color)
+                                .frame(width: max(8, geo.size.width * CGFloat(value) / 10))
+                            if let cap {
+                                // Ghost of what the model said before the cap
+                                Capsule()
+                                    .strokeBorder(color.opacity(0.35), style: StrokeStyle(lineWidth: 1, dash: [3, 3]))
+                                    .frame(width: max(8, geo.size.width * CGFloat(cap.from) / 10))
+                            }
+                        }
+                    }
+                    .frame(height: 8)
+
+                    HStack(spacing: 3) {
+                        if cap != nil {
+                            Image(systemName: "lock.fill")
+                                .font(.system(size: 9, weight: .bold))
+                                .foregroundColor(.textSec.opacity(0.7))
+                        }
+                        Text("\(value)/10")
+                            .font(.duoCaption)
+                            .foregroundColor(color)
+                    }
+                    .frame(width: 44, alignment: .trailing)
+
+                    if canExpand {
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundColor(.textSec.opacity(0.5))
+                            .rotationEffect(.degrees(isOpen ? 180 : 0))
+                    }
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .disabled(!canExpand)
+
+            if isOpen {
+                VStack(alignment: .leading, spacing: 6) {
+                    if let text = evidence?.text(for: key), !text.isEmpty {
+                        Text(text)
+                            .font(.system(size: 12))
+                            .foregroundColor(.textPri)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    if let cap {
+                        Label {
+                            Text("Capped at \(cap.to) (the critic said \(cap.from)): \(cap.reason)")
+                                .fixedSize(horizontal: false, vertical: true)
+                        } icon: {
+                            Image(systemName: "lock.fill")
+                        }
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(.brandAmberDark)
+                    }
+                    Label {
+                        Text(DimensionRubric.nextStep(for: key, score: value))
+                            .fixedSize(horizontal: false, vertical: true)
+                    } icon: {
+                        Image(systemName: "arrow.up.right.circle.fill")
+                    }
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundColor(.brandGreenDark)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(10)
+                .background(
+                    RoundedRectangle(cornerRadius: DuoTokens.Radius.inset, style: .continuous)
+                        .fill(Color.white.opacity(0.7))
+                )
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
     }
 }
 

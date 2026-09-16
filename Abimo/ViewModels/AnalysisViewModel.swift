@@ -51,11 +51,7 @@ class AnalysisViewModel: ObservableObject {
         do {
             // Best-effort web research first — grounds the manual regenerate
             // path the same way the pipeline does; nil just means ungrounded.
-            var researchText = transcription.text
-            if let pivot {
-                researchText += "\nPivot: \(pivot.title) — \(pivot.pitch)"
-            }
-            let research = await aiService.researchMarket(researchText)
+            let research = await aiService.researchMarket(transcription.text, pivot: pivot)
             analysis = try await aiService.generateAndSaveSWOTAnalysis(
                 transcriptionId: transcription.id,
                 transcriptionText: transcription.text,

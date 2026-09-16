@@ -24,30 +24,24 @@ class AIAnalysisService: ObservableObject {
 
     // MARK: - Market Research (best-effort, never blocks the pipeline)
 
-    /// Live web research digest from the research-market edge function.
-    struct ResearchDigest: Codable {
-        let comparables: [MarketComparable]
-        let nicheNotes: String
-        let demandSignals: [String]
+    /// The digest type lives with the other analysis models now; kept as a
+    /// nested alias so existing call sites read the same.
+    typealias ResearchDigest = Abimo.ResearchDigest
 
-        enum CodingKeys: String, CodingKey {
-            case comparables
-            case nicheNotes    = "niche_notes"
-            case demandSignals = "demand_signals"
-        }
-
-        var isEmpty: Bool {
-            comparables.isEmpty && nicheNotes.isEmpty && demandSignals.isEmpty
-        }
+    private struct ResearchRequest: Encodable {
+        let transcription: String
+        let pivot: IdeaVariant?
     }
 
     /// Scouts the market via live web search. Returns nil on ANY failure or
-    /// after ~25s — the analysis simply proceeds ungrounded.
-    func researchMarket(_ text: String) async -> ResearchDigest? {
+    /// after ~25s — the analysis simply proceeds ungrounded. A pivot is sent
+    /// as its own field so the server's digest cache key matches the
+    /// transcript hash analyze-swot computes.
+    func researchMarket(_ text: String, pivot: IdeaVariant? = nil) async -> ResearchDigest? {
         let invoke = { [supabase] () async throws -> ResearchDigest in
             try await supabase.client.functions.invoke(
                 "research-market",
-                options: FunctionInvokeOptions(body: ["transcription": text])
+                options: FunctionInvokeOptions(body: ResearchRequest(transcription: text, pivot: pivot))
             )
         }
         return await withTaskGroup(of: ResearchDigest?.self) { group in
@@ -131,7 +125,16 @@ class AIAnalysisService: ObservableObject {
             dimensionScores: response.dimensionScores,
             scoreRationale: response.scoreRationale,
             fatalFlaw: response.fatalFlaw,
-            ideaVariants: response.ideaVariants
+            ideaVariants: response.ideaVariants,
+            scoringVersion: response.scoringVersion,
+            verdictBand: response.verdictBand,
+            verdictReason: response.verdictReason,
+            dimensionEvidence: response.dimensionEvidence,
+            scoreMeta: response.scoreMeta,
+            evidenceStrength: response.evidenceStrength,
+            fatalFlawReason: response.fatalFlawReason,
+            researchDigest: research,
+            scoreAuditId: response.scoreAuditId
         )
 
         try await supabase.createSWOTAnalysis(analysis)
@@ -282,4 +285,14 @@ struct SWOTAnalysisResponse: Codable {
     let fatalFlaw: Bool?
     let dimensionScores: DimensionScores?
     let ideaVariants: [IdeaVariant]?
+    // Scoring v2 (absent from responses of the previous function version)
+    let scoringVersion: Int?
+    let verdictBand: String?
+    let verdictReason: String?
+    let dimensionEvidence: DimensionEvidence?
+    let scoreMeta: ScoreMeta?
+    let evidenceStrength: String?
+    let fatalFlawReason: String?
+    let founderEvidence: FounderEvidence?
+    let scoreAuditId: UUID?
 }

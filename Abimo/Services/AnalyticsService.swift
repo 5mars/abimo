@@ -17,7 +17,7 @@ enum AnalyticsEvent {
     case pipelineStageCompleted(stage: String)
     case pipelineCompleted(durationSec: Int)
     case pipelineFailed(stage: String, reason: String)
-    case analysisViewed(scoreBand: String)
+    case analysisViewed(scoreBand: String, scoringVersion: Int)
     case gateHit(gate: String)                 // "idea_cap" | "swot_lock"
     case paywallShown(context: String)         // PaywallView.Context rawValue
     case purchaseInitiated(productId: String)
@@ -79,8 +79,8 @@ enum AnalyticsEvent {
             return ["duration_sec": durationSec]
         case .pipelineFailed(let stage, let reason):
             return ["stage": stage, "reason": String(reason.prefix(100))]
-        case .analysisViewed(let scoreBand):
-            return ["score_band": scoreBand]
+        case .analysisViewed(let scoreBand, let scoringVersion):
+            return ["score_band": scoreBand, "scoring_version": scoringVersion]
         case .gateHit(let gate):
             return ["gate": gate]
         case .paywallShown(let context):
