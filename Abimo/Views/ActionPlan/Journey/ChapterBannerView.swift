@@ -62,6 +62,11 @@ struct ChapterBannerView: View {
         .background(shape.fill(chapter.kind.color))
         .background(shape.fill(chapter.kind.edgeColor).offset(y: DuoTokens.Edge.card))
         .padding(.bottom, DuoTokens.Edge.card)
+        // Closing a chapter gets its own beat: the ring fills and the
+        // device gives one sharp tap.
+        .onChange(of: chapter.isComplete) { _, done in
+            if done { HapticEngine.impact(style: .rigid) }
+        }
     }
 
     private var eyebrow: String {

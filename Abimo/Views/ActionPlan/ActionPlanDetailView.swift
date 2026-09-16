@@ -41,33 +41,8 @@ struct ActionPlanDetailView: View {
                 .zIndex(3)
             }
 
-            // Milestone banner
-            if case .milestone(let count) = viewModel.celebrationState {
-                MilestoneBannerView(count: count)
-                    .transition(.move(edge: .top).combined(with: .opacity))
-                    .zIndex(1)
-            }
-
-            // Streak-extended banner (first completion of the day)
-            if case .streakExtended(let days) = viewModel.celebrationState {
-                StreakBannerView(days: days)
-                    .transition(.move(edge: .top).combined(with: .opacity))
-                    .zIndex(1)
-            }
-
-            // Daily-goal banner (the completion that crossed today's goal)
-            if case .dailyGoalHit(let goalXP) = viewModel.celebrationState {
-                DailyGoalBannerView(goalXP: goalXP)
-                    .transition(.move(edge: .top).combined(with: .opacity))
-                    .zIndex(1)
-            }
-
-            // Badge-unlocked toast (earned by this completion)
-            if case .achievementUnlocked(let badge) = viewModel.celebrationState {
-                AchievementBannerView(achievement: badge)
-                    .transition(.move(edge: .top).combined(with: .opacity))
-                    .zIndex(1)
-            }
+            // Milestone / streak / goal / badge no longer stack banners here —
+            // they land as one RewardsStrip inside the congrats sheet.
 
             // Plan completion overlay
             if viewModel.celebrationState == .planComplete {

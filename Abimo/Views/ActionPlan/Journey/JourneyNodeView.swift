@@ -36,6 +36,17 @@ struct JourneyNodeView: View {
     let justCompletedActionId: UUID?
     var nodeSize: CGFloat = 64
     var celebrationState: CelebrationState = .idle
+    /// The action whose completion is being celebrated — a milestone plays
+    /// its (heavier) confetti on that node instead of a top banner.
+    var celebratingActionId: UUID? = nil
+
+    private var showsConfetti: Bool {
+        switch celebrationState {
+        case .inlineConfetti(let id): return id == action.id
+        case .milestone:              return celebratingActionId == action.id
+        default:                      return false
+        }
+    }
 
     @State private var completionBounceTrigger = 0
     @State private var unlockPulseTrigger = 0
@@ -87,8 +98,7 @@ struct JourneyNodeView: View {
             }
         }
         .overlay {
-            if case .inlineConfetti(let actionId) = celebrationState,
-               actionId == action.id {
+            if showsConfetti {
                 InlineConfettiView()
                     .allowsHitTesting(false)
             }

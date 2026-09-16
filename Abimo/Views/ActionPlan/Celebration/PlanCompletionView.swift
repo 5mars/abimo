@@ -73,6 +73,11 @@ struct PlanCompletionView: View {
                         .padding(.horizontal, 24)
                 }
 
+                if let rewards = viewModel.lastRewards {
+                    RewardsStrip(rewards: rewards)
+                        .padding(.horizontal, 32)
+                }
+
                 // Done button
                 GradientButton(title: "Done") {
                     onDismiss()

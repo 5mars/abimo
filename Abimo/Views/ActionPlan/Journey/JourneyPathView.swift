@@ -20,6 +20,7 @@ struct JourneyPathView: View {
     @State private var pendingPick: UUID?
     @State private var pendingUndo: UUID?
     @State private var heroLine = MascotVoice.moment(for: .nextStepNudge).line
+    @Namespace private var riderNS
 
     private let layout = JourneyLayout()
     private let pathTopInset: CGFloat = 36   // room for the bobbing NEXT pill above the first node
@@ -68,6 +69,12 @@ struct JourneyPathView: View {
                     }
                 }
                 .padding(.bottom, 140)
+                // The mascot rides to the new next node once the completed
+                // node's bounce and trail draw-on have landed.
+                .animation(
+                    AnimationPolicy.reduceMotion ? nil : .spring(response: 0.6, dampingFraction: 0.75).delay(0.75),
+                    value: viewModel.nextRecommendedAction?.id
+                )
                 .task {
                     // Defer scroll to after first layout pass
                     try? await Task.sleep(nanoseconds: 80_000_000)
@@ -170,10 +177,20 @@ struct JourneyPathView: View {
                     onTap: { selectedAction = action },
                     justCompletedActionId: viewModel.justCompletedActionId,
                     nodeSize: layout.nodeSize,
-                    celebrationState: viewModel.celebrationState
+                    celebrationState: viewModel.celebrationState,
+                    celebratingActionId: viewModel.completingActionId
                 )
                 .position(layout.center(index, width: width))
                 .id(action.id)
+            }
+
+            // The critic stands beside whatever's next — and walks there.
+            if let nextIndex = chapter.actions.firstIndex(where: { $0.id == nextId }) {
+                MascotView(mood: .neutral, size: layout.mascotSize, motion: .idle)
+                    .matchedGeometryEffect(id: "rider", in: riderNS)
+                    .position(layout.mascotCenter(nextIndex, width: width))
+                    .allowsHitTesting(false)
+                    .transition(.opacity)
             }
         }
     }

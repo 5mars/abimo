@@ -15,9 +15,12 @@ enum CelebrationState: Equatable {
     case idle
     case inlineConfetti(actionId: UUID)   // per-action node burst, auto-clears after 1.5s
     case milestone(count: Int)            // 3, 5, or 7 — banner + heavier confetti, auto-clears after 2.5s
-    case streakExtended(days: Int)        // first completion of the day — flame banner, auto-clears after 2.5s
-    case dailyGoalHit(goalXP: Int)        // today's XP crossed the goal — banner, auto-clears after 2.5s
-    case achievementUnlocked(Achievement) // badge earned mid-session — banner, auto-clears after 2.5s
+    // The three below are no longer emitted: streak, daily goal and badge
+    // land in CompletionRewards (the strip in the congrats sheet). Kept so
+    // the enum's shape — and every switch over it — stays stable.
+    case streakExtended(days: Int)
+    case dailyGoalHit(goalXP: Int)
+    case achievementUnlocked(Achievement)
     case planComplete                     // full-screen overlay, user-dismissed via Done button
 }
 
@@ -52,6 +55,9 @@ class ActionPlanViewModel: ObservableObject {
     @Published var completingActionId: UUID?
     @Published var justCompletedActionId: UUID? = nil
     @Published var celebrationState: CelebrationState = .idle
+    /// What the most recent completion earned — shown as one strip in the
+    /// congrats / plan-complete sheets instead of stacked banners.
+    @Published var lastRewards: CompletionRewards? = nil
 
     private let supabase = SupabaseService.shared
     private let aiService = AIAnalysisService()
@@ -187,6 +193,7 @@ class ActionPlanViewModel: ObservableObject {
             await completeAction(id: id, outcome: "did_it", note: nil)
         } else {
             // Unchecking — just toggle directly
+            lastRewards = nil
             await performToggle(id: id, isCompleted: false)
         }
     }
@@ -326,56 +333,28 @@ class ActionPlanViewModel: ObservableObject {
             NotificationScheduler.shared.sendStreakMilestone(days: info.streak)
         }
 
-        var queueDelay: TimeInterval
-        switch celebrationState {
-        case .milestone:       queueDelay = 2.7
-        case .inlineConfetti:  queueDelay = 1.7
-        default:               queueDelay = 0.3
+        // Everything this completion earned goes into ONE receipt (the
+        // rewards strip in the congrats sheet) — no banner queue.
+        var rewards = lastRewards ?? CompletionRewards(xp: XPEngine.actionXP)
+        rewards.firstOfDay = info.completionsToday == 1
+        rewards.xp = CompletionRewards.baseXP(firstOfDay: rewards.firstOfDay)
+        if info.completionsToday == 1, info.streak >= 2 {
+            rewards.streak = info.streak
         }
 
-        // Streak banner: first completion of the day, streak of 2+.
-        if info.completionsToday == 1, info.streak >= 2, celebrationState != .planComplete {
-            DispatchQueue.main.asyncAfter(deadline: .now() + queueDelay) { [weak self] in
-                guard let self, self.celebrationState == .idle else { return }
-                self.celebrationState = .streakExtended(days: info.streak)
-                HapticEngine.impact(style: .medium)
-                SoundEngine.whoosh()
-                DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { [weak self] in
-                    if case .streakExtended = self?.celebrationState ?? .idle {
-                        self?.celebrationState = .idle
-                    }
-                }
-            }
-            // Anything queued after the streak banner waits out its slot.
-            queueDelay += 2.8
-        }
-
-        // Daily-goal banner: exactly the completion that crossed the goal.
         let goalXP = UserDefaults.standard.object(forKey: DailyGoalTier.storageKey) as? Int
             ?? DailyGoalTier.fallback.rawValue
-        if XPEngine.completionCrossesGoal(completionsTodayAfter: info.completionsToday, goal: goalXP),
-           celebrationState != .planComplete {
+        if XPEngine.completionCrossesGoal(completionsTodayAfter: info.completionsToday, goal: goalXP) {
             AnalyticsService.shared.log(.dailyGoalHit(tier: DailyGoalTier(storedXP: goalXP).analyticsName))
-            DispatchQueue.main.asyncAfter(deadline: .now() + queueDelay) { [weak self] in
-                guard let self, self.celebrationState == .idle else { return }
-                self.celebrationState = .dailyGoalHit(goalXP: goalXP)
-                HapticEngine.impact(style: .medium)
-                SoundEngine.whoosh()
-                DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { [weak self] in
-                    if case .dailyGoalHit = self?.celebrationState ?? .idle {
-                        self?.celebrationState = .idle
-                    }
-                }
-            }
-            queueDelay += 2.8
+            rewards.goalHit = goalXP
         }
 
-        // Achievement toast: badges this completion just earned, celebrated
-        // where they're earned instead of waiting for a Profile visit. Only
-        // the action/streak/XP-derived badges can trigger here — idea-,
-        // analysis- and score-based fields are zeroed, which can only delay
-        // those badges (the Profile grid still catches them), never unlock
-        // them falsely. Same latch key as the grid, so nothing fires twice.
+        // Badges this completion just earned, celebrated where they're
+        // earned instead of waiting for a Profile visit. Only the action/
+        // streak/XP-derived badges can trigger here — idea-, analysis- and
+        // score-based fields are zeroed, which can only delay those badges
+        // (the Profile grid still catches them), never unlock them falsely.
+        // Same latch key as the grid, so nothing fires twice.
         let context = AchievementContext(
             ideaCount: 0,
             analysisCount: 0,
@@ -391,24 +370,15 @@ class ActionPlanViewModel: ObservableObject {
             UserDefaults.standard.string(forKey: Achievement.latchStorageKey) ?? ""
         )
         let fresh = Achievement.freshUnlocks(in: context, previous: previous)
-        if let badge = fresh.sorted(by: { $0.rawValue < $1.rawValue }).first,
-           celebrationState != .planComplete {
+        if let badge = fresh.sorted(by: { $0.rawValue < $1.rawValue }).first {
             UserDefaults.standard.set(
                 Achievement.encodeLatch(previous.union(fresh)),
                 forKey: Achievement.latchStorageKey
             )
-            DispatchQueue.main.asyncAfter(deadline: .now() + queueDelay) { [weak self] in
-                guard let self, self.celebrationState == .idle else { return }
-                self.celebrationState = .achievementUnlocked(badge)
-                HapticEngine.success()
-                SoundEngine.chime()
-                DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { [weak self] in
-                    if case .achievementUnlocked = self?.celebrationState ?? .idle {
-                        self?.celebrationState = .idle
-                    }
-                }
-            }
+            rewards.badge = badge
         }
+
+        lastRewards = rewards
     }
 
     /// Evaluates and sets celebrationState after an action is marked complete.
@@ -417,6 +387,13 @@ class ActionPlanViewModel: ObservableObject {
     func evaluateCelebrationState(completedId: UUID) {
         let newCompletedCount = microActions.filter(\.isCompleted).count
         let allDone = newCompletedCount == microActions.count && !microActions.isEmpty
+
+        // Start the receipt here (sync) so the milestone is captured even if
+        // the streak fetch that enriches it is slow; base XP until then.
+        lastRewards = CompletionRewards(
+            xp: XPEngine.actionXP,
+            milestone: !allDone && [3, 5, 7].contains(newCompletedCount) ? newCompletedCount : nil
+        )
 
         if allDone {
             // planComplete takes priority — skip milestone even if count is 3, 5, or 7

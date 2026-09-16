@@ -33,10 +33,15 @@ struct CongratsHalfSheet: View {
             MascotCalloutLine(line: moment?.line ?? "Nice work! \u{2728}")
                 .padding(.horizontal, 16)
 
+            if let rewards = viewModel.lastRewards {
+                RewardsStrip(rewards: rewards)
+                    .padding(.horizontal, 8)
+            }
+
             Button {
                 onAdvance()
             } label: {
-                Text("Keep the momentum?")
+                Text("What's next?")
                     .font(.system(size: 16, weight: .bold))
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
