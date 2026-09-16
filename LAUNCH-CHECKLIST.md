@@ -164,3 +164,36 @@ The unit-test host app intermittently crashes on the simulator
 (`malloc: pointer being freed was not allocated`) which aborts some test runs.
 Verified to exist before the Firebase/security changes. The app itself runs
 normally. Worth a debugging session before building more test coverage.
+
+## Scoring v2 (deployed 2026-09-16) — reference
+
+The viability score is computed in `supabase/functions/_shared/scoring.ts`
+(`computeScoreV2`): no verdict-band clamp, deterministic evidence caps from
+the research digest's numbers, weakest-link gate, calibrated piecewise map,
+hedge penalty. Every scoring call writes a `score_audits` row; research
+digests are cached in `research_digests` by transcript hash.
+
+**Redeploy procedure (any change under `supabase/functions/`):**
+
+```bash
+deno test supabase/functions/_shared/scoring_test.ts     # anchors + caps must stay green
+deno check supabase/functions/analyze-swot/index.ts supabase/functions/research-market/index.ts
+supabase db push                                          # only if a new migration was added
+supabase functions deploy analyze-swot research-market generate-action-plan transcribe-audio
+```
+
+All four functions import `_shared/gate.ts`, so redeploy all four together.
+
+**Secrets (Supabase → Edge Functions → Secrets):** `OPENAI_API_KEY` (existing);
+`AI_LIMIT_EXEMPT_USER_IDS` — comma-separated user ids of calibration accounts
+(no daily AI budget; their audits are flagged `is_calibration`). Never list a
+real user here.
+
+**Calibration:** `scripts/calibration-test.sh` (needs `.env`, see
+`.env.example`). Acceptance criteria are in the script header. Live
+distribution: `scripts/sql/score_histogram.sql` in the dashboard SQL editor —
+watch `pct_mid` for `scoring_version = 2` vs the v1 rows.
+
+**Prompt anchors** ("Final ~N" in `analyze-swot/index.ts`) must be regenerated
+from `scoring_test.ts` whenever the math changes — the model fights stale
+anchors by inflating dimensions.
