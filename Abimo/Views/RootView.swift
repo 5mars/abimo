@@ -49,6 +49,7 @@ struct MainContentView: View {
     @EnvironmentObject var coordinator: NavigationCoordinator
     @StateObject private var mascot = MascotDirector.shared
     @StateObject private var walkIn = WalkInDirector.shared
+    @StateObject private var notificationRouter = NotificationRouter.shared
     // One plans/streak view model shared by the Actions tab and Profile —
     // both used to own separate instances that each refetched every plan.
     @StateObject private var actionsVM = ActionsTabViewModel()
@@ -78,6 +79,10 @@ struct MainContentView: View {
             CustomTabBar(selectedTab: $coordinator.selectedTab)
         }
         .walkInSpotlight(spotlightSpec)
+        // Notification taps land where they point (and a tap that arrives
+        // before this view exists is still waiting in pendingRoute).
+        .onAppear { consumeRoute(notificationRouter.pendingRoute) }
+        .onChange(of: notificationRouter.pendingRoute) { _, route in consumeRoute(route) }
         .overlay {
             // Walk-in beat 1: the first-ever welcome. The CTA deliberately
             // does NOT switch tabs — the Record tab starts glowing instead,
@@ -162,6 +167,12 @@ struct MainContentView: View {
             // No trigger produces this yet; land on the Kitchen as a safe default.
             coordinator.selectedTab = .ideas
         }
+    }
+
+    private func consumeRoute(_ route: DeepRoute?) {
+        guard let route else { return }
+        coordinator.handle(route)
+        notificationRouter.pendingRoute = nil
     }
 }
 

@@ -11,12 +11,33 @@ struct ActionsTabView: View {
     @State private var expandedCommitmentPlanId: UUID? = nil
     @AppStorage(DailyGoalTier.storageKey) private var dailyGoalXP = DailyGoalTier.fallback.rawValue
     @AppStorage(DareEngine.latchStorageKey) private var dareLatchStore = ""
+    @AppStorage(DareEngine.replayLatchKey) private var replayLatch = ""
+    @ObservedObject private var pipeline = IdeaPipelineService.shared
 
     /// Today's XP for the goal ring: action completions plus latched dares.
     private var xpToday: Int {
         let latched = DareEngine.decodeLatch(dareLatchStore, for: Date())
         return XPEngine.xpToday(completionDates: viewModel.allCompletionDates)
             + DareEngine.xp(latchedCount: latched.count)
+    }
+
+    private var dareContext: DareContext {
+        DareContext(
+            ideasRecordedToday: viewModel.notes.filter { Calendar.current.isDateInToday($0.createdAt) }.count,
+            replayedPitchToday: replayLatch == DareEngine.dayKey(for: Date())
+        )
+    }
+
+    /// What today is about — decided by one pure function.
+    private var loopState: DailyLoopState {
+        DailyLoopState.resolve(
+            notes: viewModel.notes,
+            plans: viewModel.plans,
+            actionsByPlan: viewModel.microActionsByPlan,
+            pipelineCooking: pipeline.isRunning,
+            planGenerationPending: coordinator.pendingPlanGeneration,
+            planGenerationFailed: coordinator.planGenerationRetry != nil
+        )
     }
 
     var body: some View {
@@ -32,36 +53,38 @@ struct ActionsTabView: View {
                     } else if viewModel.plans.isEmpty && viewModel.errorMessage != nil {
                         loadErrorState
                             .cardEntrance(delay: 0.1)
-                    } else if viewModel.plans.isEmpty {
-                        if coordinator.pendingPlanGeneration || coordinator.planGenerationRetry != nil {
-                            topBanner
-                        } else {
-                            emptyState
-                                .cardEntrance(delay: 0.1)
-                        }
+                    } else if loopState == .noIdeas {
+                        // First run belongs to the walk-in tour.
+                        emptyState
+                            .cardEntrance(delay: 0.1)
                     } else {
-                        // Momentum Dashboard
-                        if !viewModel.allCompletionDates.isEmpty {
-                            MomentumDashboard(
-                                streak: viewModel.currentStreak,
-                                weekActivity: viewModel.weekActivity,
-                                totalCompletedThisWeek: viewModel.totalCompletedThisWeek,
-                                xpToday: xpToday,
-                                dailyGoalXP: $dailyGoalXP
-                            )
-                            .padding(.horizontal, 16)
-                            .cardEntrance(delay: 0)
+                        // The daily surface shows for anyone with at least one
+                        // idea — a founder with no plan (or every plan finished)
+                        // still has a streak to keep and dares to clear.
+                        MomentumDashboard(
+                            streak: viewModel.currentStreak,
+                            weekActivity: viewModel.weekActivity,
+                            totalCompletedThisWeek: viewModel.totalCompletedThisWeek,
+                            xpToday: xpToday,
+                            dailyGoalXP: $dailyGoalXP
+                        )
+                        .padding(.horizontal, 16)
+                        .cardEntrance(delay: 0)
 
-                            DailyDaresCard(
-                                actionsByPlan: viewModel.microActionsByPlan,
-                                streak: viewModel.currentStreak,
-                                committedActionId: viewModel.activeCommitment?.microActionId
-                            )
-                            .padding(.horizontal, 16)
-                            .cardEntrance(delay: 0.06)
-                        }
+                        DailyDaresCard(
+                            actionsByPlan: viewModel.microActionsByPlan,
+                            streak: viewModel.currentStreak,
+                            committedActionId: viewModel.activeCommitment?.microActionId,
+                            context: dareContext
+                        )
+                        .padding(.horizontal, 16)
+                        .cardEntrance(delay: 0.06)
 
                         topBanner
+
+                        sparkCard
+                            .padding(.horizontal, 16)
+                            .cardEntrance(delay: 0.1)
 
                         ForEach(Array(viewModel.plans.enumerated()), id: \.element.id) { index, plan in
                             ideaCard(plan)
@@ -71,12 +94,21 @@ struct ActionsTabView: View {
                                     .firstActionCard,
                                     isActive: index == 0 && coordinator.selectedTab == .actions
                                 )
-                                .cardEntrance(delay: Double(index) * 0.08 + 0.06)
+                                .cardEntrance(delay: Double(index) * 0.08 + 0.12)
                         }
                     }
 
                     Spacer().frame(height: 100)
                 }
+            }
+        }
+        // A notification deep-linked to a plan pushes it directly.
+        .navigationDestination(isPresented: Binding(
+            get: { coordinator.pendingPlan != nil },
+            set: { if !$0 { coordinator.pendingPlan = nil } }
+        )) {
+            if let pending = coordinator.pendingPlan {
+                ActionPlanDetailView(planId: pending.planId, analysisId: pending.analysisId)
             }
         }
         .navigationTitle("Actions")
@@ -94,6 +126,54 @@ struct ActionsTabView: View {
             if !isPending {
                 Task { await viewModel.loadAllPlans() }
             }
+        }
+    }
+
+    // MARK: - Spark card (the day's one non-plan prompt)
+
+    @ViewBuilder
+    private var sparkCard: some View {
+        switch loopState {
+        case .ideaUntasted(let noteId, let title):
+            SparkCard(
+                kind: .tasteIdea,
+                title: "\u{201C}\(title)\u{201D} is sitting raw.",
+                line: MascotVoice.moment(for: .recordPrompt).line,
+                buttonTitle: "Taste it",
+                onTap: {
+                    AnalyticsService.shared.log(.sparkTapped(kind: SparkCard.Kind.tasteIdea.rawValue))
+                    if let note = viewModel.notes.first(where: { $0.id == noteId }) {
+                        coordinator.pendingShowAnalysis = true
+                        coordinator.navigateToNote(note)
+                    }
+                }
+            )
+        case .planMissing(let noteId, let title, _):
+            SparkCard(
+                kind: .buildPlan,
+                title: "\u{201C}\(title)\u{201D} is tasted but has no plan.",
+                line: "Critics talk, cooks do. Let's write the recipe.",
+                buttonTitle: "Get the action plan",
+                onTap: {
+                    AnalyticsService.shared.log(.sparkTapped(kind: SparkCard.Kind.buildPlan.rawValue))
+                    if let note = viewModel.notes.first(where: { $0.id == noteId }) {
+                        coordinator.navigateToNote(note)
+                    }
+                }
+            )
+        case .allChaptersDone:
+            SparkCard(
+                kind: .whatsNext,
+                title: "Every plan on the stove is done.",
+                line: MascotVoice.moment(for: .planComplete).line,
+                buttonTitle: "Record a new idea",
+                onTap: {
+                    AnalyticsService.shared.log(.sparkTapped(kind: SparkCard.Kind.whatsNext.rawValue))
+                    coordinator.selectedTab = .record
+                }
+            )
+        case .activePlan, .planCooking, .planFailed, .noIdeas:
+            EmptyView()
         }
     }
 

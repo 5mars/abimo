@@ -39,17 +39,22 @@ class NotificationService: ObservableObject {
 
     // MARK: - Scheduling
 
+    /// `route` is where a tap lands (see DeepRoute); `kind` is the analytics
+    /// bucket for notification_opened. Both ride in userInfo.
     func scheduleNotification(
         id: String,
         title: String,
         body: String,
         delay: TimeInterval,
-        attachMascot: Bool = true
+        attachMascot: Bool = true,
+        route: DeepRoute? = nil,
+        kind: String? = nil
     ) {
         let content = UNMutableNotificationContent()
         content.title = title
         content.body = body
         content.sound = .default
+        content.userInfo = userInfo(route: route, kind: kind, id: id)
 
         if attachMascot, let attachment = mascotAttachment() {
             content.attachments = [attachment]
@@ -67,12 +72,15 @@ class NotificationService: ObservableObject {
         body: String,
         hour: Int,
         minute: Int = 0,
-        attachMascot: Bool = true
+        attachMascot: Bool = true,
+        route: DeepRoute? = nil,
+        kind: String? = nil
     ) {
         let content = UNMutableNotificationContent()
         content.title = title
         content.body = body
         content.sound = .default
+        content.userInfo = userInfo(route: route, kind: kind, id: id)
 
         if attachMascot, let attachment = mascotAttachment() {
             content.attachments = [attachment]
@@ -86,6 +94,13 @@ class NotificationService: ObservableObject {
         let request = UNNotificationRequest(identifier: id, content: content, trigger: trigger)
 
         center.add(request)
+    }
+
+    private func userInfo(route: DeepRoute?, kind: String?, id: String) -> [AnyHashable: Any] {
+        var info: [AnyHashable: Any] = ["nid": id]
+        if let route { info["route"] = route.encoded }
+        info["kind"] = kind ?? id.split(separator: "-").first.map(String.init) ?? "unknown"
+        return info
     }
 
     // MARK: - Cancellation

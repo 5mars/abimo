@@ -117,9 +117,10 @@ class ActionPlanViewModel: ObservableObject {
     var nextStepXP: Int { XPEngine.actionXP + (xpToday == 0 ? XPEngine.firstOfDayBonus : 0) }
 
     func refreshMomentum() async {
-        let dates = await CompletionStore.shared.completionDates()
-        streak = Self.streakInfo(completionDates: dates).streak
-        xpToday = XPEngine.xpToday(completionDates: dates)
+        let completions = await CompletionStore.shared.completionDates()
+        let activity = await CompletionStore.shared.activityDates()
+        streak = Self.streakInfo(completionDates: activity).streak
+        xpToday = XPEngine.xpToday(completionDates: completions)
     }
 
     /// Which picker the sheet shows; `showActionPicker` stays the presentation
@@ -194,6 +195,7 @@ class ActionPlanViewModel: ObservableObject {
         } else {
             // Unchecking — just toggle directly
             lastRewards = nil
+            AnalyticsService.shared.log(.actionUncompleted)
             await performToggle(id: id, isCompleted: false)
         }
     }
@@ -213,6 +215,20 @@ class ActionPlanViewModel: ObservableObject {
         let trimmed = note?.trimmingCharacters(in: .whitespacesAndNewlines)
         await confirmCompletion(id: id, outcome: outcome, note: (trimmed?.isEmpty ?? true) ? nil : trimmed)
         completingActionId = id
+
+        if let action = microActions.first(where: { $0.id == id }) {
+            let today = microActions.filter {
+                guard let d = $0.completedAt else { return false }
+                return Calendar.current.isDateInToday(d)
+            }.count
+            AnalyticsService.shared.log(.actionCompleted(
+                quadrant: action.quadrant ?? "none",
+                minutes: action.timeEstimateMinutes,
+                outcome: outcome,
+                completionsToday: today,
+                streak: streak
+            ))
+        }
 
         // Only show congrats sheet if there are remaining actions (not plan complete)
         let hasRemaining = microActions.contains(where: { !$0.isCompleted && $0.id != id })
@@ -325,12 +341,18 @@ class ActionPlanViewModel: ObservableObject {
             .filter { !$0.isEmpty && $0.allSatisfy(\.isCompleted) }
             .count
 
+        // Streak counts recordings too; XP and "first completion today" don't.
+        let activity = await CompletionStore.shared.activityDates()
         let info = Self.streakInfo(completionDates: dates)
-        streak = info.streak
+        let activityStreak = Self.streakInfo(completionDates: activity).streak
+        streak = activityStreak
         xpToday = XPEngine.xpToday(completionDates: dates)
 
-        if info.completionsToday == 1, [3, 7, 14, 30].contains(info.streak) {
-            NotificationScheduler.shared.sendStreakMilestone(days: info.streak)
+        if info.completionsToday == 1, [3, 7, 14, 30].contains(activityStreak) {
+            NotificationScheduler.shared.sendStreakMilestone(days: activityStreak)
+        }
+        if info.completionsToday == 1, activityStreak >= 2 {
+            AnalyticsService.shared.log(.streakExtended(days: activityStreak, via: "action"))
         }
 
         // Everything this completion earned goes into ONE receipt (the
@@ -338,8 +360,8 @@ class ActionPlanViewModel: ObservableObject {
         var rewards = lastRewards ?? CompletionRewards(xp: XPEngine.actionXP)
         rewards.firstOfDay = info.completionsToday == 1
         rewards.xp = CompletionRewards.baseXP(firstOfDay: rewards.firstOfDay)
-        if info.completionsToday == 1, info.streak >= 2 {
-            rewards.streak = info.streak
+        if info.completionsToday == 1, activityStreak >= 2 {
+            rewards.streak = activityStreak
         }
 
         let goalXP = UserDefaults.standard.object(forKey: DailyGoalTier.storageKey) as? Int
@@ -494,7 +516,12 @@ class ActionPlanViewModel: ObservableObject {
 
         // Schedule nudge if action not completed within 24h
         if let action = orderedActions.first(where: { $0.id == id }) {
-            NotificationScheduler.shared.scheduleActionNudge(actionId: id, actionText: action.text)
+            NotificationScheduler.shared.scheduleActionNudge(
+                actionId: id,
+                actionText: action.text,
+                planId: actionPlan?.id,
+                analysisId: actionPlan?.analysisId
+            )
         }
     }
 
@@ -654,6 +681,15 @@ class ActionsTabViewModel: ObservableObject {
         return result
     }
 
+    /// The founder's ideas — what the daily loop needs to know whether there
+    /// is anything raw to taste, and to count recordings toward the streak.
+    @Published var notes: [VoiceNote] = []
+
+    /// Completions ∪ recordings — what the streak and week dots read.
+    var activityDates: [Date] {
+        allCompletionDates + notes.map(\.createdAt)
+    }
+
     func loadAllPlans() async {
         if !hasLoadedOnce { isLoading = true }
         defer {
@@ -667,6 +703,8 @@ class ActionsTabViewModel: ObservableObject {
             errorMessage = "Couldn't load your plans"
             return
         }
+
+        notes = (try? await supabase.fetchVoiceNotes()) ?? notes
 
         do {
             let fetchedPlans = try await supabase.fetchAllActionPlans(userId: userId)
@@ -737,12 +775,13 @@ class ActionsTabViewModel: ObservableObject {
             .compactMap(\.completedAt)
     }
 
-    /// Current streak: consecutive days ending today with at least one completion
+    /// Current streak: consecutive days ending today with at least one
+    /// completion OR recording.
     var currentStreak: Int {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
 
-        let completionDays = Set(allCompletionDates.map { calendar.startOfDay(for: $0) })
+        let completionDays = Set(activityDates.map { calendar.startOfDay(for: $0) })
 
         guard completionDays.contains(today) else { return 0 }
 
@@ -756,11 +795,11 @@ class ActionsTabViewModel: ObservableObject {
         return streak
     }
 
-    /// 7 bools for Mon–Sun of the current week
+    /// 7 bools for Mon–Sun of the current week (completions or recordings)
     var weekActivity: [Bool] {
         let calendar = Calendar.current
         let today = Date()
-        let completionDays = Set(allCompletionDates.map { calendar.startOfDay(for: $0) })
+        let completionDays = Set(activityDates.map { calendar.startOfDay(for: $0) })
 
         // Find Monday of this week
         var components = calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: today)

@@ -14,13 +14,17 @@ struct DailyDaresCard: View {
     let actionsByPlan: [UUID: [MicroAction]]
     let streak: Int
     let committedActionId: UUID?
+    var context: DareContext = DareContext()
 
     @AppStorage(DareEngine.latchStorageKey) private var latchStore = ""
     @State private var clearedMoment: MascotMoment?
     @State private var burstTrigger = 0
 
     private var today: Date { Date() }
-    private var dares: [Dare] { DareEngine.dares(for: today) }
+    private var hasOpenActions: Bool {
+        actionsByPlan.values.flatMap { $0 }.contains { !$0.isCompleted }
+    }
+    private var dares: [Dare] { DareEngine.dares(for: today, hasOpenActions: hasOpenActions) }
     private var latched: Set<Dare> { DareEngine.decodeLatch(latchStore, for: today) }
     private var allCleared: Bool { dares.allSatisfy(latched.contains) }
 
@@ -99,7 +103,10 @@ struct DailyDaresCard: View {
     /// or the committed action changes.
     private var completionFingerprint: Int {
         let all = actionsByPlan.values.flatMap { $0 }
-        return all.filter(\.isCompleted).count &* 31 &+ (committedActionId?.hashValue ?? 0)
+        return all.filter(\.isCompleted).count &* 31
+            &+ (committedActionId?.hashValue ?? 0)
+            &+ context.ideasRecordedToday &* 7
+            &+ (context.replayedPitchToday ? 1 : 0)
     }
 
     private func evaluate() {
@@ -112,7 +119,8 @@ struct DailyDaresCard: View {
                 dare,
                 actionsByPlan: actionsByPlan,
                 streak: streak,
-                committedActionId: committedActionId
+                committedActionId: committedActionId,
+                context: context
             ) {
                 current.insert(dare)
                 newly.append(dare)

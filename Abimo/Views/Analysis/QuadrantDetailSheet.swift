@@ -52,6 +52,7 @@ struct QuadrantDetailSheet: View {
                             }
                             .duoPanel(padding: 16)
                             .plusLocked(!entitlements.isPremium) {
+                                AnalyticsService.shared.log(.gateHit(gate: "swot_items", source: "quadrant_sheet"))
                                 showPaywall = true
                             }
                             .cardEntrance(delay: 0.15)

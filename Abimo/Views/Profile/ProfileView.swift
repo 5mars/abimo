@@ -171,6 +171,7 @@ struct ProfileView: View {
             .duoPanel(fill: .cardDarkTeal)
         } else {
             Button {
+                AnalyticsService.shared.log(.gateHit(gate: "general", source: "profile"))
                 showPaywall = true
             } label: {
                 HStack(spacing: 12) {

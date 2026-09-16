@@ -65,6 +65,9 @@ struct NotesListView: View {
                 }
             }
         }
+        // A notification deep-linked to a note: open it once we can find it.
+        .onChange(of: coordinator.pendingNoteId) { _, _ in resolvePendingNote() }
+        .onChange(of: viewModel.notes.count) { _, _ in resolvePendingNote() }
         .onChange(of: pipeline.stage) { _, newStage in
             // A finished cook flips the card from "Cooking" to "Analyzed"
             if newStage == .done {
@@ -117,6 +120,13 @@ struct NotesListView: View {
         .padding(.horizontal, 32)
     }
 
+    private func resolvePendingNote() {
+        guard let id = coordinator.pendingNoteId,
+              let note = viewModel.notes.first(where: { $0.id == id }) else { return }
+        coordinator.pendingNoteId = nil
+        coordinator.pendingNote = note
+    }
+
     /// "3/6" for the note's plan, if it has one.
     private func planProgress(for note: VoiceNote) -> (completed: Int, total: Int)? {
         guard let analysisId = note.analysisId,
@@ -133,6 +143,10 @@ struct NotesListView: View {
             // Lab header
             Section {
                 LabHeaderView(count: viewModel.notes.count, isPremium: entitlements.isPremium) {
+                    AnalyticsService.shared.log(.gateHit(
+                        gate: viewModel.notes.count >= EntitlementService.freeIdeaLimit ? "idea_cap" : "general",
+                        source: "slot_pill"
+                    ))
                     showPaywall = true
                 }
                     .listRowBackground(Color.clear)

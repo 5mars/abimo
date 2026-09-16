@@ -18,8 +18,24 @@ enum AnalyticsEvent {
     case pipelineCompleted(durationSec: Int)
     case pipelineFailed(stage: String, reason: String)
     case analysisViewed(scoreBand: String, scoringVersion: Int)
-    case gateHit(gate: String)                 // "idea_cap" | "swot_lock"
-    case paywallShown(context: String)         // PaywallView.Context rawValue
+    // gate: idea_cap | swot_items | market_intel | remixes | evidence_receipt | retaste | next_chapter | daily_cap
+    // source: pipeline | quadrant_sheet | analysis_card | slot_pill | profile | wrap_up | mascot | dare
+    case gateHit(gate: String, source: String)
+    case paywallShown(context: String)         // PaywallView.Context analyticsName
+    case paywallDismissed(context: String, selectedProductId: String, secondsOpen: Int, sawTrialCTA: Bool)
+    case paywallPlanSelected(productId: String)
+    case entitlementChanged(from: String, to: String, source: String)   // free|plus ; purchase|restore|refresh
+    case appOpen(source: String, daysSinceLast: Int, loopState: String) // launch|foreground|notification
+    case notificationOpened(id: String, kind: String)
+    case actionCompleted(quadrant: String, minutes: Int, outcome: String, completionsToday: Int, streak: Int)
+    case actionUncompleted
+    case planCompleted(actions: Int, daysToComplete: Int)
+    case streakExtended(days: Int, via: String)
+    case sparkShown(kind: String)
+    case sparkTapped(kind: String)
+    case shareInitiated(surface: String, scoreBand: String)
+    case shareCompleted(surface: String, scoreBand: String)
+    case aiCapHit(fn: String)
     case purchaseInitiated(productId: String)
     case purchaseSucceeded(productId: String)
     case purchaseFailed(reason: String)        // "cancelled" | "pending" | "unverified" | "error"
@@ -45,6 +61,20 @@ enum AnalyticsEvent {
         case .analysisViewed:         return "analysis_viewed"
         case .gateHit:                return "gate_hit"
         case .paywallShown:           return "paywall_shown"
+        case .paywallDismissed:       return "paywall_dismissed"
+        case .paywallPlanSelected:    return "paywall_plan_selected"
+        case .entitlementChanged:     return "entitlement_changed"
+        case .appOpen:                return "app_open"
+        case .notificationOpened:     return "notification_opened"
+        case .actionCompleted:        return "action_completed"
+        case .actionUncompleted:      return "action_uncompleted"
+        case .planCompleted:          return "plan_completed"
+        case .streakExtended:         return "streak_extended"
+        case .sparkShown:             return "spark_shown"
+        case .sparkTapped:            return "spark_tapped"
+        case .shareInitiated:         return "share_initiated"
+        case .shareCompleted:         return "share_completed"
+        case .aiCapHit:               return "ai_cap_hit"
         case .purchaseInitiated:      return "purchase_initiated"
         case .purchaseSucceeded:      return "purchase_succeeded"
         case .purchaseFailed:         return "purchase_failed"
@@ -65,12 +95,32 @@ enum AnalyticsEvent {
         switch self {
         case .signUp, .login:
             return [AnalyticsParameterMethod: "email"]
-        case .ideaCreated, .purchaseRestored, .walkInStarted, .walkInCompleted, .daresCleared:
+        case .ideaCreated, .purchaseRestored, .walkInStarted, .walkInCompleted, .daresCleared, .actionUncompleted:
             return nil
         case .dailyGoalHit(let tier), .goalTierChanged(let tier):
             return ["tier": tier]
-        case .dareCompleted(let kind):
+        case .dareCompleted(let kind), .sparkShown(let kind), .sparkTapped(let kind):
             return ["kind": kind]
+        case .paywallDismissed(let context, let productId, let seconds, let sawTrial):
+            return ["context": context, "selected_product_id": productId, "seconds_open": seconds, "saw_trial_cta": sawTrial ? 1 : 0]
+        case .paywallPlanSelected(let productId):
+            return ["product_id": productId]
+        case .entitlementChanged(let from, let to, let source):
+            return ["from": from, "to": to, "source": source]
+        case .appOpen(let source, let days, let loopState):
+            return ["source": source, "days_since_last": days, "loop_state": loopState]
+        case .notificationOpened(let id, let kind):
+            return ["id": String(id.prefix(100)), "kind": kind]
+        case .actionCompleted(let quadrant, let minutes, let outcome, let completionsToday, let streak):
+            return ["quadrant": quadrant, "minutes": minutes, "outcome": outcome, "completions_today": completionsToday, "streak": streak]
+        case .planCompleted(let actions, let days):
+            return ["actions": actions, "days_to_complete": days]
+        case .streakExtended(let days, let via):
+            return ["days": days, "via": via]
+        case .shareInitiated(let surface, let band), .shareCompleted(let surface, let band):
+            return ["surface": surface, "score_band": band]
+        case .aiCapHit(let fn):
+            return ["fn": fn]
         case .walkInStepCompleted(let step), .walkInSkipped(let step):
             return ["step": step]
         case .pipelineStageCompleted(let stage):
@@ -81,8 +131,8 @@ enum AnalyticsEvent {
             return ["stage": stage, "reason": String(reason.prefix(100))]
         case .analysisViewed(let scoreBand, let scoringVersion):
             return ["score_band": scoreBand, "scoring_version": scoringVersion]
-        case .gateHit(let gate):
-            return ["gate": gate]
+        case .gateHit(let gate, let source):
+            return ["gate": gate, "source": source]
         case .paywallShown(let context):
             return ["context": context]
         case .purchaseInitiated(let productId),

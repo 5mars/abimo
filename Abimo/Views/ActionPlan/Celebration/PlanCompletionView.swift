@@ -13,11 +13,27 @@ struct PlanCompletionView: View {
 
     @State private var appeared = false
     @State private var moment: MascotMoment?
+    @State private var showWrapUp = false
 
     var body: some View {
         ZStack {
             // Background
             Color.appBg.ignoresSafeArea()
+
+            if showWrapUp {
+                PlanWrapUpView(viewModel: viewModel, onDismiss: onDismiss)
+                    .transition(.move(edge: .trailing).combined(with: .opacity))
+                    .zIndex(1)
+            } else {
+                celebration
+                    .transition(.opacity)
+            }
+        }
+        .animation(AnimationPolicy.reduceMotion ? nil : .spring(response: 0.45, dampingFraction: 0.85), value: showWrapUp)
+    }
+
+    private var celebration: some View {
+        ZStack {
 
             // Confetti behind everything
             if !AnimationPolicy.reduceMotion {
@@ -78,9 +94,9 @@ struct PlanCompletionView: View {
                         .padding(.horizontal, 32)
                 }
 
-                // Done button
-                GradientButton(title: "Done") {
-                    onDismiss()
+                // Second beat: recap + what's next (was a dead-end "Done")
+                GradientButton(title: "What did we learn?") {
+                    showWrapUp = true
                 }
                 .padding(.horizontal, 32)
 

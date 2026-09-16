@@ -81,6 +81,12 @@ final class IdeaPipelineService: ObservableObject {
     }
 
     /// True when THIS note is the one currently cooking.
+    /// True while any stage is running — the daily loop shows "cooking".
+    var isRunning: Bool {
+        if case .running = stage { return true }
+        return false
+    }
+
     func isCooking(noteId: UUID) -> Bool {
         isActive && note?.id == noteId
     }
@@ -123,7 +129,7 @@ final class IdeaPipelineService: ObservableObject {
                let count = try? await supabase.countVoiceNotes(),
                count >= EntitlementService.freeIdeaLimit {
                 capHit = true
-                AnalyticsService.shared.log(.gateHit(gate: "idea_cap"))
+                AnalyticsService.shared.log(.gateHit(gate: "idea_cap", source: "pipeline"))
                 fail(.saving, "Kitchen's full — three dishes max on the free menu. Your recording is safe; free a slot or go Plus, then retry.")
                 return
             }
@@ -226,6 +232,7 @@ final class IdeaPipelineService: ObservableObject {
     /// as a closed kitchen, not a random error.
     private func friendlyMessage(for error: Error, fallback: String) -> String {
         if case FunctionsError.httpError(let code, _) = error, code == 429 {
+            AnalyticsService.shared.log(.aiCapHit(fn: "pipeline"))
             return "The kitchen's done for today — you've hit the daily cooking limit. Burners are back on tomorrow."
         }
         return fallback

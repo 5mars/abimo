@@ -22,6 +22,17 @@ struct SWOTAnalysisView: View {
     @State private var showPaywall = false
     @State private var showReceipt = false
     @State private var pendingRetaste: IdeaVariant?
+    @State private var shareImage: Image?
+
+    private func renderShareCard(_ analysis: SWOTAnalysis) {
+        guard let score = analysis.viabilityScore,
+              let ui = ScoreCardRenderer.render(
+                title: noteTitle.isEmpty ? "My idea" : noteTitle,
+                score: score,
+                dimensions: analysis.dimensionScores
+              ) else { return }
+        shareImage = Image(uiImage: ui)
+    }
 
     init(transcription: Transcription, preloadedAnalysis: SWOTAnalysis? = nil, noteTitle: String = "") {
         self.transcription = transcription
@@ -72,6 +83,24 @@ struct SWOTAnalysisView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(Color.appBg, for: .navigationBar)
             .toolbar {
+                // The score card is the app's one organic acquisition loop —
+                // a "Chef's Kiss 87" in a group chat.
+                if let shareImage, let analysis = viewModel.analysis, let score = analysis.viabilityScore {
+                    ToolbarItem(placement: .navigationBarLeading) {
+                        ShareLink(
+                            item: shareImage,
+                            preview: SharePreview(noteTitle.isEmpty ? "My idea" : noteTitle, image: shareImage)
+                        ) {
+                            Image(systemName: "square.and.arrow.up")
+                                .font(.system(size: 15, weight: .semibold))
+                        }
+                        .tint(.brand)
+                        .simultaneousGesture(TapGesture().onEnded {
+                            let band = score >= 70 ? "high" : score >= 40 ? "mid" : "low"
+                            AnalyticsService.shared.log(.shareInitiated(surface: "analysis", scoreBand: band))
+                        })
+                    }
+                }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Done") { dismiss() }
                         .tint(.brand)
@@ -89,7 +118,11 @@ struct SWOTAnalysisView: View {
                         scoreBand: band,
                         scoringVersion: analysis.scoringVersion ?? 1
                     ))
+                    renderShareCard(analysis)
                 }
+            }
+            .onChange(of: viewModel.analysis?.viabilityScore) { _, _ in
+                if let analysis = viewModel.analysis { renderShareCard(analysis) }
             }
             .sheet(item: $activeCourse) { course in
                 QuadrantDetailSheet(course: course, onGetActionPlan: {
@@ -223,7 +256,7 @@ struct SWOTAnalysisView: View {
                 if entitlements.isPremium {
                     showReceipt = true
                 } else {
-                    AnalyticsService.shared.log(.gateHit(gate: "swot_lock"))
+                    AnalyticsService.shared.log(.gateHit(gate: "evidence_receipt", source: "analysis_card"))
                     showPaywall = true
                 }
             }
@@ -332,7 +365,7 @@ struct SWOTAnalysisView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .plusLocked(true, message: "Unlock the remixes") {
-                    AnalyticsService.shared.log(.gateHit(gate: "swot_lock"))
+                    AnalyticsService.shared.log(.gateHit(gate: "remixes", source: "analysis_card"))
                     showPaywall = true
                 }
             }
@@ -396,7 +429,7 @@ struct SWOTAnalysisView: View {
                 }
                 MarketInsightGrid(insights: insights)
                     .plusLocked(true, message: "Unlock Market Intel") {
-                        AnalyticsService.shared.log(.gateHit(gate: "swot_lock"))
+                        AnalyticsService.shared.log(.gateHit(gate: "market_intel", source: "analysis_card"))
                         showPaywall = true
                     }
             }

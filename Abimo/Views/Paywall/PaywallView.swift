@@ -14,13 +14,19 @@ struct PaywallView: View {
     enum Context {
         case ideaCap        // hit the free 3-idea limit
         case general        // browsing from Kitchen pill / Profile
-        case fullAnalysis   // tapped locked tasting notes / market intel
+        case fullAnalysis   // tapped locked tasting notes / market intel / evidence receipt
+        case nextChapter    // finished a plan, wants the next 5-7 steps
+        case retaste        // did the work, wants the critic to re-judge
+        case dailyCap       // free daily AI budget spent
 
         var mascotLine: String {
             switch self {
             case .ideaCap:      return "Kitchen's full. Time to go pro."
             case .general:      return "Fine. Here's the whole menu."
             case .fullAnalysis: return "You got the free sample. The full tasting menu is Plus."
+            case .nextChapter:  return "Chapter one, cleaned plate. Chapter two is on the Plus menu."
+            case .retaste:      return "You did the work. Want me to re-judge? That's a Plus table."
+            case .dailyCap:     return "Free kitchen closes after three tastings. Plus keeps the burners on."
             }
         }
 
@@ -29,6 +35,9 @@ struct PaywallView: View {
             case .ideaCap:      return "Free kitchens hold 3 ideas. Yours is packed."
             case .general:      return "Every idea deserves a spot on the stove."
             case .fullAnalysis: return "Every point, every detail, every market stat — no blur."
+            case .nextChapter:  return "Plus builds the next chapter from what you learned."
+            case .retaste:      return "Re-score after the work and watch the number move."
+            case .dailyCap:     return "Ten tastings a day instead of three, every day."
             }
         }
 
@@ -37,6 +46,9 @@ struct PaywallView: View {
             case .ideaCap:      return "idea_cap"
             case .general:      return "general"
             case .fullAnalysis: return "full_analysis"
+            case .nextChapter:  return "next_chapter"
+            case .retaste:      return "retaste"
+            case .dailyCap:     return "daily_cap"
             }
         }
     }
@@ -46,12 +58,27 @@ struct PaywallView: View {
     @ObservedObject private var entitlements = EntitlementService.shared
     @Environment(\.dismiss) private var dismiss
     @State private var selectedProductID = EntitlementService.ProductID.yearly
+    @State private var trialEligible: [String: Bool] = [:]
+    @State private var openedAt = Date()
+    @State private var purchased = false
 
     var body: some View {
         ZStack {
             Color.appBg.ignoresSafeArea()
                 .onAppear {
+                    openedAt = Date()
                     AnalyticsService.shared.log(.paywallShown(context: context.analyticsName))
+                }
+                .onDisappear {
+                    // Both the X and a swipe-down land here; a purchase dismisses too,
+                    // so only the no-purchase exits count as a dismissal.
+                    guard !purchased, !entitlements.isPremium else { return }
+                    AnalyticsService.shared.log(.paywallDismissed(
+                        context: context.analyticsName,
+                        selectedProductId: selectedProductID,
+                        secondsOpen: Int(Date().timeIntervalSince(openedAt)),
+                        sawTrialCTA: selectedHasEligibleTrial
+                    ))
                 }
 
             ScrollView(showsIndicators: false) {
@@ -102,11 +129,19 @@ struct PaywallView: View {
                     Spacer().frame(height: 20)
 
                     if !entitlements.products.isEmpty {
-                        GradientButton(
-                            title: "Unlock Abimo Plus",
-                            isLoading: entitlements.purchaseInFlight
-                        ) {
-                            buySelected()
+                        VStack(spacing: 8) {
+                            GradientButton(
+                                title: ctaTitle,
+                                isLoading: entitlements.purchaseInFlight
+                            ) {
+                                buySelected()
+                            }
+                            if let terms = trialTerms {
+                                Text(terms)
+                                    .font(.duoCaption)
+                                    .foregroundColor(.textSec)
+                                    .multilineTextAlignment(.center)
+                            }
                         }
                         .padding(.horizontal, 24)
                         .cardEntrance(delay: 0.25)
@@ -128,6 +163,48 @@ struct PaywallView: View {
             if entitlements.products.isEmpty {
                 await entitlements.loadProducts()
             }
+            // Apple allows one intro offer per subscription group per user —
+            // ask StoreKit, don't assume.
+            for product in entitlements.products {
+                if let sub = product.subscription {
+                    trialEligible[product.id] = await sub.isEligibleForIntroOffer
+                }
+            }
+        }
+    }
+
+    // MARK: - Trial-aware CTA
+
+    private var selectedProduct: Product? {
+        entitlements.products.first { $0.id == selectedProductID }
+    }
+
+    private var selectedHasEligibleTrial: Bool {
+        guard let product = selectedProduct, hasFreeTrial(product) else { return false }
+        return trialEligible[product.id] ?? false
+    }
+
+    private var ctaTitle: String {
+        guard selectedHasEligibleTrial, let days = trialDays(selectedProduct) else { return "Unlock Abimo Plus" }
+        return "Start \(days)-day free trial"
+    }
+
+    /// Price and period stay visible under a trial CTA (App Review 3.1.2).
+    private var trialTerms: String? {
+        guard selectedHasEligibleTrial, let product = selectedProduct else { return nil }
+        let period = product.id == EntitlementService.ProductID.yearly ? "year" : "month"
+        return "then \(product.displayPrice)/\(period) · cancel anytime"
+    }
+
+    private func trialDays(_ product: Product?) -> Int? {
+        guard let offer = product?.subscription?.introductoryOffer, offer.paymentMode == .freeTrial else { return nil }
+        let p = offer.period
+        switch p.unit {
+        case .day:   return p.value
+        case .week:  return p.value * 7
+        case .month: return p.value * 30
+        case .year:  return p.value * 365
+        @unknown default: return nil
         }
     }
 
@@ -237,6 +314,7 @@ struct PaywallView: View {
 
         return Button {
             selectedProductID = product.id
+            AnalyticsService.shared.log(.paywallPlanSelected(productId: product.id))
         } label: {
             HStack(spacing: 14) {
                 Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
@@ -353,6 +431,7 @@ struct PaywallView: View {
         AnalyticsService.shared.log(.purchaseInitiated(productId: product.id))
         Task {
             if await entitlements.purchase(product) {
+                purchased = true
                 HapticEngine.success()
                 dismiss()
             }

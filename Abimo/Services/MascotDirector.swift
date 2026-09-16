@@ -82,7 +82,7 @@ final class MascotDirector: ObservableObject {
         guard sessionPopupCount < popupSessionCap, currentMoment == nil,
               passesThrottle(.streakAtRisk(days: 0)) else { return }
 
-        let dates = await CompletionStore.shared.completionDates()
+        let dates = await CompletionStore.shared.activityDates()
         let atRisk = ActionPlanViewModel.streakEndingYesterday(completionDates: dates)
         guard atRisk >= 2 else { return }
         fire(.streakAtRisk(days: atRisk))

@@ -80,8 +80,19 @@ final class EntitlementService: ObservableObject {
                 break
             }
         }
+        if hasResolvedOnce && premium != isPremium {
+            AnalyticsService.shared.log(.entitlementChanged(
+                from: isPremium ? "plus" : "free",
+                to: premium ? "plus" : "free",
+                source: "refresh"
+            ))
+        }
+        hasResolvedOnce = true
         isPremium = premium
     }
+
+    /// First resolution is the baseline, not a change.
+    private var hasResolvedOnce = false
 
     // MARK: - Products
 

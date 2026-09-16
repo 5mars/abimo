@@ -56,9 +56,24 @@ final class CompletionStore {
         await actionsByPlan(maxAge: maxAge).values.flatMap { $0 }.compactMap(\.completedAt)
     }
 
-    /// Drop the cache — call after any write that changes completions.
+    private var notesCache: (dates: [Date], fetchedAt: Date)?
+
+    /// Recording an idea is a real act too. Streaks count completions OR
+    /// recordings; XP stays completion-only.
+    func activityDates(maxAge: TimeInterval = 60) async -> [Date] {
+        let completions = await completionDates(maxAge: maxAge)
+        if let notesCache, Date().timeIntervalSince(notesCache.fetchedAt) < maxAge {
+            return completions + notesCache.dates
+        }
+        let noteDates = ((try? await supabase.fetchVoiceNotes()) ?? []).map(\.createdAt)
+        notesCache = (noteDates, Date())
+        return completions + noteDates
+    }
+
+    /// Drop the cache — call after any write that changes completions or notes.
     func invalidate() {
         cache = nil
+        notesCache = nil
     }
 
     /// Feed the cache from a fetch someone else already paid for.

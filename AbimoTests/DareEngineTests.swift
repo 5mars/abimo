@@ -123,6 +123,50 @@ final class DareEngineTests: XCTestCase {
         XCTAssertFalse(DareEngine.isSatisfied(.keepYourWord, actionsByPlan: [planId: [committed]], streak: 0, committedActionId: nil))
     }
 
+    // MARK: - Plan-less dares
+
+    func testNoOpenActionsOffersOnlyPlanlessDares() {
+        let dares = DareEngine.dares(for: Date(), hasOpenActions: false)
+        XCTAssertFalse(dares.isEmpty)
+        XCTAssertTrue(dares.allSatisfy { !$0.needsPlan })
+    }
+
+    func testOpenActionsAlwaysIncludeOnePlanlessDare() {
+        for offset in 0..<14 {
+            let day = calendar.date(byAdding: .day, value: offset, to: Date())!
+            let dares = DareEngine.dares(for: day, hasOpenActions: true)
+            XCTAssertEqual(dares.count, 3)
+            XCTAssertTrue(dares.contains { !$0.needsPlan }, "day +\(offset) has no plan-less dare")
+        }
+    }
+
+    func testDropIdeaAndReplayReadTheContext() {
+        XCTAssertFalse(DareEngine.isSatisfied(.dropIdea, actionsByPlan: [:], streak: 0))
+        XCTAssertTrue(DareEngine.isSatisfied(.dropIdea, actionsByPlan: [:], streak: 0, context: DareContext(ideasRecordedToday: 1)))
+        XCTAssertTrue(DareEngine.isSatisfied(.replayPitch, actionsByPlan: [:], streak: 0, context: DareContext(replayedPitchToday: true)))
+    }
+
+    func testLeaveNoteNeedsANoteOnTodaysCompletion() {
+        let planId = UUID()
+        var noted = action(planId: planId, hour: 13)
+        noted = MicroAction(id: noted.id, actionPlanId: planId, text: "t", doneCriteria: "d",
+                            timeEstimateMinutes: 10, priority: 0, quadrant: nil, template: nil,
+                            actionType: nil, deepLinkData: nil, isCompleted: true, completedAt: noted.completedAt,
+                            isCommitted: false, committedAt: nil, scheduledFor: nil,
+                            completionOutcome: "didnt_work", completionNote: "Nobody answered", createdAt: Date())
+        XCTAssertTrue(DareEngine.isSatisfied(.leaveNote, actionsByPlan: [planId: [noted]], streak: 0))
+        XCTAssertFalse(DareEngine.isSatisfied(.leaveNote, actionsByPlan: [planId: [action(planId: planId, hour: 13)]], streak: 0))
+    }
+
+    func testReplayLatchIsDayKeyed() {
+        let defaults = UserDefaults(suiteName: "DareEngineTests.\(UUID().uuidString)")!
+        XCTAssertFalse(DareEngine.replayedPitch(defaults: defaults))
+        DareEngine.markPitchReplayed(defaults: defaults)
+        XCTAssertTrue(DareEngine.replayedPitch(defaults: defaults))
+        let tomorrow = calendar.date(byAdding: .day, value: 1, to: Date())!
+        XCTAssertFalse(DareEngine.replayedPitch(on: tomorrow, defaults: defaults))
+    }
+
     // MARK: - XP
 
     func testDareXPWithChestBonus() {

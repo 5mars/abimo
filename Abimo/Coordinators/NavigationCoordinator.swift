@@ -42,6 +42,12 @@ extension AppTab {
     }
 }
 
+struct PendingPlanRoute: Equatable, Identifiable {
+    let planId: UUID
+    let analysisId: UUID
+    var id: UUID { planId }
+}
+
 /// Everything needed to re-run a failed action-plan generation from the Actions tab.
 struct PlanGenerationRetryContext {
     let analysis: SWOTAnalysis
@@ -63,6 +69,23 @@ final class NavigationCoordinator: ObservableObject {
     /// Set by the recording pipeline so NoteDetailView opens the Taste Test
     /// sheet immediately on arrival instead of requiring another tap.
     @Published var pendingShowAnalysis: Bool = false
+
+    /// Deep-link targets from a notification tap. The Kitchen resolves the
+    /// note id once its list has loaded; the Actions tab pushes the plan.
+    @Published var pendingNoteId: UUID? = nil
+    @Published var pendingPlan: PendingPlanRoute? = nil
+
+    func handle(_ route: DeepRoute) {
+        selectedTab = route.tab
+        switch route {
+        case .note(let id):
+            pendingNoteId = id
+        case .plan(let planId, let analysisId):
+            pendingPlan = PendingPlanRoute(planId: planId, analysisId: analysisId)
+        case .record, .actions, .profile, .report:
+            break
+        }
+    }
 
     func navigateToNote(_ note: VoiceNote) {
         selectedTab = .ideas

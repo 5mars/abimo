@@ -17,6 +17,7 @@ enum SassLevel {
 
 enum NotificationTrigger {
     case inactivity
+    case longAbsence(days: Int)   // 14 / 30 / 60 — the chain used to stop at 7
     case incompleteAction
     case unanalyzedIdea
     case streakAtRisk
@@ -49,6 +50,8 @@ struct NotificationCopy {
         switch trigger {
         case .inactivity:
             return inactivityMessages(sass: sass)
+        case .longAbsence(let days):
+            return longAbsenceMessages(days: days)
         case .incompleteAction:
             return incompleteActionMessages(sass: sass)
         case .unanalyzedIdea:
@@ -87,6 +90,31 @@ struct NotificationCopy {
                 NotificationMessage(title: "Your ideas asked about you", body: "I said you were 'busy'. We both know I lied for you. — Abimo", mood: .grumpy),
                 NotificationMessage(title: "Seven days", body: "I've reviewed restaurants that opened AND closed in less time. — Abimo", mood: .grumpy),
                 NotificationMessage(title: "Still here. Unfortunately.", body: "Me, your ideas, and a week of silence. Cozy. — Abimo", mood: .grumpy),
+            ]
+        }
+    }
+
+    // MARK: - Long Absence (14 / 30 / 60 days — the lights are on a timer)
+
+    private static func longAbsenceMessages(days: Int) -> [NotificationMessage] {
+        switch days {
+        case ..<21:
+            return [
+                NotificationMessage(title: "Two weeks", body: "I've started reviewing my own ideas. It's going badly. — Abimo", mood: .sassy),
+                NotificationMessage(title: "14 days of silence", body: "Your plan is still on the counter. So am I. One of us is patient.", mood: .sassy),
+                NotificationMessage(title: "Not checking in", body: "Just noting that fourteen dinners have passed. Uneaten. — Abimo", mood: .sassy),
+            ]
+        case ..<45:
+            return [
+                NotificationMessage(title: "A month", body: "The stove is off. The pilot light isn't. One idea relights it. — Abimo", mood: .grumpy),
+                NotificationMessage(title: "30 days", body: "I've reviewed places that opened, peaked, and closed in less. Come cook.", mood: .grumpy),
+                NotificationMessage(title: "Your kitchen, a month on", body: "Dust on the knives. Ideas in the fridge. Still edible. Barely. — Abimo", mood: .grumpy),
+            ]
+        default:
+            return [
+                NotificationMessage(title: "Sixty days", body: "I'm not mad. I'm a horse. But the kitchen misses you. — Abimo", mood: .grumpy),
+                NotificationMessage(title: "Two months", body: "Every big idea started as a small note someone came back to. Come back to yours.", mood: .grumpy),
+                NotificationMessage(title: "The door's still open", body: "Sixty days and I never changed the locks. One idea. Sixty seconds. — Abimo", mood: .grumpy),
             ]
         }
     }
