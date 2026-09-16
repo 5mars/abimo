@@ -267,6 +267,17 @@ class SupabaseService {
         return response.first
     }
 
+    /// Re-taste: overwrite the row under its existing id. Never delete-and-
+    /// recreate here — action_plans hang off this id, and the plan history
+    /// is the whole point of re-tasting.
+    func updateSWOTAnalysisInPlace(_ analysis: SWOTAnalysis) async throws {
+        try await client
+            .from("swot_analyses")
+            .update(analysis)
+            .eq("id", value: analysis.id)
+            .execute()
+    }
+
     /// Deletes every analysis for a transcription plus its dependent action
     /// plans and micro-actions. Client-side, child-first — no cascade
     /// assumption. Used before re-generating so a transcription never
@@ -312,6 +323,15 @@ class SupabaseService {
         try await client
             .from("action_plans")
             .insert(plan)
+            .execute()
+    }
+
+    /// A new chapter adds minutes to the plate.
+    func updateActionPlanEstimate(id: UUID, totalMinutes: Int) async throws {
+        try await client
+            .from("action_plans")
+            .update(["total_estimate_minutes": totalMinutes])
+            .eq("id", value: id)
             .execute()
     }
 

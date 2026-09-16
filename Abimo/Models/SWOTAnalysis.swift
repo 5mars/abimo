@@ -305,6 +305,14 @@ struct IdeaVariant: Codable, Hashable, Identifiable {
     }
 }
 
+// MARK: - Score history (re-tastes)
+
+struct ScoreHistoryEntry: Codable, Hashable {
+    let score: Int
+    let at: Date
+    let reason: String?
+}
+
 // MARK: - SWOTAnalysis
 
 struct SWOTAnalysis: Identifiable, Codable {
@@ -346,9 +354,58 @@ struct SWOTAnalysis: Identifiable, Codable {
     var fatalFlawReason: String? = nil
     var researchDigest: ResearchDigest? = nil
     var scoreAuditId: UUID? = nil
+    /// Re-tastes: every previous score, oldest first. The row keeps its id so
+    /// the action plan (and its history) survive the re-judging.
+    var scoreHistory: [ScoreHistoryEntry]? = nil
+    var retasteCount: Int? = nil
 
     /// Rows scored before v2 show a footnote and no weights/caps UI.
     var isLegacyScoring: Bool { (scoringVersion ?? 1) < 2 }
+
+    /// The score before the most recent re-taste, if there was one.
+    var previousScore: Int? { scoreHistory?.last?.score }
+
+    /// The same row, re-judged: identical `id`/`transcriptionId`/`createdAt`
+    /// so nothing downstream (plans, notes, audits) is orphaned; the old
+    /// score is pushed onto the history. Pure — the caller persists it.
+    func retasted(with response: SWOTAnalysisResponse, research: ResearchDigest?, reason: String, now: Date = Date()) -> SWOTAnalysis {
+        var history = scoreHistory ?? []
+        if let old = viabilityScore {
+            history.append(ScoreHistoryEntry(score: old, at: now, reason: reason))
+        }
+        return SWOTAnalysis(
+            id: id,
+            transcriptionId: transcriptionId,
+            strengths: [],
+            weaknesses: [],
+            opportunities: [],
+            threats: [],
+            summary: response.summary,
+            createdAt: createdAt,
+            strengthItems: response.strengths,
+            weaknessItems: response.weaknesses,
+            opportunityItems: response.opportunities,
+            threatItems: response.threats,
+            viabilityScore: response.viabilityScore,
+            marketContext: response.marketContext,
+            marketInsights: response.marketInsights,
+            dimensionScores: response.dimensionScores,
+            scoreRationale: response.scoreRationale,
+            fatalFlaw: response.fatalFlaw,
+            ideaVariants: response.ideaVariants,
+            scoringVersion: response.scoringVersion,
+            verdictBand: response.verdictBand,
+            verdictReason: response.verdictReason,
+            dimensionEvidence: response.dimensionEvidence,
+            scoreMeta: response.scoreMeta,
+            evidenceStrength: response.evidenceStrength,
+            fatalFlawReason: response.fatalFlawReason,
+            researchDigest: research ?? researchDigest,
+            scoreAuditId: response.scoreAuditId,
+            scoreHistory: history,
+            retasteCount: (retasteCount ?? 0) + 1
+        )
+    }
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -379,6 +436,8 @@ struct SWOTAnalysis: Identifiable, Codable {
         case fatalFlawReason   = "fatal_flaw_reason"
         case researchDigest    = "research_digest"
         case scoreAuditId      = "score_audit_id"
+        case scoreHistory      = "score_history"
+        case retasteCount      = "retaste_count"
     }
 
     // MARK: - Computed helpers (Charts fall back to score=50 for legacy rows)

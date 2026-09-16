@@ -30,6 +30,10 @@ enum AnalyticsEvent {
     case actionCompleted(quadrant: String, minutes: Int, outcome: String, completionsToday: Int, streak: Int)
     case actionUncompleted
     case planCompleted(actions: Int, daysToComplete: Int)
+    case nextChapterRequested(chapter: Int)
+    case nextChapterGenerated(chapter: Int, actions: Int)
+    case retasteRequested(previousScore: Int)
+    case retasteCompleted(previousScore: Int, newScore: Int)
     case streakExtended(days: Int, via: String)
     case sparkShown(kind: String)
     case sparkTapped(kind: String)
@@ -69,6 +73,10 @@ enum AnalyticsEvent {
         case .actionCompleted:        return "action_completed"
         case .actionUncompleted:      return "action_uncompleted"
         case .planCompleted:          return "plan_completed"
+        case .nextChapterRequested:   return "next_chapter_requested"
+        case .nextChapterGenerated:   return "next_chapter_generated"
+        case .retasteRequested:       return "retaste_requested"
+        case .retasteCompleted:       return "retaste_completed"
         case .streakExtended:         return "streak_extended"
         case .sparkShown:             return "spark_shown"
         case .sparkTapped:            return "spark_tapped"
@@ -115,6 +123,14 @@ enum AnalyticsEvent {
             return ["quadrant": quadrant, "minutes": minutes, "outcome": outcome, "completions_today": completionsToday, "streak": streak]
         case .planCompleted(let actions, let days):
             return ["actions": actions, "days_to_complete": days]
+        case .nextChapterRequested(let chapter):
+            return ["chapter": chapter]
+        case .nextChapterGenerated(let chapter, let actions):
+            return ["chapter": chapter, "actions": actions]
+        case .retasteRequested(let previous):
+            return ["previous_score": previous]
+        case .retasteCompleted(let previous, let new):
+            return ["previous_score": previous, "new_score": new, "delta": new - previous]
         case .streakExtended(let days, let via):
             return ["days": days, "via": via]
         case .shareInitiated(let surface, let band), .shareCompleted(let surface, let band):

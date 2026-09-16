@@ -176,13 +176,13 @@ digests are cached in `research_digests` by transcript hash.
 **Redeploy procedure (any change under `supabase/functions/`):**
 
 ```bash
-deno test supabase/functions/_shared/scoring_test.ts     # anchors + caps must stay green
-deno check supabase/functions/analyze-swot/index.ts supabase/functions/research-market/index.ts
+deno test supabase/functions/_shared/                      # scoring anchors + JWS entitlement tests
+deno check supabase/functions/_shared/*.ts supabase/functions/*/index.ts
 supabase db push                                          # only if a new migration was added
-supabase functions deploy analyze-swot research-market generate-action-plan transcribe-audio
+supabase functions deploy analyze-swot research-market generate-action-plan transcribe-audio verify-entitlement extend-action-plan
 ```
 
-All four functions import `_shared/gate.ts`, so redeploy all four together.
+All six functions import `_shared/gate.ts`, so redeploy all six together.
 
 **Secrets (Supabase → Edge Functions → Secrets):** `OPENAI_API_KEY` (existing);
 `AI_LIMIT_EXEMPT_USER_IDS` — comma-separated user ids of calibration accounts
@@ -197,3 +197,50 @@ watch `pct_mid` for `scoring_version = 2` vs the v1 rows.
 **Prompt anchors** ("Final ~N" in `analyze-swot/index.ts`) must be regenerated
 from `scoring_test.ts` whenever the math changes — the model fights stale
 anchors by inflating dimensions.
+
+## Plus is the second chapter (built 2026-09-16, NOT yet deployed) — reference
+
+Server-side tiers. Free = one full taste + chapter 1 per idea, 3 active ideas,
+daily AI caps 3 (research/transcribe) / 6 (analyze/plan). Plus = next chapters,
+re-taste, full evidence, unlimited ideas, caps 10/10/20/20.
+
+**Order of operations (the client ships last):**
+1. `supabase db push` → `20260916130000_profiles_plus.sql` (profiles + `is_plus()`
+   + tier-aware voice_notes trigger + `micro_actions.chapter` +
+   `swot_analyses.score_history/retaste_count`). Verify in the dashboard:
+   `select count(*) from profiles;` equals `select count(*) from auth.users;`.
+   If pg_cron isn't enabled the migration prints a NOTICE — enable it and
+   re-run the `cron.schedule('expire-lapsed-plus', …)` block by hand.
+2. Deploy all six functions (command above). From this point free users are
+   capped at 3/3/6/6 and Plus users are capped at 3/3/6/6 TOO until their
+   app syncs an entitlement — so ship the iOS build promptly, and warn in
+   release notes that Plus users should open the app once.
+3. Ship the iOS build. On launch `EntitlementService.syncServer()` posts the
+   StoreKit 2 `jwsRepresentation` to `verify-entitlement`, which verifies the
+   x5c chain to Apple Root CA G3 locally and upserts `profiles`.
+
+**Secrets:** `SUPABASE_SERVICE_ROLE_KEY` (injected automatically; used only
+by verify-entitlement to write profiles). `ALLOW_STOREKIT_TEST_ENV=true` ONLY
+on a dev project — accepts Xcode StoreKit-Testing transactions, which do not
+chain to Apple. Never set it in production. Optional
+`APPLE_ROOT_CA_G3_SHA256` overrides the pinned root fingerprint if Apple
+rotates it (verify at apple.com/certificateauthority first).
+
+**App Store Connect (manual):**
+- [ ] Monthly `com.mars.Abimo.plus.monthly`: add introductory offer, free, 1 week.
+- [ ] Yearly `com.mars.Abimo.plus.yearly`: change introductory offer 3 days → 1 week.
+- [ ] Update subscription descriptions to match `AbimoPlus.storekit`
+      ("Next chapters, re-tastes, full evidence, unlimited ideas").
+- [ ] Re-shoot paywall review screenshots (benefits copy changed).
+- [ ] Existing subscribers keep unlimited slots — the promise holds; nothing to migrate.
+
+**Verify after deploy (Jeremy, signed in):**
+- [ ] Free account: 4th transcription of the day → progress screen shows
+      "Keep the burners on — go Plus" and the `.dailyCap` paywall.
+- [ ] StoreKit Testing purchase → within a minute `profiles.is_premium = true`
+      for that user (dashboard). Requires `ALLOW_STOREKIT_TEST_ENV=true` on a dev project.
+- [ ] Finish a plan → wrap-up → Next chapter → 5-7 steps appended with
+      `chapter = 2`, journey shows them after chapter 1, first one marked NEXT.
+- [ ] Wrap-up → Re-taste → row keeps its id (`select id, retaste_count,
+      jsonb_array_length(score_history) from swot_analyses`), gauge shows the delta.
+- [ ] Free account tapping Next chapter / Re-taste → paywall, `gate_hit` logged.

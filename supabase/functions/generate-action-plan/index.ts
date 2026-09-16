@@ -3,7 +3,7 @@ import { gate, jsonError, CORS_HEADERS } from "../_shared/gate.ts";
 
 const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY")!;
 
-const DAILY_LIMIT = 20;
+const DAILY_LIMIT = { free: 6, plus: 20 };
 const MAX_TRANSCRIPTION_CHARS = 8000;
 const MAX_SWOT_CONTEXT_CHARS = 6000;
 
@@ -136,7 +136,7 @@ serve(async (req) => {
 
   try {
     const {
-      analysis_id,
+      analysis_id: _analysis_id,   // client bookkeeping; the plan is stored client-side
       transcription_text,
       swot_summary,
       strengths,

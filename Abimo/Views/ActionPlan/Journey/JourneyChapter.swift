@@ -84,28 +84,44 @@ struct JourneyChapter: Identifiable, Equatable {
     let kind: JourneyChapterKind
     let title: String
     let actions: [MicroAction]
+    /// The plan chapter (`micro_actions.chapter`) these steps came from —
+    /// 1 for the original plan, 2+ for Plus "next chapter" extensions.
+    var part: Int = 1
 
-    var id: String { kind.rawValue }
+    var id: String { "\(part)-\(kind.rawValue)" }
     var completedCount: Int { actions.filter(\.isCompleted).count }
     var totalMinutes: Int { actions.reduce(0) { $0 + $1.timeEstimateMinutes } }
     var isComplete: Bool { !actions.isEmpty && actions.allSatisfy(\.isCompleted) }
 
     static func == (lhs: JourneyChapter, rhs: JourneyChapter) -> Bool {
-        lhs.kind == rhs.kind && lhs.title == rhs.title && lhs.actions.map(\.id) == rhs.actions.map(\.id)
+        lhs.kind == rhs.kind && lhs.title == rhs.title && lhs.part == rhs.part
+            && lhs.actions.map(\.id) == rhs.actions.map(\.id)
     }
 }
 
 enum JourneyChapterBuilder {
     private static let order: [JourneyChapterKind] = [.fixWeakSpot, .proveDemand, .playYourEdge, .watchRisks]
 
-    /// Groups `actions` (already in display order) into 1-3 chapters.
+    /// Groups `actions` (already in display order) into chapters. Steps are
+    /// first split by plan part (`chapterNumber`, ascending) so a Plus "next
+    /// chapter" always reads after the original plan; within a part:
     /// - Every action needs a recognizable quadrant and at least two distinct
     ///   quadrants must appear; otherwise a single "Your steps" chapter is
     ///   returned so old plans (quadrant NULL) render unchanged.
     /// - A lone strength and a lone threat merge into one chapter.
-    /// - Never more than three chapters: trailing single-action chapters fold
-    ///   into the one before them.
+    /// - Never more than three chapters per part: trailing single-action
+    ///   chapters fold into the one before them.
     static func build(from actions: [MicroAction]) -> [JourneyChapter] {
+        guard !actions.isEmpty else { return [] }
+        let parts = Set(actions.map(\.chapterNumber)).sorted()
+        return parts.flatMap { part in
+            buildPart(from: actions.filter { $0.chapterNumber == part }).map {
+                JourneyChapter(kind: $0.kind, title: $0.title, actions: $0.actions, part: part)
+            }
+        }
+    }
+
+    private static func buildPart(from actions: [MicroAction]) -> [JourneyChapter] {
         guard !actions.isEmpty else { return [] }
 
         var buckets: [JourneyChapterKind: [MicroAction]] = [:]

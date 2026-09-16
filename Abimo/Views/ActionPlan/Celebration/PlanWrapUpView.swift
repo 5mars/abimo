@@ -9,6 +9,7 @@
 //
 
 import SwiftUI
+import Supabase
 
 struct PlanWrapUpView: View {
     @ObservedObject var viewModel: ActionPlanViewModel
@@ -19,6 +20,14 @@ struct PlanWrapUpView: View {
     @State private var paywallContext: PaywallView.Context?
     @State private var shareImage: Image?
     @State private var scoreBand = "unknown"
+    // Loaded once for the share card; reused by re-taste.
+    @State private var note: VoiceNote?
+    @State private var analysis: SWOTAnalysis?
+    @State private var isRetasting = false
+    @State private var retasteResult: (old: Int, new: Int)?
+    @State private var doorError: String?
+
+    private let aiService = AIAnalysisService()
 
     private var actions: [MicroAction] { viewModel.microActions }
     private var didIt: Int { actions.filter { $0.completionOutcome != "didnt_work" }.count }
@@ -70,22 +79,40 @@ struct PlanWrapUpView: View {
 
                 // Doors
                 VStack(spacing: 10) {
-                    door("Next chapter", "5-7 more steps, built from what you learned",
-                         icon: "book.pages.fill", plus: true) {
-                        if entitlements.isPremium {
-                            // Generation lands with the server work in the next release.
-                            paywallContext = nil
-                        } else {
-                            AnalyticsService.shared.log(.gateHit(gate: "next_chapter", source: "wrap_up"))
-                            paywallContext = .nextChapter
+                    if viewModel.isExtending {
+                        busyRow("Writing chapter \(viewModel.partCount + 1)…")
+                    } else {
+                        door("Next chapter", "5-7 more steps, built from what you learned",
+                             icon: "book.pages.fill", plus: true) {
+                            if entitlements.isPremium {
+                                Task { await extendPlan() }
+                            } else {
+                                AnalyticsService.shared.log(.gateHit(gate: "next_chapter", source: "wrap_up"))
+                                paywallContext = .nextChapter
+                            }
                         }
                     }
-                    door("Re-taste your idea", "Re-score after the work. Watch the number move.",
-                         icon: "arrow.clockwise", plus: true) {
-                        if !entitlements.isPremium {
-                            AnalyticsService.shared.log(.gateHit(gate: "retaste", source: "wrap_up"))
+                    if let retasteResult {
+                        retasteRow(retasteResult)
+                    } else if isRetasting {
+                        busyRow("The critic is tasting again…")
+                    } else {
+                        door("Re-taste your idea", "Re-score after the work. Watch the number move.",
+                             icon: "arrow.clockwise", plus: true) {
+                            if entitlements.isPremium {
+                                Task { await retaste() }
+                            } else {
+                                AnalyticsService.shared.log(.gateHit(gate: "retaste", source: "wrap_up"))
+                                paywallContext = .retaste
+                            }
                         }
-                        paywallContext = .retaste
+                    }
+                    if let doorError {
+                        Text(doorError)
+                            .font(.system(size: 12))
+                            .foregroundColor(.brand)
+                            .multilineTextAlignment(.center)
+                            .frame(maxWidth: .infinity)
                     }
                     if let shareImage {
                         ShareLink(
@@ -183,6 +210,105 @@ struct PlanWrapUpView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
+    private func busyRow(_ text: String) -> some View {
+        HStack(spacing: 12) {
+            ProgressView().tint(.brand)
+            Text(text)
+                .font(.system(size: 14, weight: .semibold, design: .rounded))
+                .foregroundColor(.textSec)
+            Spacer(minLength: 0)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
+        .duoCard()
+    }
+
+    /// The re-taste verdict, in place of the door: "46 → 58".
+    private func retasteRow(_ result: (old: Int, new: Int)) -> some View {
+        let delta = result.new - result.old
+        let tint: Color = delta > 0 ? .brandGreen : delta < 0 ? .brand : .textSec
+        return HStack(spacing: 12) {
+            Image(systemName: delta > 0 ? "arrow.up.right" : delta < 0 ? "arrow.down.right" : "equal")
+                .font(.system(size: 15, weight: .bold))
+                .foregroundColor(tint)
+                .frame(width: 30, height: 30)
+                .background(Circle().fill(tint.opacity(0.12)))
+            VStack(alignment: .leading, spacing: 2) {
+                Text("\(result.old) → \(result.new)")
+                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                    .foregroundColor(.textPri)
+                Text(delta == 0
+                     ? "The critic tasted no difference. The work didn't change the evidence."
+                     : delta > 0
+                        ? "Up \(delta). The work counted as evidence — keep going."
+                        : "Down \(-delta). You learned something the first score didn't know.")
+                    .font(.system(size: 12))
+                    .foregroundColor(.textSec)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 0)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
+        .duoCard()
+    }
+
+    // MARK: - Doors (Plus)
+
+    private func extendPlan() async {
+        doorError = nil
+        do {
+            try await viewModel.requestNextChapter()
+            onDismiss()   // back to the journey, first new step already marked NEXT
+        } catch {
+            doorError = Self.friendly(error, fallback: "The next chapter didn't cook. Try again in a moment.")
+        }
+    }
+
+    private func retaste() async {
+        guard let note, let analysis else {
+            doorError = "Couldn't find the tasting behind this plan."
+            return
+        }
+        doorError = nil
+        isRetasting = true
+        defer { isRetasting = false }
+        let old = analysis.viabilityScore ?? 0
+        AnalyticsService.shared.log(.retasteRequested(previousScore: old))
+        do {
+            guard let transcription = try await SupabaseService.shared.fetchTranscription(noteId: note.id) else {
+                doorError = "This idea has no transcript to re-taste."
+                return
+            }
+            let updated = try await aiService.retasteAnalysis(
+                analysis,
+                transcriptionText: transcription.text,
+                completedActions: viewModel.microActions
+            )
+            self.analysis = updated
+            let new = updated.viabilityScore ?? old
+            retasteResult = (old, new)
+            AnalyticsService.shared.log(.retasteCompleted(previousScore: old, newScore: new))
+            HapticEngine.success()
+            await loadShareCard()   // the card should carry the new number
+        } catch {
+            doorError = Self.friendly(error, fallback: "The critic choked mid-taste. Try again in a moment.")
+        }
+    }
+
+    /// Server-side tier and budget answers read as kitchen talk, not HTTP.
+    private static func friendly(_ error: Error, fallback: String) -> String {
+        if case FunctionsError.httpError(let code, _) = error {
+            switch code {
+            case 403: return "That table is Plus-only. If you just subscribed, give the kitchen a minute to catch up."
+            case 409: return "This plan has reached its final chapter. Re-taste it — or ship."
+            case 429: return "Even Plus chefs rest. Burners back on tomorrow."
+            default: break
+            }
+        }
+        return fallback
+    }
+
     /// The share card needs the analysis behind this plan: note → transcription → analysis.
     private func loadShareCard() async {
         guard let plan = viewModel.actionPlan else { return }
@@ -192,6 +318,8 @@ struct PlanWrapUpView: View {
               let transcriptionId = note.transcriptionId,
               let analysis = try? await supabase.fetchSWOTAnalysis(transcriptionId: transcriptionId),
               let score = analysis.viabilityScore else { return }
+        self.note = note
+        self.analysis = analysis
         scoreBand = score >= 70 ? "high" : score >= 40 ? "mid" : "low"
         if let ui = ScoreCardRenderer.render(title: note.title, score: score, dimensions: analysis.dimensionScores) {
             shareImage = Image(uiImage: ui)

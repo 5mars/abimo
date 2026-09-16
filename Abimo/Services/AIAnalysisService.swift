@@ -58,16 +58,45 @@ class AIAnalysisService: ObservableObject {
 
     // MARK: - SWOT Analysis
 
+    /// "Work done since last tasting" — the critic re-judges with the
+    /// founder's completed steps as new evidence. Server-side Plus-only.
+    struct RetasteContext: Encodable {
+        struct CompletedAction: Encodable {
+            let text: String
+            let outcome: String?
+            let note: String?
+        }
+        let analysisId: UUID
+        let completedActions: [CompletedAction]
+        let previousScore: Int
+
+        enum CodingKeys: String, CodingKey {
+            case analysisId       = "analysis_id"
+            case completedActions = "completed_actions"
+            case previousScore    = "previous_score"
+        }
+
+        init(analysis: SWOTAnalysis, actions: [MicroAction]) {
+            analysisId = analysis.id
+            previousScore = analysis.viabilityScore ?? 0
+            completedActions = actions.filter(\.isCompleted).prefix(30).map {
+                CompletedAction(text: $0.text, outcome: $0.completionOutcome, note: $0.completionNote)
+            }
+        }
+    }
+
     private struct AnalyzeRequest: Encodable {
         let transcription: String
         let research: ResearchDigest?
         let pivot: IdeaVariant?
+        var retaste: RetasteContext? = nil
     }
 
     func analyzeTranscription(
         _ text: String,
         research: ResearchDigest? = nil,
-        pivot: IdeaVariant? = nil
+        pivot: IdeaVariant? = nil,
+        retaste: RetasteContext? = nil
     ) async throws -> SWOTAnalysisResponse {
         isAnalyzing = true
         errorMessage = nil
@@ -77,11 +106,34 @@ class AIAnalysisService: ObservableObject {
             .invoke(
                 "analyze-swot",
                 options: FunctionInvokeOptions(
-                    body: AnalyzeRequest(transcription: text, research: research, pivot: pivot)
+                    body: AnalyzeRequest(transcription: text, research: research, pivot: pivot, retaste: retaste)
                 )
             )
 
         return response
+    }
+
+    /// Re-taste in place: same row id, score pushed onto the history, plan
+    /// untouched. Reuses the digest stored on the row instead of spending a
+    /// research credit.
+    func retasteAnalysis(
+        _ existing: SWOTAnalysis,
+        transcriptionText: String,
+        completedActions: [MicroAction]
+    ) async throws -> SWOTAnalysis {
+        let context = RetasteContext(analysis: existing, actions: completedActions)
+        let response = try await analyzeTranscription(
+            transcriptionText,
+            research: existing.researchDigest,
+            retaste: context
+        )
+        let updated = existing.retasted(
+            with: response,
+            research: existing.researchDigest,
+            reason: "retaste after \(context.completedActions.count) steps"
+        )
+        try await supabase.updateSWOTAnalysisInPlace(updated)
+        return updated
     }
 
     /// - Parameters:
@@ -266,6 +318,61 @@ class AIAnalysisService: ObservableObject {
         try await supabase.createMicroActions(microActions)
 
         return (plan, microActions)
+    }
+
+    // MARK: - Next chapter (Plus)
+
+    struct ChapterResponse: Decodable {
+        let title: String
+        let summary: String
+        let chapter: Int
+        let actions: [ActionPlanResponseItem]
+    }
+
+    /// Appends the next chapter to a finished plan. The server reads the
+    /// transcript, analysis and completed steps itself — only the plan id
+    /// travels. Returns the new actions (already persisted).
+    func extendActionPlan(_ plan: ActionPlan, existing: [MicroAction]) async throws -> (chapter: Int, actions: [MicroAction]) {
+        struct Body: Encodable {
+            let actionPlanId: UUID
+            enum CodingKeys: String, CodingKey { case actionPlanId = "action_plan_id" }
+        }
+        let response: ChapterResponse = try await supabase.client.functions.invoke(
+            "extend-action-plan",
+            options: FunctionInvokeOptions(body: Body(actionPlanId: plan.id))
+        )
+
+        let now = Date()
+        // Priorities continue after the last existing step so the default
+        // ordering (priority ascending) keeps chapters in sequence.
+        let base = (existing.map(\.priority).max() ?? 0)
+        let actions = response.actions.map { item in
+            MicroAction(
+                id: UUID(),
+                actionPlanId: plan.id,
+                text: item.text,
+                doneCriteria: item.doneCriteria,
+                timeEstimateMinutes: item.timeEstimateMinutes,
+                priority: base + item.priority,
+                quadrant: item.quadrant,
+                template: item.template,
+                actionType: item.actionType,
+                deepLinkData: item.deepLinkData,
+                isCompleted: false,
+                completedAt: nil,
+                isCommitted: false,
+                committedAt: nil,
+                scheduledFor: nil,
+                completionOutcome: nil,
+                completionNote: nil,
+                createdAt: now,
+                chapter: response.chapter
+            )
+        }
+        try await supabase.createMicroActions(actions)
+        let total = (existing + actions).reduce(0) { $0 + $1.timeEstimateMinutes }
+        try? await supabase.updateActionPlanEstimate(id: plan.id, totalMinutes: total)
+        return (response.chapter, actions)
     }
 }
 

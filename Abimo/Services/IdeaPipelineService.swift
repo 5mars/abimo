@@ -107,6 +107,7 @@ final class IdeaPipelineService: ObservableObject {
         research = nil
         stage = .idle
         capHit = false
+        dailyCapHit = false
         runStartedAt = Date()
         runTask = Task { await run(recordingVM: recordingVM, coordinator: coordinator) }
     }
@@ -116,6 +117,7 @@ final class IdeaPipelineService: ObservableObject {
     func retry(recordingVM: RecordingViewModel, coordinator: NavigationCoordinator) {
         runTask?.cancel()
         capHit = false
+        dailyCapHit = false
         runTask = Task { await run(recordingVM: recordingVM, coordinator: coordinator) }
     }
 
@@ -229,14 +231,26 @@ final class IdeaPipelineService: ObservableObject {
     // MARK: - Failure + background notification
 
     /// The server enforces a per-user daily AI budget (HTTP 429) — surface it
-    /// as a closed kitchen, not a random error.
+    /// as a closed kitchen, not a random error. The body says which tier hit
+    /// the wall; a free kitchen gets the Plus door, a Plus one gets tomorrow.
     private func friendlyMessage(for error: Error, fallback: String) -> String {
-        if case FunctionsError.httpError(let code, _) = error, code == 429 {
+        if case FunctionsError.httpError(let code, let data) = error, code == 429 {
             AnalyticsService.shared.log(.aiCapHit(fn: "pipeline"))
-            return "The kitchen's done for today — you've hit the daily cooking limit. Burners are back on tomorrow."
+            let body = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
+            let tier = body?["tier"] as? String ?? (EntitlementService.shared.isPremium ? "plus" : "free")
+            if tier == "free" {
+                dailyCapHit = true
+                AnalyticsService.shared.log(.gateHit(gate: "daily_cap", source: "pipeline"))
+                return "The free kitchen closes after today's tastings. Your recording is safe — Plus keeps the burners on, or come back tomorrow."
+            }
+            return "Even Plus chefs rest. You've hit today's cooking limit — burners are back on tomorrow."
         }
         return fallback
     }
+
+    /// Set when the FREE daily AI budget blocked a stage; the progress screen
+    /// offers the .dailyCap paywall. The saved recording stays retryable.
+    @Published private(set) var dailyCapHit = false
 
     private func fail(_ step: Step, _ message: String) {
         stage = .failed(step, message)

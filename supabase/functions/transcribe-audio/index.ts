@@ -95,11 +95,11 @@ serve(async (req) => {
     )
   } catch (error) {
     console.error('=== ERROR ===')
-    console.error('Error:', error.message)
+    console.error('Error:', (error as Error).message)
 
     return new Response(
       JSON.stringify({
-        error: error.message
+        error: (error as Error).message
       }),
       {
         headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },

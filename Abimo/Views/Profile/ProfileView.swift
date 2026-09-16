@@ -158,7 +158,7 @@ struct ProfileView: View {
                     Text("Abimo Plus — active")
                         .font(.duoCardTitle)
                         .foregroundColor(.textPri)
-                    Text("Unlimited idea slots")
+                    Text("Next chapters, re-tastes, full evidence, unlimited ideas")
                         .font(.system(size: 13))
                         .foregroundColor(.textSec)
                 }
@@ -182,7 +182,7 @@ struct ProfileView: View {
                         Text("Go Plus")
                             .font(.duoCardTitle)
                             .foregroundColor(.textPri)
-                        Text("Unlimited idea slots for the serious cooks")
+                        Text("Next chapters, re-tastes, and more burners for the serious cooks")
                             .font(.system(size: 13))
                             .foregroundColor(.textSec)
                     }

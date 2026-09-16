@@ -60,7 +60,7 @@ struct PipelineProgressView: View {
         }
         .interactiveDismissDisabled()
         .sheet(isPresented: $showPaywall) {
-            PaywallView(context: .ideaCap)
+            PaywallView(context: pipeline.dailyCapHit ? .dailyCap : .ideaCap)
         }
     }
 
@@ -158,6 +158,11 @@ struct PipelineProgressView: View {
                     GradientButton(title: "Unlock Abimo Plus") { showPaywall = true }
                     secondaryButton("I freed a slot — retry", tint: .brand) { onRetry() }
                     secondaryButton("Discard recording", tint: .textSec) { onDiscard() }
+                } else if pipeline.dailyCapHit {
+                    // Free daily AI budget spent: the note is saved, so the
+                    // user can upgrade and retry now or come back tomorrow.
+                    GradientButton(title: "Keep the burners on — go Plus") { showPaywall = true }
+                    secondaryButton("I'll come back tomorrow", tint: .textSec) { onBackground() }
                 } else {
                     GradientButton(title: "Try again") { onRetry() }
                     if step == .saving {

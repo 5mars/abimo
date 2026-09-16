@@ -251,6 +251,7 @@ struct SWOTAnalysisView: View {
             fatalFlaw: analysis.fatalFlaw ?? false,
             fatalFlawReason: analysis.fatalFlawReason,
             isLegacyScoring: analysis.isLegacyScoring,
+            previousScore: analysis.previousScore,
             receiptLocked: !entitlements.isPremium,
             onShowReceipt: {
                 if entitlements.isPremium {
@@ -546,6 +547,8 @@ struct ViabilityGaugeView: View {
     var fatalFlaw: Bool = false
     var fatalFlawReason: String? = nil
     var isLegacyScoring: Bool = false
+    /// Set after a re-taste: the gauge shows how far the number moved.
+    var previousScore: Int? = nil
     var receiptLocked: Bool = true
     var onShowReceipt: (() -> Void)? = nil
     @State private var animatedScore: Double = 0
@@ -614,6 +617,18 @@ struct ViabilityGaugeView: View {
                 .padding(.vertical, 6)
                 .background(verdict.color.opacity(0.15))
                 .clipShape(Capsule())
+
+            // Re-taste delta — the number moved because the founder did work.
+            if let previousScore, previousScore != score {
+                let delta = score - previousScore
+                HStack(spacing: 5) {
+                    Image(systemName: delta > 0 ? "arrow.up.right" : "arrow.down.right")
+                        .font(.system(size: 11, weight: .bold))
+                    Text("\(delta > 0 ? "+" : "")\(delta) since your last tasting (was \(previousScore))")
+                        .font(.system(size: 12, weight: .semibold, design: .rounded))
+                }
+                .foregroundColor(delta > 0 ? .brandGreen : .brand)
+            }
 
             Text(verdict.caption)
                 .font(.system(size: 13))

@@ -33,7 +33,7 @@ struct PaywallView: View {
         var subtitle: String {
             switch self {
             case .ideaCap:      return "Free kitchens hold 3 ideas. Yours is packed."
-            case .general:      return "Every idea deserves a spot on the stove."
+            case .general:      return "The first taste is free. Plus is what happens after you do the work."
             case .fullAnalysis: return "Every point, every detail, every market stat — no blur."
             case .nextChapter:  return "Plus builds the next chapter from what you learned."
             case .retaste:      return "Re-score after the work and watch the number move."
@@ -241,14 +241,14 @@ struct PaywallView: View {
 
     private var benefitsPanel: some View {
         VStack(alignment: .leading, spacing: 14) {
-            benefitRow("infinity", "Unlimited idea slots",
-                       "Record as many ideas as your brain produces")
-            benefitRow("fork.knife", "Every idea gets the full treatment",
-                       "Taste test, verdict, and action plan on all of them")
-            benefitRow("doc.text.magnifyingglass", "Full tasting notes",
-                       "Every strength, weakness, and market stat — deep-dive included")
-            benefitRow("sparkles", "First in line for new critic features",
-                       "Deeper analyses and new mascot moods land here first")
+            benefitRow("book.pages.fill", "Next chapters",
+                       "Finish a plan, get the next 5-7 steps built from what you learned")
+            benefitRow("arrow.clockwise", "Re-taste after the work",
+                       "The critic re-scores with your results as evidence. Watch the number move.")
+            benefitRow("doc.text.magnifyingglass", "Full evidence",
+                       "Every tasting note, market stat, and the receipt behind the score")
+            benefitRow("flame.fill", "Unlimited ideas, more burners",
+                       "No 3-idea cap, and three times the daily tastings")
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .duoPanel()

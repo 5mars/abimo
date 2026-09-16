@@ -102,6 +102,30 @@ class ActionPlanViewModel: ObservableObject {
     /// Chapters are a pure projection of orderedActions (see JourneyChapterBuilder).
     var chapters: [JourneyChapter] { JourneyChapterBuilder.build(from: orderedActions) }
 
+    /// How many plan parts exist (1 = original plan only; 2+ after "Next chapter").
+    var partCount: Int { microActions.map(\.chapterNumber).max() ?? 1 }
+
+    // MARK: - Next chapter (Plus)
+
+    @Published var isExtending = false
+
+    /// Appends the next chapter to this plan (server-side Plus check; the
+    /// paywall runs before this is called). New steps land as `open`, the
+    /// first one becomes `next`, and the celebration overlay clears so the
+    /// journey is usable again.
+    func requestNextChapter() async throws {
+        guard let plan = actionPlan, !isExtending else { return }
+        isExtending = true
+        defer { isExtending = false }
+        AnalyticsService.shared.log(.nextChapterRequested(chapter: partCount + 1))
+        let (chapter, added) = try await aiService.extendActionPlan(plan, existing: microActions)
+        microActions.append(contentsOf: added)
+        celebrationState = .idle
+        lastRewards = nil
+        AnalyticsService.shared.log(.nextChapterGenerated(chapter: chapter, actions: added.count))
+        HapticEngine.success()
+    }
+
     /// Minutes still on the plate — the "45 min left" in the journey header.
     var remainingMinutes: Int {
         microActions.filter { !$0.isCompleted }.reduce(0) { $0 + $1.timeEstimateMinutes }

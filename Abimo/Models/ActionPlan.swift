@@ -48,6 +48,12 @@ struct MicroAction: Identifiable, Codable, Hashable {
     var completionOutcome: String?
     var completionNote: String?
     let createdAt: Date
+    /// Which chapter of the plan this step belongs to. Optional so rows from
+    /// before the column existed still decode; nil reads as chapter 1 and is
+    /// omitted on insert so the DB default applies.
+    var chapter: Int? = nil
+
+    var chapterNumber: Int { chapter ?? 1 }
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -68,6 +74,7 @@ struct MicroAction: Identifiable, Codable, Hashable {
         case completionOutcome   = "completion_outcome"
         case completionNote      = "completion_note"
         case createdAt           = "created_at"
+        case chapter
     }
 }
 

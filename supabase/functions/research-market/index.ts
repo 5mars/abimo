@@ -4,7 +4,7 @@ import { sha256Hex } from "../_shared/scoring.ts";
 
 const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY")!;
 
-const DAILY_LIMIT = 10;
+const DAILY_LIMIT = { free: 3, plus: 10 };
 const MAX_TRANSCRIPTION_CHARS = 8000;
 const MAX_PIVOT_FIELD_CHARS = 500;
 

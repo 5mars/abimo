@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { gate, jsonError, CORS_HEADERS } from "../_shared/gate.ts";
+import { gate, jsonError, requirePlus, CORS_HEADERS } from "../_shared/gate.ts";
 import {
   computeScoreV2,
   deriveResearchFacts,
@@ -12,9 +12,11 @@ import {
 const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY")!;
 const MODEL = "gpt-4o";
 
-const DAILY_LIMIT = 20;
+// Free tier gets a real week of tasting; Plus gets the old ceiling.
+const DAILY_LIMIT = { free: 6, plus: 20 };
 const MAX_TRANSCRIPTION_CHARS = 8000;
 const MAX_PIVOT_FIELD_CHARS = 500;
+const MAX_RETASTE_ACTIONS = 30;
 
 const SWOT_ITEM_SCHEMA = {
   type: "object",
@@ -337,7 +339,9 @@ serve(async (req) => {
   if (g instanceof Response) return g;
 
   try {
-    const { transcription, research, pivot, calibration } = await req.json();
+    // retaste.analysis_id is accepted for the client's bookkeeping but the
+    // score is re-judged from the transcript + work done, not read back.
+    const { transcription, research, pivot, calibration, retaste } = await req.json();
 
     if (!transcription || typeof transcription !== "string") {
       return jsonError("transcription field required", 400);
@@ -351,9 +355,33 @@ serve(async (req) => {
       return jsonError("pivot fields too long", 400);
     }
 
+    // Re-taste = the critic re-judges AFTER the founder did the work. Plus-only:
+    // it's a second full analysis, and it's the reason to stay subscribed.
+    if (retaste) {
+      const denied = requirePlus(g);
+      if (denied) return denied;
+      if (!Array.isArray(retaste.completed_actions) || retaste.completed_actions.length > MAX_RETASTE_ACTIONS) {
+        return jsonError("retaste.completed_actions invalid", 400);
+      }
+    }
+
     let userMessage = `Startup idea voice note transcription:\n\n${transcription}\n\n`;
     if (pivot && typeof pivot.title === "string") {
       userMessage += `FOUNDER'S PIVOT — the founder tasted the original and chose this remix instead. Analyze THE REMIX as the idea; the transcript above is background context only. ideaTitle must reflect the remix.\nRemix: ${pivot.title}\nPitch: ${pivot.pitch ?? ""}\nDifferentiator: ${pivot.differentiator ?? ""}\n\n`;
+    }
+    if (retaste) {
+      const lines = (retaste.completed_actions as Array<{ text?: string; outcome?: string; note?: string }>)
+        .map((a) => {
+          const outcome = a.outcome === "didnt_work" ? "TRIED, DIDN'T WORK" : "DID IT";
+          const note = typeof a.note === "string" && a.note ? ` — "${a.note.slice(0, 300)}"` : "";
+          return `- ${String(a.text ?? "").slice(0, 200)} [${outcome}]${note}`;
+        })
+        .join("\n");
+      userMessage += `WORK DONE SINCE LAST TASTING (previous Critic's Score: ${Number(retaste.previous_score ?? 0)}/100)
+The founder went and did these steps. Treat their outcomes and notes as NEW evidence:
+${lines || "- (none recorded)"}
+
+Re-judge the idea with this evidence. Real replies, sign-ups, or payments raise demandEvidence; "didn't work" outcomes are information, not failure — if they reveal the problem isn't real, say so and score it. If nothing material was learned, the score should barely move. Set founderEvidence from the work above as well as the transcript.\n\n`;
     }
     // Prefer the structured (v2) digest. Older app builds forward only the
     // prose fields, so fall back to the digest research-market cached for
@@ -486,7 +514,7 @@ serve(async (req) => {
           evidence_strength: meta.evidenceStrength,
           score_meta: meta,
           model: MODEL,
-          is_pivot: Boolean(pivot),
+          is_pivot: Boolean(pivot) || Boolean(retaste),
           is_calibration: Boolean(g.limitExempt) || calibration === true,
         })
         .select("id")

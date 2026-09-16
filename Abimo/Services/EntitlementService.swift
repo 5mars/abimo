@@ -11,6 +11,7 @@ import Foundation
 import Combine
 import StoreKit
 import UIKit
+import Supabase
 
 @MainActor
 final class EntitlementService: ObservableObject {
@@ -80,7 +81,8 @@ final class EntitlementService: ObservableObject {
                 break
             }
         }
-        if hasResolvedOnce && premium != isPremium {
+        let changed = hasResolvedOnce && premium != isPremium
+        if changed {
             AnalyticsService.shared.log(.entitlementChanged(
                 from: isPremium ? "plus" : "free",
                 to: premium ? "plus" : "free",
@@ -89,10 +91,50 @@ final class EntitlementService: ObservableObject {
         }
         hasResolvedOnce = true
         isPremium = premium
+        await syncServer(force: changed)
     }
 
     /// First resolution is the baseline, not a change.
     private var hasResolvedOnce = false
+
+    // MARK: - Server mirror (profiles.is_premium)
+
+    /// Posts the current signed transaction to verify-entitlement so the
+    /// server can apply Plus caps and Plus-only functions. StoreKit stays the
+    /// source of truth for the UI; this is the server catching up. Throttled
+    /// to once a day unless the entitlement just changed.
+    private static let lastSyncKey = "entitlement_last_server_sync"
+
+    func syncServer(force: Bool = false) async {
+        let last = UserDefaults.standard.object(forKey: Self.lastSyncKey) as? Date ?? .distantPast
+        guard force || Date().timeIntervalSince(last) > 24 * 60 * 60 else { return }
+
+        var jws: String? = nil
+        for await entitlement in Transaction.currentEntitlements {
+            // The signed payload lives on the VerificationResult, not the
+            // decoded Transaction — the server re-verifies it against Apple.
+            if case .verified(let transaction) = entitlement,
+               ProductID.all.contains(transaction.productID),
+               transaction.revocationDate == nil {
+                jws = entitlement.jwsRepresentation
+                break
+            }
+        }
+
+        struct Body: Encodable { let jws: String? }
+        do {
+            _ = try await SupabaseService.shared.client.functions.invoke(
+                "verify-entitlement",
+                options: FunctionInvokeOptions(body: Body(jws: jws))
+            ) as EmptyResponse
+            UserDefaults.standard.set(Date(), forKey: Self.lastSyncKey)
+        } catch {
+            // Best-effort: the next launch retries. Never surface to the user.
+            print("verify-entitlement sync failed: \(error.localizedDescription)")
+        }
+    }
+
+    private struct EmptyResponse: Decodable {}
 
     // MARK: - Products
 
