@@ -14,13 +14,15 @@ class SupabaseService {
     let client: SupabaseClient
 
     private init() {
-        // TODO: Replace with your actual Supabase credentials
         let supabaseURL = URL(string: "https://ymbfqlrarlnqtzatgfah.supabase.co")!
         let supabaseAnonKey = "sb_publishable_HUIZRQ5EfaFU3EV-1IzqNQ_8uOBDJ39"
 
         client = SupabaseClient(
             supabaseURL: supabaseURL,
-            supabaseKey: supabaseAnonKey
+            supabaseKey: supabaseAnonKey,
+            options: .init(
+                auth: .init(emitLocalSessionAsInitialSession: true)
+            )
         )
     }
 
@@ -91,6 +93,18 @@ class SupabaseService {
         return response
     }
 
+    func fetchVoiceNote(id: UUID) async throws -> VoiceNote? {
+        let response: [VoiceNote] = try await client
+            .from("voice_notes")
+            .select()
+            .eq("id", value: id)
+            .limit(1)
+            .execute()
+            .value
+
+        return response.first
+    }
+
     func deleteVoiceNote(id: UUID) async throws {
         try await client
             .from("voice_notes")
@@ -105,6 +119,56 @@ class SupabaseService {
             .update(["title": title])
             .eq("id", value: id)
             .execute()
+    }
+
+    func updateVoiceNoteAnalysisId(noteId: UUID, analysisId: UUID) async throws {
+        try await client
+            .from("voice_notes")
+            .update(["analysis_id": analysisId.uuidString])
+            .eq("id", value: noteId)
+            .execute()
+    }
+
+    // MARK: - Counts
+
+    func countVoiceNotes() async throws -> Int {
+        struct IdOnly: Decodable { let id: UUID }
+        let rows: [IdOnly] = try await client
+            .from("voice_notes")
+            .select("id")
+            .execute()
+            .value
+        return rows.count
+    }
+
+    func countAnalyses() async throws -> Int {
+        struct IdOnly: Decodable { let id: UUID }
+        let rows: [IdOnly] = try await client
+            .from("swot_analyses")
+            .select("id")
+            .execute()
+            .value
+        return rows.count
+    }
+
+    /// All of the user's viability scores keyed by analysis id (RLS scopes rows).
+    func fetchViabilityScores() async throws -> [UUID: Int] {
+        struct Row: Decodable {
+            let id: UUID
+            let viabilityScore: Int?
+            enum CodingKeys: String, CodingKey {
+                case id
+                case viabilityScore = "viability_score"
+            }
+        }
+        let rows: [Row] = try await client
+            .from("swot_analyses")
+            .select("id, viability_score")
+            .execute()
+            .value
+        return rows.reduce(into: [:]) { dict, row in
+            if let score = row.viabilityScore { dict[row.id] = score }
+        }
     }
 
     // MARK: - Storage
@@ -196,10 +260,61 @@ class SupabaseService {
             .from("swot_analyses")
             .select()
             .eq("transcription_id", value: transcriptionId)
+            .order("created_at", ascending: false)
             .execute()
             .value
 
         return response.first
+    }
+
+    /// Re-taste: overwrite the row under its existing id. Never delete-and-
+    /// recreate here — action_plans hang off this id, and the plan history
+    /// is the whole point of re-tasting.
+    func updateSWOTAnalysisInPlace(_ analysis: SWOTAnalysis) async throws {
+        try await client
+            .from("swot_analyses")
+            .update(analysis)
+            .eq("id", value: analysis.id)
+            .execute()
+    }
+
+    /// Deletes every analysis for a transcription plus its dependent action
+    /// plans and micro-actions. Client-side, child-first — no cascade
+    /// assumption. Used before re-generating so a transcription never
+    /// accumulates duplicate analyses.
+    func deleteAnalysisArtifacts(transcriptionId: UUID) async throws {
+        let analyses: [SWOTAnalysis] = try await client
+            .from("swot_analyses")
+            .select()
+            .eq("transcription_id", value: transcriptionId)
+            .execute()
+            .value
+
+        for analysis in analyses {
+            let plans: [ActionPlan] = try await client
+                .from("action_plans")
+                .select()
+                .eq("analysis_id", value: analysis.id)
+                .execute()
+                .value
+            for plan in plans {
+                try await client
+                    .from("micro_actions")
+                    .delete()
+                    .eq("action_plan_id", value: plan.id)
+                    .execute()
+                try await client
+                    .from("action_plans")
+                    .delete()
+                    .eq("id", value: plan.id)
+                    .execute()
+            }
+            try await client
+                .from("swot_analyses")
+                .delete()
+                .eq("id", value: analysis.id)
+                .execute()
+        }
     }
 
     // MARK: - Action Plans
@@ -208,6 +323,15 @@ class SupabaseService {
         try await client
             .from("action_plans")
             .insert(plan)
+            .execute()
+    }
+
+    /// A new chapter adds minutes to the plate.
+    func updateActionPlanEstimate(id: UUID, totalMinutes: Int) async throws {
+        try await client
+            .from("action_plans")
+            .update(["total_estimate_minutes": totalMinutes])
+            .eq("id", value: id)
             .execute()
     }
 
@@ -381,5 +505,26 @@ class SupabaseService {
             .update(StatusPayload(status: status, completed_at: completedAt))
             .eq("id", value: id)
             .execute()
+    }
+
+    // MARK: - Account Deletion
+
+    func deleteAccount() async throws {
+        let session = try await client.auth.session
+        let userId = session.user.id
+
+        // Delete storage files first (RPC won't handle storage)
+        let files = try await client.storage
+            .from("voice-recordings")
+            .list(path: "\(userId)")
+        if !files.isEmpty {
+            let paths = files.map { "\(userId)/\($0.name)" }
+            try await client.storage
+                .from("voice-recordings")
+                .remove(paths: paths)
+        }
+
+        // Delete all user data + auth record via server-side RPC
+        try await client.rpc("delete_user_account").execute()
     }
 }

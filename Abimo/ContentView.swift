@@ -23,35 +23,41 @@ extension Color {
         self.init(.sRGB, red: Double(r) / 255, green: Double(g) / 255, blue: Double(b) / 255)
     }
 
-    // Brand palette
-    static let brand        = Color(hex: "FF6B6B")  // Coral red
-    static let brandLight   = Color(hex: "FF9B9B")  // Light coral
-    static let brandPink    = Color(hex: "A855F7")  // Purple (accent)
-    static let brandAmber   = Color(hex: "FBBF24")  // Golden yellow
-    static let brandGreen   = Color(hex: "34D399")  // Emerald green
-    static let brandRed     = Color(hex: "F87171")  // Soft red
-    static let brandBlue    = Color(hex: "60A5FA")  // Sky blue
-    static let brandOrange  = Color(hex: "FB923C")  // Tangerine
+    // Brand palette — bold saturated colors on pure white (Duolingo-style)
+    static let brand        = Color(hex: "FF5252")  // Punchy coral
+    static let brandLight   = Color(hex: "FF7B70")  // Gradient endpoint
+    static let brandAmber   = Color(hex: "FFB800")  // Bold amber
+    static let brandGreen   = Color(hex: "2EC46F")  // Bold green
+    static let brandBlue    = Color(hex: "3B82F6")  // Bold blue
+    static let brandOrange  = Color(hex: "FF8A3D")  // Verdict-scale orange (coral↔amber)
 
     // Surfaces
-    static let appBg               = Color(hex: "FFF5F5")  // Warm rose cream
+    static let appBg               = Color.white
+    static let journeyBg           = Color(hex: "FFF8F0")  // Warm cream — the action-plan path lives here
     static let cardBg              = Color.white            // White card (alias)
     static let cardSurface         = Color.white            // White card
     static let cardSurfaceElevated = Color.white            // White elevated card
-    static let textPri             = Color(hex: "1C1C1E")  // Dark charcoal
-    static let textSec             = Color(hex: "8E8E93")  // Medium gray
+    static let textPri             = Color(hex: "3C3C43")  // Soft charcoal
+    static let textSec             = Color(hex: "AFAFB4")  // Medium gray
+    static let textTertiary        = Color(hex: "C7C7CC")  // Chevrons, dots, decorative glyphs
+    static let insetBg             = Color(hex: "F7F7F7")  // duoInset well background
 
-    // Tinted light card surfaces
-    static let cardDarkBlue   = Color(hex: "EFF6FF")  // Light blue tint
-    static let cardDarkTeal   = Color(hex: "ECFDF5")  // Light green tint
-    static let cardDarkPurple = Color(hex: "FAF5FF")  // Light purple tint
-    static let cardDarkOrange = Color(hex: "FFF7ED")  // Light orange tint
-    static let cardDarkRed    = Color(hex: "FFF1F2")  // Light coral tint
+    // Tinted light card surfaces (cooler, tuned for pure white)
+    static let cardDarkBlue   = Color(hex: "EDF4FE")  // Light blue tint
+    static let cardDarkTeal   = Color(hex: "EAF9F1")  // Light green tint
+    static let cardDarkOrange = Color(hex: "FFF6E3")  // Light amber tint
+    static let cardDarkRed    = Color(hex: "FFEFEF")  // Light coral tint
+    static let cardDarkMint   = Color(hex: "F2FBF7")  // Pale mint hero surface
 
-    // Accent colors
-    static let accentBlue   = Color(hex: "60A5FA")  // Sky blue — charts, data viz
-    static let accentTeal   = Color(hex: "34D399")  // Emerald — positive indicators
-    static let accentCoral  = Color(hex: "A855F7")  // Purple — warnings, threats
+    // Duo3D darker-edge variants (bottom edges of 3D buttons/nodes/cards)
+    static let brandDark       = Color(hex: "E03E3E")  // edge for brand FF5252
+    static let brandGreenDark  = Color(hex: "25A65C")  // edge for brandGreen 2EC46F
+    static let brandAmberDark  = Color(hex: "DB9E00")  // edge for brandAmber FFB800
+    static let brandBlueDark   = Color(hex: "2563EB")  // edge for brandBlue 3B82F6
+    static let cardEdge        = Color(hex: "E5E5E5")  // grey — white-card borders/edges
+    static let lockedFace      = Color(hex: "EBEBEB")  // locked node face / disabled button
+    static let lockedEdge      = Color(hex: "CDCDCD")  // locked node edge
+
 }
 
 // MARK: - Brand Gradients
@@ -65,50 +71,23 @@ extension LinearGradient {
         colors: [.brand, .brand],
         startPoint: .topLeading, endPoint: .bottomTrailing
     )
+    // SWOT quadrant gradients — S=green, W=coral, O=blue, T=amber
     static let swotStrength = LinearGradient(
-        colors: [Color(hex: "34D399"), Color(hex: "6EE7B7")],
+        colors: [Color(hex: "2EC46F"), Color(hex: "5AD68F")],
         startPoint: .topLeading, endPoint: .bottomTrailing
     )
     static let swotWeakness = LinearGradient(
-        colors: [Color(hex: "F87171"), Color(hex: "FF6B6B")],
+        colors: [Color(hex: "FF5252"), Color(hex: "FF7B70")],
         startPoint: .topLeading, endPoint: .bottomTrailing
     )
     static let swotOpportunity = LinearGradient(
-        colors: [Color(hex: "60A5FA"), Color(hex: "93C5FD")],
+        colors: [Color(hex: "3B82F6"), Color(hex: "6FA5F9")],
         startPoint: .topLeading, endPoint: .bottomTrailing
     )
     static let swotThreat = LinearGradient(
-        colors: [Color(hex: "FB923C"), Color(hex: "F87171")],
+        colors: [Color(hex: "FFB800"), Color(hex: "FFCB3D")],
         startPoint: .topLeading, endPoint: .bottomTrailing
     )
-}
-
-// MARK: - Card Style Modifiers
-
-extension View {
-    /// Standard card — pure white, fully flat
-    func cardStyle(padding: CGFloat = 20) -> some View {
-        self
-            .padding(padding)
-            .background(Color.white)
-            .cornerRadius(24)
-    }
-
-    /// Tinted card — solid tint color, fully flat
-    func tintedCard(color: Color, padding: CGFloat = 16) -> some View {
-        self
-            .padding(padding)
-            .background(color)
-            .cornerRadius(24)
-    }
-
-    /// Hero card — solid tinted background, larger padding, fully flat
-    func heroCard(color: Color = .cardDarkPurple, padding: CGFloat = 24) -> some View {
-        self
-            .padding(padding)
-            .background(color)
-            .cornerRadius(24)
-    }
 }
 
 // MARK: - AppTextField
@@ -118,6 +97,7 @@ struct AppTextField: View {
     @Binding var text: String
     var isSecure: Bool = false
     var keyboardType: UIKeyboardType = .default
+    var submitLabel: SubmitLabel = .done
 
     @FocusState private var isFocused: Bool
 
@@ -129,14 +109,22 @@ struct AppTextField: View {
             } else {
                 TextField(placeholder, text: $text)
                     .keyboardType(keyboardType)
-                    .autocapitalization(.none)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
                     .focused($isFocused)
             }
         }
+        .submitLabel(submitLabel)
         .padding(.horizontal, 16)
         .padding(.vertical, 14)
-        .background(isFocused ? Color.white : Color(hex: "EDEBE8"))
-        .cornerRadius(14)
+        .background(
+            RoundedRectangle(cornerRadius: DuoTokens.Radius.button, style: .continuous)
+                .fill(Color.white)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: DuoTokens.Radius.button, style: .continuous)
+                .strokeBorder(isFocused ? Color.brand : Color.cardEdge, lineWidth: 2)
+        )
         .animation(.easeInOut(duration: 0.2), value: isFocused)
         .font(.system(size: 16))
         .foregroundColor(.textPri)
@@ -155,8 +143,14 @@ struct CardEntranceModifier: ViewModifier {
             .opacity(appeared ? 1 : 0)
             .offset(y: appeared ? 0 : 22)
             .onAppear {
-                withAnimation(.spring(response: 0.5, dampingFraction: 0.78).delay(delay)) {
+                // Reduce motion skips the delay too — a staggered fade with
+                // no movement still reads as motion on long screens.
+                if AnimationPolicy.reduceMotion {
                     appeared = true
+                } else {
+                    withAnimation(.spring(response: 0.5, dampingFraction: 0.78).delay(delay)) {
+                        appeared = true
+                    }
                 }
             }
     }
@@ -168,45 +162,62 @@ extension View {
     }
 }
 
-// MARK: - PlayfulButtonStyle
-
-struct PlayfulButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .scaleEffect(configuration.isPressed ? 0.94 : 1.0)
-            .animation(.spring(response: 0.22, dampingFraction: 0.55), value: configuration.isPressed)
-    }
-}
-
 // MARK: - GradientButton
 
 struct GradientButton: View {
+    enum Size {
+        case regular  // 58pt face + 4pt edge = 62 total (previous flat height)
+        case compact  // 44pt face + 4pt edge
+
+        var faceHeight: CGFloat {
+            switch self {
+            case .regular: return 58
+            case .compact: return 44
+            }
+        }
+
+        var fontSize: CGFloat {
+            switch self {
+            case .regular: return 18
+            case .compact: return 15
+            }
+        }
+    }
+
     let title: String
     var gradient: LinearGradient = .brand
     var isLoading: Bool = false
     var isDisabled: Bool = false
-    var cornerRadius: CGFloat = 20
+    var cornerRadius: CGFloat = DuoTokens.Radius.button
+    var size: Size = .regular
+    var edge: Color = .brandDark
     let action: () -> Void
+
+    private var inactive: Bool { isDisabled || isLoading }
 
     var body: some View {
         Button(action: action) {
             ZStack {
                 if isLoading {
-                    ProgressView().tint(.white).scaleEffect(0.9)
+                    ProgressView().tint(inactive ? Color.textSec : .white).scaleEffect(0.9)
                 } else {
                     Text(title)
-                        .font(.system(size: 18, weight: .bold))
-                        .foregroundColor(.white)
+                        .font(.system(size: size.fontSize, weight: .bold))
+                        .foregroundColor(isDisabled ? .textSec : .white)
                 }
             }
             .frame(maxWidth: .infinity)
-            .frame(height: 62)
-            .background(gradient.opacity(isDisabled ? 0.45 : 1.0))
-            .cornerRadius(cornerRadius)
+            .frame(height: size.faceHeight)
         }
-        .buttonStyle(PlayfulButtonStyle())
-        .disabled(isDisabled || isLoading)
-        .animation(.spring(response: 0.3, dampingFraction: 0.65), value: isDisabled)
+        .buttonStyle(Duo3DGradientButtonStyle(
+            fill: isDisabled
+                ? LinearGradient(colors: [.lockedFace, .lockedFace], startPoint: .top, endPoint: .bottom)
+                : gradient,
+            edge: isDisabled ? .lockedFace : edge,  // disabled = flat look (edge matches face), height stays stable
+            cornerRadius: cornerRadius
+        ))
+        .disabled(inactive)
+        .animation(.easeOut(duration: 0.2), value: isDisabled)
     }
 }
 
@@ -243,7 +254,7 @@ struct WaveformBarsView: View {
         let dist = abs(Double(index) - center) / center
         let envelope = 1.0 - pow(dist, 1.5) * 0.65
         let base: CGFloat = 4
-        let maxExtra: CGFloat = 52
+        let maxExtra: CGFloat = 56
         return base + maxExtra * CGFloat(level) * CGFloat(envelope)
     }
 
@@ -255,7 +266,7 @@ struct WaveformBarsView: View {
                     .frame(width: 3.5, height: height(for: i))
             }
         }
-        .frame(height: 64)
+        .frame(height: 72)
         .animation(.spring(response: 0.12, dampingFraction: 0.6), value: level)
     }
 }

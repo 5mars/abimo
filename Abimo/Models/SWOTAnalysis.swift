@@ -40,18 +40,277 @@ struct SWOTItem: Identifiable, Codable, Hashable {
 
 // MARK: - MarketInsights
 
+/// A real small business found by live web research — proof the dish sells
+/// at a small table. Nested inside the market_insights jsonb.
+struct MarketComparable: Codable, Hashable, Identifiable {
+    var id: String { name }
+    let name: String
+    let what: String
+    let pricing: String
+    let status: String
+    let url: String?
+    // Idea-aware comparison, added at analysis time (nil on older rows)
+    let overlap: String?   // what it shares with the founder's idea
+    let edge: String?      // how the founder's idea differs / could win
+    // Scoring v2 numbers from research-market (nil on the analyze-swot copy
+    // and on older digests)
+    var priceAmount: Double? = nil
+    var priceCurrency: String? = nil
+    var pricePeriod: String? = nil      // month | year | one_time | free | unknown
+    var chargesMoney: String? = nil     // yes | no | unknown
+    var size: String? = nil             // solo | small_team | company | giant | unknown
+    var userCountHint: Double? = nil
+    var userCountSource: String? = nil
+    var lastActive: String? = nil       // 2025_or_later | 2023_2024 | older | unknown
+
+    enum CodingKeys: String, CodingKey {
+        case name, what, pricing, status, url, overlap, edge
+        case priceAmount     = "price_amount"
+        case priceCurrency   = "price_currency"
+        case pricePeriod     = "price_period"
+        case chargesMoney    = "charges_money"
+        case size
+        case userCountHint   = "user_count_hint"
+        case userCountSource = "user_count_source"
+        case lastActive      = "last_active"
+    }
+
+    init(name: String, what: String, pricing: String, status: String,
+         url: String?, overlap: String? = nil, edge: String? = nil) {
+        self.name = name
+        self.what = what
+        self.pricing = pricing
+        self.status = status
+        self.url = url
+        self.overlap = overlap
+        self.edge = edge
+    }
+}
+
+// MARK: - ResearchDigest
+
+/// One demand signal the scout found, with direction and weight.
+struct ResearchSignal: Codable, Hashable, Identifiable {
+    var id: String { text }
+    let text: String
+    let url: String?
+    let sourceType: String?   // reddit | forum | review | app_store | news | blog | social | marketplace | other
+    let direction: String?    // positive | negative
+    let strength: String?     // weak | moderate | strong
+    let recency: String?
+    let countHint: Double?
+
+    enum CodingKeys: String, CodingKey {
+        case text, url, direction, strength, recency
+        case sourceType = "source_type"
+        case countHint  = "count_hint"
+    }
+}
+
+/// The numbers block of a v2 research digest — what the scorer's evidence
+/// caps read.
+struct ResearchMarket: Codable, Hashable {
+    let paidComparablesFound: Int?
+    let freeAlternativesDominate: String?
+    let saturation: String?
+    let smallPlayersMakingMoney: String?
+    let giantBlocksNiche: String?
+    let giantName: String?
+    let typicalPriceLow: Double?
+    let typicalPriceHigh: Double?
+    let priceCurrency: String?
+    let searchQuality: String?
+    let queriesRun: [String]?
+
+    enum CodingKeys: String, CodingKey {
+        case paidComparablesFound     = "paid_comparables_found"
+        case freeAlternativesDominate = "free_alternatives_dominate"
+        case saturation
+        case smallPlayersMakingMoney  = "small_players_making_money"
+        case giantBlocksNiche         = "giant_blocks_niche"
+        case giantName                = "giant_name"
+        case typicalPriceLow          = "typical_price_low"
+        case typicalPriceHigh         = "typical_price_high"
+        case priceCurrency            = "price_currency"
+        case searchQuality            = "search_quality"
+        case queriesRun               = "queries_run"
+    }
+}
+
+/// Live web research digest from the research-market edge function. The
+/// first three fields are the legacy prose digest; `signals` and `market`
+/// arrived with scoring v2 and are nil on older digests.
+struct ResearchDigest: Codable {
+    let comparables: [MarketComparable]
+    let nicheNotes: String
+    let demandSignals: [String]
+    var signals: [ResearchSignal]? = nil
+    var market: ResearchMarket? = nil
+
+    enum CodingKeys: String, CodingKey {
+        case comparables, signals, market
+        case nicheNotes    = "niche_notes"
+        case demandSignals = "demand_signals"
+    }
+
+    var isEmpty: Bool {
+        comparables.isEmpty && nicheNotes.isEmpty && demandSignals.isEmpty && (signals ?? []).isEmpty
+    }
+}
+
 struct MarketInsights: Codable {
     let marketSize: String?
     let growthRate: String?
     let trendDirection: String?   // "up" | "down" | "stable"
     let keyCompetitors: [String]?
+    let comparables: [MarketComparable]?
 
     enum CodingKeys: String, CodingKey {
         case marketSize      = "market_size"
         case growthRate      = "growth_rate"
         case trendDirection  = "trend_direction"
         case keyCompetitors  = "key_competitors"
+        case comparables
     }
+}
+
+// MARK: - DimensionScores
+
+/// The five 0-10 sub-scores behind the viability score. Keys stay camelCase
+/// in the jsonb column — they mirror the edge-function response verbatim.
+struct DimensionScores: Codable, Hashable {
+    let problemSeverity: Int
+    let demandEvidence: Int
+    let marketQuality: Int
+    let feasibility: Int
+    let differentiation: Int
+
+    func value(for key: DimensionKey) -> Int {
+        switch key {
+        case .problemSeverity: return problemSeverity
+        case .demandEvidence:  return demandEvidence
+        case .marketQuality:   return marketQuality
+        case .feasibility:     return feasibility
+        case .differentiation: return differentiation
+        }
+    }
+}
+
+/// The five dimensions, keyed exactly as the edge function names them.
+enum DimensionKey: String, CaseIterable, Identifiable {
+    case problemSeverity, demandEvidence, marketQuality, feasibility, differentiation
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .problemSeverity: return "Problem"
+        case .demandEvidence:  return "Demand"
+        case .marketQuality:   return "Market"
+        case .feasibility:     return "Buildable"
+        case .differentiation: return "Different"
+        }
+    }
+}
+
+/// The model's one evidence sentence per dimension (scoring v2).
+struct DimensionEvidence: Codable, Hashable {
+    let problemSeverity: String?
+    let demandEvidence: String?
+    let marketQuality: String?
+    let feasibility: String?
+    let differentiation: String?
+
+    func text(for key: DimensionKey) -> String? {
+        switch key {
+        case .problemSeverity: return problemSeverity
+        case .demandEvidence:  return demandEvidence
+        case .marketQuality:   return marketQuality
+        case .feasibility:     return feasibility
+        case .differentiation: return differentiation
+        }
+    }
+}
+
+/// Concrete numbers the founder stated about demand, extracted before judging.
+struct FounderEvidence: Codable, Hashable {
+    let citesConcreteNumbers: Bool
+    let quotes: [String]
+    let strongest: String   // none | anecdote | personal_experience | community_size | poll | waitlist | prepayments | revenue
+}
+
+// MARK: - ScoreMeta (scoring v2 receipt)
+
+struct ScoreCap: Codable, Hashable {
+    let dim: String
+    let from: Int
+    let to: Int
+    let reason: String
+}
+
+struct ScoreAdjustment: Codable, Hashable {
+    let kind: String     // hedged | founder_numbers | dead_dimension | fatal_flaw | ceiling
+    let delta: Int?
+    let cap: Int?
+    let reason: String
+}
+
+/// Everything the server did to turn five dimensions into the number —
+/// weights, caps, gate, map, adjustments. Mirrors _shared/scoring.ts.
+struct ScoreMeta: Codable, Hashable {
+    let version: Int
+    let weights: [String: Double]?
+    let rawDims: DimensionScores?
+    let cappedDims: DimensionScores?
+    let wm: Double?
+    let gate: Double?
+    let demandFactor: Double?
+    let raw: Double?
+    let mapped: Double?
+    let caps: [ScoreCap]?
+    let adjustments: [ScoreAdjustment]?
+    let hedged: Bool?
+    let verdictBand: String?
+    let computedBand: String?
+    let bandMismatch: Bool?
+    let evidenceStrength: String?
+
+    func cap(for key: DimensionKey) -> ScoreCap? {
+        caps?.first { $0.dim == key.rawValue }
+    }
+
+    func weight(for key: DimensionKey) -> Double? {
+        weights?[key.rawValue]
+    }
+}
+
+// MARK: - IdeaVariant
+
+/// A "Remix the Recipe" variation: same core idea, one axis changed.
+struct IdeaVariant: Codable, Hashable, Identifiable {
+    var id: String { title }
+    let title: String
+    let pitch: String
+    let differentiator: String
+    // vs-the-original comparison (nil on rows from before the polish round)
+    let keeps: String?     // what stays from the original idea
+    let changes: String?   // what's different or added
+
+    init(title: String, pitch: String, differentiator: String,
+         keeps: String? = nil, changes: String? = nil) {
+        self.title = title
+        self.pitch = pitch
+        self.differentiator = differentiator
+        self.keeps = keeps
+        self.changes = changes
+    }
+}
+
+// MARK: - Score history (re-tastes)
+
+struct ScoreHistoryEntry: Codable, Hashable {
+    let score: Int
+    let at: Date
+    let reason: String?
 }
 
 // MARK: - SWOTAnalysis
@@ -78,6 +337,76 @@ struct SWOTAnalysis: Identifiable, Codable {
     let marketContext: String?
     let marketInsights: MarketInsights?
 
+    // Score transparency + remixes (nullable — rows before the overhaul have NULL)
+    let dimensionScores: DimensionScores?
+    let scoreRationale: String?
+    let fatalFlaw: Bool?
+    let ideaVariants: [IdeaVariant]?
+
+    // Scoring v2 receipt (nil on rows scored with the old recipe). Defaults
+    // keep the memberwise init source-compatible with older call sites.
+    var scoringVersion: Int? = nil
+    var verdictBand: String? = nil
+    var verdictReason: String? = nil
+    var dimensionEvidence: DimensionEvidence? = nil
+    var scoreMeta: ScoreMeta? = nil
+    var evidenceStrength: String? = nil      // none | thin | ok | rich
+    var fatalFlawReason: String? = nil
+    var researchDigest: ResearchDigest? = nil
+    var scoreAuditId: UUID? = nil
+    /// Re-tastes: every previous score, oldest first. The row keeps its id so
+    /// the action plan (and its history) survive the re-judging.
+    var scoreHistory: [ScoreHistoryEntry]? = nil
+    var retasteCount: Int? = nil
+
+    /// Rows scored before v2 show a footnote and no weights/caps UI.
+    var isLegacyScoring: Bool { (scoringVersion ?? 1) < 2 }
+
+    /// The score before the most recent re-taste, if there was one.
+    var previousScore: Int? { scoreHistory?.last?.score }
+
+    /// The same row, re-judged: identical `id`/`transcriptionId`/`createdAt`
+    /// so nothing downstream (plans, notes, audits) is orphaned; the old
+    /// score is pushed onto the history. Pure — the caller persists it.
+    func retasted(with response: SWOTAnalysisResponse, research: ResearchDigest?, reason: String, now: Date = Date()) -> SWOTAnalysis {
+        var history = scoreHistory ?? []
+        if let old = viabilityScore {
+            history.append(ScoreHistoryEntry(score: old, at: now, reason: reason))
+        }
+        return SWOTAnalysis(
+            id: id,
+            transcriptionId: transcriptionId,
+            strengths: [],
+            weaknesses: [],
+            opportunities: [],
+            threats: [],
+            summary: response.summary,
+            createdAt: createdAt,
+            strengthItems: response.strengths,
+            weaknessItems: response.weaknesses,
+            opportunityItems: response.opportunities,
+            threatItems: response.threats,
+            viabilityScore: response.viabilityScore,
+            marketContext: response.marketContext,
+            marketInsights: response.marketInsights,
+            dimensionScores: response.dimensionScores,
+            scoreRationale: response.scoreRationale,
+            fatalFlaw: response.fatalFlaw,
+            ideaVariants: response.ideaVariants,
+            scoringVersion: response.scoringVersion,
+            verdictBand: response.verdictBand,
+            verdictReason: response.verdictReason,
+            dimensionEvidence: response.dimensionEvidence,
+            scoreMeta: response.scoreMeta,
+            evidenceStrength: response.evidenceStrength,
+            fatalFlawReason: response.fatalFlawReason,
+            researchDigest: research ?? researchDigest,
+            scoreAuditId: response.scoreAuditId,
+            scoreHistory: history,
+            retasteCount: (retasteCount ?? 0) + 1
+        )
+    }
+
     enum CodingKeys: String, CodingKey {
         case id
         case transcriptionId  = "transcription_id"
@@ -94,6 +423,21 @@ struct SWOTAnalysis: Identifiable, Codable {
         case viabilityScore   = "viability_score"
         case marketContext    = "market_context"
         case marketInsights   = "market_insights"
+        case dimensionScores  = "dimension_scores"
+        case scoreRationale   = "score_rationale"
+        case fatalFlaw        = "fatal_flaw"
+        case ideaVariants     = "idea_variants"
+        case scoringVersion    = "scoring_version"
+        case verdictBand       = "verdict_band"
+        case verdictReason     = "verdict_reason"
+        case dimensionEvidence = "dimension_evidence"
+        case scoreMeta         = "score_meta"
+        case evidenceStrength  = "evidence_strength"
+        case fatalFlawReason   = "fatal_flaw_reason"
+        case researchDigest    = "research_digest"
+        case scoreAuditId      = "score_audit_id"
+        case scoreHistory      = "score_history"
+        case retasteCount      = "retaste_count"
     }
 
     // MARK: - Computed helpers (Charts fall back to score=50 for legacy rows)

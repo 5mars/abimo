@@ -27,10 +27,10 @@ final class NavigationCoordinatorTests: XCTestCase {
 
     // MARK: - Tests
 
-    func testInitialSelectedTabIsNotes() async {
+    func testInitialSelectedTabIsIdeas() async {
         let coordinator = NavigationCoordinator()
-        XCTAssertEqual(coordinator.selectedTab, .notes,
-                       "NavigationCoordinator must initialize with selectedTab == .notes")
+        XCTAssertEqual(coordinator.selectedTab, .ideas,
+                       "NavigationCoordinator must initialize with selectedTab == .ideas")
     }
 
     func testInitialPendingNoteIsNil() async {
@@ -52,8 +52,8 @@ final class NavigationCoordinatorTests: XCTestCase {
 
         coordinator.navigateToNote(note)
 
-        XCTAssertEqual(coordinator.selectedTab, .notes,
-                       "navigateToNote must set selectedTab to .notes")
+        XCTAssertEqual(coordinator.selectedTab, .ideas,
+                       "navigateToNote must set selectedTab to .ideas")
         XCTAssertEqual(coordinator.pendingNote?.id, note.id,
                        "navigateToNote must set pendingNote to the given note")
     }

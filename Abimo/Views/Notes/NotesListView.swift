@@ -7,14 +7,20 @@ import SwiftUI
 
 struct NotesListView: View {
     @EnvironmentObject var coordinator: NavigationCoordinator
+    /// Shared with the Actions tab and Profile — supplies per-idea plan progress.
+    @EnvironmentObject var actionsVM: ActionsTabViewModel
     @StateObject private var viewModel = NotesViewModel()
+    @ObservedObject private var entitlements = EntitlementService.shared
+    @ObservedObject private var pipeline = IdeaPipelineService.shared
+    @State private var confirmingDeleteNote: VoiceNote? = nil
+    @State private var showPaywall = false
 
     var body: some View {
         ZStack {
             Color.appBg.ignoresSafeArea()
 
             Group {
-                if viewModel.isLoading && viewModel.notes.isEmpty {
+                if viewModel.isLoading && !viewModel.hasLoadedOnce {
                     labLoadingView
                 } else if viewModel.notes.isEmpty {
                     labEmptyView
@@ -34,38 +40,100 @@ struct NotesListView: View {
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(Color.appBg, for: .navigationBar)
-        .alert("Error", isPresented: .constant(viewModel.errorMessage != nil)) {
+        .alert("Error", isPresented: Binding(
+            get: { viewModel.errorMessage != nil },
+            set: { if !$0 { viewModel.errorMessage = nil } }
+        )) {
             Button("OK") { viewModel.errorMessage = nil }
         } message: {
             if let error = viewModel.errorMessage { Text(error) }
         }
-        .task { await viewModel.fetchNotes() }
+        .task {
+            await viewModel.fetchNotes()
+            if !actionsVM.hasLoadedOnce { await actionsVM.loadAllPlans() }
+        }
+        .sheet(isPresented: $showPaywall) {
+            PaywallView(
+                context: viewModel.notes.count >= EntitlementService.freeIdeaLimit ? .ideaCap : .general
+            )
+        }
+        .onChange(of: coordinator.selectedTab) { _, newTab in
+            if newTab == .ideas {
+                Task {
+                    await viewModel.fetchNotes()
+                    await actionsVM.loadAllPlans()   // keep the progress rings honest
+                }
+            }
+        }
+        // A notification deep-linked to a note: open it once we can find it.
+        .onChange(of: coordinator.pendingNoteId) { _, _ in resolvePendingNote() }
+        .onChange(of: viewModel.notes.count) { _, _ in resolvePendingNote() }
+        .onChange(of: pipeline.stage) { _, newStage in
+            // A finished cook flips the card from "Cooking" to "Analyzed"
+            if newStage == .done {
+                Task { await viewModel.fetchNotes() }
+            }
+        }
+        .alert("Delete Idea?", isPresented: Binding(
+            get: { confirmingDeleteNote != nil },
+            set: { if !$0 { confirmingDeleteNote = nil } }
+        )) {
+            Button("Delete", role: .destructive) {
+                if let note = confirmingDeleteNote {
+                    Task { await viewModel.deleteNote(note) }
+                    confirmingDeleteNote = nil
+                }
+            }
+            Button("Cancel", role: .cancel) {
+                confirmingDeleteNote = nil
+            }
+        } message: {
+            if let note = confirmingDeleteNote {
+                Text("\"\(note.title)\" will be permanently deleted.")
+            }
+        }
     }
 
     // MARK: - Loading
 
     private var labLoadingView: some View {
-        LoadingView(text: "Setting up the lab...")
+        VStack(spacing: 12) {
+            ForEach(0..<3, id: \.self) { _ in
+                SkeletonCardRow()
+            }
+            Spacer()
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 24)
     }
 
     // MARK: - Empty State
 
     private var labEmptyView: some View {
-        VStack(spacing: 20) {
-            Text("🧪")
-                .font(.system(size: 56))
+        MascotEmptyStateView(
+            line: MascotVoice.moment(for: .emptyKitchen).line,
+            title: "Welcome to The Kitchen",
+            subtitle: "Record an idea and we'll turn it\ninto a real action plan",
+            ctaTitle: "Record your first idea",
+            ctaAction: { coordinator.selectedTab = .record }
+        )
+        .padding(.horizontal, 32)
+    }
 
-            Text("The Lab is empty")
-                .font(.system(size: 22, weight: .bold, design: .rounded))
-                .foregroundColor(.textPri)
+    private func resolvePendingNote() {
+        guard let id = coordinator.pendingNoteId,
+              let note = viewModel.notes.first(where: { $0.id == id }) else { return }
+        coordinator.pendingNoteId = nil
+        coordinator.pendingNote = note
+    }
 
-            Text("Record your first idea and drop it\ninto the lab for analysis")
-                .font(.system(size: 15))
-                .foregroundColor(.textSec)
-                .multilineTextAlignment(.center)
-                .lineSpacing(4)
-        }
-        .padding(.horizontal, 40)
+    /// "3/6" for the note's plan, if it has one.
+    private func planProgress(for note: VoiceNote) -> (completed: Int, total: Int)? {
+        guard let analysisId = note.analysisId,
+              let plan = actionsVM.plans.first(where: { $0.analysisId == analysisId }) else { return nil }
+        let total = actionsVM.totalCount(for: plan.id)
+        guard total > 0 else { return nil }
+        return (actionsVM.completedCount(for: plan.id), total)
     }
 
     // MARK: - Idea List
@@ -74,43 +142,45 @@ struct NotesListView: View {
         List {
             // Lab header
             Section {
-                LabHeaderView(count: viewModel.notes.count)
+                LabHeaderView(count: viewModel.notes.count, isPremium: entitlements.isPremium) {
+                    AnalyticsService.shared.log(.gateHit(
+                        gate: viewModel.notes.count >= EntitlementService.freeIdeaLimit ? "idea_cap" : "general",
+                        source: "slot_pill"
+                    ))
+                    showPaywall = true
+                }
                     .listRowBackground(Color.clear)
                     .listRowInsets(EdgeInsets())
                     .listRowSeparator(.hidden)
                     .cardEntrance(delay: 0.0)
             }
 
-            // Ideas section
+            // Ideas — cards are self-evident, no section header needed
             Section {
-                ForEach(viewModel.notes) { note in
+                ForEach(Array(viewModel.notes.enumerated()), id: \.element.id) { index, note in
+                    let isCooking = pipeline.isCooking(noteId: note.id)
                     NavigationLink(destination: NoteDetailView(note: note)) {
-                        IdeaCardView(note: note, viewModel: viewModel)
+                        IdeaCardView(
+                            note: note,
+                            viewModel: viewModel,
+                            cookingStepTitle: isCooking ? pipeline.currentStepTitle : nil,
+                            planProgress: planProgress(for: note)
+                        )
                     }
+                    // Staggered load-in, capped so deep rows don't lag
+                    .cardEntrance(delay: min(Double(index), 8) * 0.04)
+                    .disabled(isCooking)   // no peeking while the kitchen works
                     .listRowBackground(Color.appBg)
                     .listRowSeparator(.hidden)
                     .listRowInsets(EdgeInsets(top: 5, leading: 16, bottom: 5, trailing: 16))
-                }
-                .onDelete { indexSet in
-                    for index in indexSet {
-                        let note = viewModel.notes[index]
-                        Task { await viewModel.deleteNote(note) }
+                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                        Button(role: .destructive) {
+                            confirmingDeleteNote = note
+                        } label: {
+                            Label("Delete", systemImage: "trash")
+                        }
                     }
                 }
-            } header: {
-                HStack {
-                    Text("On the bench")
-                        .font(.system(size: 13, weight: .bold, design: .rounded))
-                        .foregroundColor(.textSec)
-                        .textCase(nil)
-                    Spacer()
-                    Text("\(viewModel.notes.count) idea\(viewModel.notes.count == 1 ? "" : "s")")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(.textSec.opacity(0.7))
-                }
-                .padding(.horizontal, 20)
-                .padding(.top, 4)
-                .padding(.bottom, 2)
             }
         }
         .listStyle(.plain)
@@ -123,27 +193,65 @@ struct NotesListView: View {
 
 struct LabHeaderView: View {
     let count: Int
+    var isPremium: Bool = false
+    var onSlotsTap: () -> Void = {}
 
     private var tagline: String {
+        let ideas = "\(count) idea\(count == 1 ? "" : "s") · "
         let hour = Calendar.current.component(.hour, from: Date())
-        if hour < 12 { return "morning grind, let's get it" }
-        if hour < 17 { return "ideas don't test themselves" }
-        return "late night experiments hit different"
+        if hour < 12 { return ideas + "morning grind, let's get it" }
+        if hour < 17 { return ideas + "ideas don't cook themselves" }
+        return ideas + "late night cooking hits different"
     }
+
+    private var atCap: Bool { count >= EntitlementService.freeIdeaLimit }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("The Lab")
-                .font(.system(size: 36, weight: .black, design: .rounded))
+            Text("The Kitchen")
+                .font(.duoScreenTitle)
                 .foregroundColor(.textPri)
             Text(tagline)
                 .font(.system(size: 14, weight: .medium))
                 .foregroundColor(.textSec)
+            slotPill
+                .padding(.top, 4)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 20)
         .padding(.top, 12)
-        .padding(.bottom, 16)
+        .padding(.bottom, 12)
+    }
+
+    @ViewBuilder
+    private var slotPill: some View {
+        if isPremium {
+            pillLabel("Plus · unlimited slots", icon: "infinity",
+                      fg: .brandGreen, bg: Color.brandGreen.opacity(0.12))
+        } else {
+            Button(action: onSlotsTap) {
+                pillLabel(
+                    "\(min(count, EntitlementService.freeIdeaLimit)) of \(EntitlementService.freeIdeaLimit) idea slots used",
+                    icon: atCap ? "lock.fill" : "tray.full",
+                    fg: atCap ? .white : .brand,
+                    bg: atCap ? Color.brand : Color.brand.opacity(0.12)
+                )
+            }
+            .buttonStyle(DuoPressStyle())
+        }
+    }
+
+    private func pillLabel(_ text: String, icon: String, fg: Color, bg: Color) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.system(size: 10, weight: .bold))
+            Text(text)
+                .font(.system(size: 12, weight: .bold))
+        }
+        .foregroundColor(fg)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(Capsule().fill(bg))
     }
 }
 
@@ -152,8 +260,15 @@ struct LabHeaderView: View {
 struct IdeaCardView: View {
     let note: VoiceNote
     let viewModel: NotesViewModel
+    /// Non-nil while the pipeline is actively cooking this note — the card
+    /// shows live progress and NotesListView disables navigation into it.
+    var cookingStepTitle: String? = nil
+    /// Action-plan progress for an analyzed idea; replaces the "Analyzed"
+    /// pill with a ring so the Kitchen shows there are steps waiting.
+    var planProgress: (completed: Int, total: Int)? = nil
 
     private var isAnalyzed: Bool { note.analysisId != nil }
+    private var isCooking: Bool { cookingStepTitle != nil }
 
     private func timeAgo(_ date: Date) -> String {
         let s = Int(Date().timeIntervalSince(date))
@@ -176,47 +291,82 @@ struct IdeaCardView: View {
             // Title row
             HStack(alignment: .top, spacing: 12) {
                 Text(note.title)
-                    .font(.system(size: 17, weight: .bold, design: .rounded))
+                    .font(.duoCardTitle)
                     .foregroundColor(.textPri)
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: .infinity, alignment: .leading)
 
                 // Status tag
-                Text(isAnalyzed ? "Analyzed" : "Fresh idea")
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundColor(isAnalyzed ? .brandGreen : .brand)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 5)
-                    .background((isAnalyzed ? Color.brandGreen : Color.brand).opacity(0.12))
-                    .clipShape(Capsule())
+                if isCooking {
+                    StatusPill(text: "Cooking", tint: .brandAmber, showsSpinner: true)
+                } else if let planProgress, planProgress.total > 0 {
+                    planRing(planProgress)
+                } else if isAnalyzed {
+                    StatusPill(text: "Analyzed", tint: .brandGreen)
+                } else {
+                    StatusPill(text: "New", tint: .brand)
+                }
             }
 
-            // Meta row
+            // Meta row — live step title while cooking, the usual facts after
             HStack(spacing: 10) {
-                Label(viewModel.formatDuration(note.duration), systemImage: "waveform")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(.textSec)
+                if let cookingStepTitle {
+                    Text(cookingStepTitle)
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.brandAmber)
 
-                Text("·")
-                    .foregroundColor(.textSec.opacity(0.4))
-                    .font(.system(size: 14))
+                    Spacer()
 
-                Text(timeAgo(note.createdAt))
-                    .font(.system(size: 12))
-                    .foregroundColor(.textSec)
+                    Image(systemName: "lock.fill")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(.textTertiary)
+                } else {
+                    Label(viewModel.formatDuration(note.duration), systemImage: "waveform")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.textSec)
 
-                Spacer()
+                    Text("·")
+                        .foregroundColor(.textTertiary)
+                        .font(.system(size: 14))
 
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundColor(Color.textSec.opacity(0.3))
+                    Text(timeAgo(note.createdAt))
+                        .font(.system(size: 12))
+                        .foregroundColor(.textSec)
+
+                    Spacer()
+
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(.textTertiary)
+                }
             }
+
         }
         .padding(.horizontal, 18)
         .padding(.vertical, 16)
-        .background(Color.white)
-        .cornerRadius(20)
+        .duoCard(padding: 0)
+    }
+
+    private func planRing(_ progress: (completed: Int, total: Int)) -> some View {
+        let done = progress.completed == progress.total
+        let fraction = Double(progress.completed) / Double(max(progress.total, 1))
+        return HStack(spacing: 6) {
+            ZStack {
+                Circle()
+                    .stroke((done ? Color.brandAmber : Color.brandGreen).opacity(0.2), lineWidth: 3)
+                Circle()
+                    .trim(from: 0, to: fraction)
+                    .stroke(done ? Color.brandAmber : Color.brandGreen, style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                    .rotationEffect(.degrees(-90))
+            }
+            .frame(width: 22, height: 22)
+            Text("\(progress.completed)/\(progress.total)")
+                .font(.system(size: 12, weight: .bold, design: .rounded))
+                .foregroundColor(done ? .brandAmberDark : .brandGreenDark)
+                .contentTransition(.numericText())
+        }
+        .accessibilityLabel("\(progress.completed) of \(progress.total) steps done")
     }
 }
 
@@ -225,4 +375,5 @@ struct IdeaCardView: View {
         NotesListView()
     }
     .environmentObject(NavigationCoordinator())
+    .environmentObject(ActionsTabViewModel())
 }

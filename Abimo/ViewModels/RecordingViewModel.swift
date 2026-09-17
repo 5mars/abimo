@@ -15,10 +15,37 @@ class RecordingViewModel: ObservableObject {
     @Published var isSaving = false
     @Published var errorMessage: String?
     @Published var recordingFileURL: URL?
+    @Published var activeIdeaCount: Int?   // nil until first fetch
+
+    /// Free-tier gate: at the cap when not premium and the last known count
+    /// has reached the limit. While the count is unfetched (nil) we allow
+    /// optimistically — the pipeline's server-side pre-flight is the backstop.
+    var isAtFreeCap: Bool {
+        guard !EntitlementService.shared.isPremium else { return false }
+        guard let count = activeIdeaCount else { return false }
+        return count >= EntitlementService.freeIdeaLimit
+    }
+
+    func refreshIdeaCount() async {
+        activeIdeaCount = try? await supabase.countVoiceNotes()
+    }
 
     private let audioService = AudioRecordingService()
     private let supabase = SupabaseService.shared
     private let permissionsManager = PermissionsManager()
+    private var cancellables = Set<AnyCancellable>()
+
+    init() {
+        // Forward audioService changes so SwiftUI observes audioLevel/duration updates
+        audioService.objectWillChange
+            .sink { [weak self] _ in self?.objectWillChange.send() }
+            .store(in: &cancellables)
+
+        // Forward permission changes so the denied-mic card appears/disappears live
+        permissionsManager.objectWillChange
+            .sink { [weak self] _ in self?.objectWillChange.send() }
+            .store(in: &cancellables)
+    }
 
     var recordingDuration: TimeInterval {
         audioService.recordingDuration
@@ -28,11 +55,19 @@ class RecordingViewModel: ObservableObject {
         audioService.audioLevel
     }
 
+    var micDenied: Bool {
+        permissionsManager.microphoneDenied
+    }
+
     func checkAndRequestPermissions() async -> Bool {
-        if !permissionsManager.microphoneAuthorized || !permissionsManager.speechRecognitionAuthorized {
-            return await permissionsManager.requestAllPermissions()
+        if !permissionsManager.microphoneAuthorized {
+            return await permissionsManager.requestMicrophonePermission()
         }
         return true
+    }
+
+    func openSettings() {
+        PermissionsManager.openAppSettings()
     }
 
     func startRecording() async {
@@ -40,7 +75,7 @@ class RecordingViewModel: ObservableObject {
 
         // Check permissions
         guard await checkAndRequestPermissions() else {
-            errorMessage = "Microphone and speech recognition permissions are required"
+            errorMessage = nil // denied state is rendered as a dedicated card, not an error string
             return
         }
 
@@ -111,6 +146,9 @@ class RecordingViewModel: ObservableObject {
             // Clean up local file
             AudioFileManager.deleteFile(at: fileURL)
             recordingFileURL = nil
+
+            // Schedule nudge if idea not analyzed within 24h
+            NotificationScheduler.shared.scheduleIdeaNudge(noteId: voiceNote.id, noteTitle: title)
 
             return voiceNote
         } catch {

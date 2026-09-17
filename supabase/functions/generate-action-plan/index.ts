@@ -1,11 +1,11 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { gate, jsonError, CORS_HEADERS } from "../_shared/gate.ts";
 
 const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY")!;
 
-const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+const DAILY_LIMIT = { free: 6, plus: 20 };
+const MAX_TRANSCRIPTION_CHARS = 8000;
+const MAX_SWOT_CONTEXT_CHARS = 6000;
 
 const ACTION_PLAN_SCHEMA = {
   type: "object",
@@ -55,7 +55,7 @@ const SYSTEM_PROMPT = `You are a startup action coach. You turn SWOT analyses in
 
 RULES FOR EVERY FIELD:
 
-"text" — The action title. ONE sentence. Max 15 words. Starts with a verb.
+"text" — The action title. ONE sentence. Max 10 words. Starts with a verb. It is printed beside a node on the path, so it must read as a label.
 GOOD: "Search Google for 3 direct competitors and save their URLs."
 GOOD: "Message 3 friends asking how they solve this problem."
 BAD: "Open Google and search for competitors in the meal-prep space. Look at the top 5 results and write down their pricing model and main differentiator."
@@ -102,21 +102,25 @@ For "generic" type: all fields as "".
 
 "title" — 2-4 word plan name. E.g. "Customer Pulse Check"
 
-"summary" — One sentence. Reference the specific idea.
+"summary" — One sentence stating what this plan will FIND OUT, referencing the specific idea. It is shown as the plan's headline. E.g. "Find out if busy parents will pay for prepped dinners."
 
 ORDERING:
+0. When DIMENSION SCORES are provided, the first 1-2 actions must attack the WEAKEST dimension.
 1. Address biggest weakness/risk
 2. Validate top opportunity
 3. Leverage a strength
 4. Monitor threats
 
+When REAL SMALL COMPARABLES are provided, reference them by name in search/message templates (e.g. "PoolTrak alternatives pricing") instead of [competitor] placeholders.
+
 Generate exactly 5-7 actions. Spread across quadrants.
 
-STRATEGY BY VIABILITY:
-0-35: Help founder pivot. Find the real problem.
-36-60: Validate the problem exists. Don't build yet.
-61-80: Test demand. Would people pay?
-81-100: Find first users. Move fast.
+STRATEGY BY VIABILITY (scores spread the full range — treat the band as truth):
+0-19: The idea as described doesn't survive. Actions should hunt for a pivot or the real problem underneath.
+20-39: Something's there but unproven. Actions should find out if the problem actually exists.
+40-59: Real problem, unproven demand. Actions should test whether anyone cares enough to act.
+60-79: Promising. Actions should test willingness to pay.
+80-100: Rare. Actions should get real users fast.
 
 Each action must take 5-30 min, cost nothing, require no coding.
 The template is what makes the user actually DO it — make it so easy they just copy, paste, and send.
@@ -127,17 +131,12 @@ serve(async (req) => {
     return new Response(null, { headers: CORS_HEADERS });
   }
 
-  const authHeader = req.headers.get("Authorization");
-  if (!authHeader) {
-    return new Response(
-      JSON.stringify({ error: "Not authenticated" }),
-      { status: 401, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
-    );
-  }
+  const g = await gate(req, "generate-action-plan", DAILY_LIMIT);
+  if (g instanceof Response) return g;
 
   try {
     const {
-      analysis_id,
+      analysis_id: _analysis_id,   // client bookkeeping; the plan is stored client-side
       transcription_text,
       swot_summary,
       strengths,
@@ -145,26 +144,39 @@ serve(async (req) => {
       opportunities,
       threats,
       viability_score,
+      dimension_scores,
+      score_rationale,
+      comparables,
     } = await req.json();
 
     if (!transcription_text || typeof transcription_text !== "string") {
-      return new Response(
-        JSON.stringify({ error: "transcription_text field required" }),
-        { status: 400, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
-      );
+      return jsonError("transcription_text field required", 400);
     }
+    if (transcription_text.length > MAX_TRANSCRIPTION_CHARS) {
+      return jsonError("transcription_text too long", 400);
+    }
+
+    const dims = dimension_scores
+      ? `problem ${dimension_scores.problemSeverity}, demand ${dimension_scores.demandEvidence}, market ${dimension_scores.marketQuality}, buildable ${dimension_scores.feasibility}, different ${dimension_scores.differentiation}`
+      : "Not available.";
+
+    const clip = (arr: unknown) =>
+      ((arr as string[] | undefined) || []).join("; ").slice(0, MAX_SWOT_CONTEXT_CHARS) || "None.";
 
     const userMessage = `Founder's idea and SWOT analysis:
 
 VOICE NOTE:
 ${transcription_text}
 
-SUMMARY: ${swot_summary || "None."}
-STRENGTHS: ${(strengths || []).join("; ") || "None."}
-WEAKNESSES: ${(weaknesses || []).join("; ") || "None."}
-OPPORTUNITIES: ${(opportunities || []).join("; ") || "None."}
-THREATS: ${(threats || []).join("; ") || "None."}
+SUMMARY: ${String(swot_summary || "None.").slice(0, MAX_SWOT_CONTEXT_CHARS)}
+STRENGTHS: ${clip(strengths)}
+WEAKNESSES: ${clip(weaknesses)}
+OPPORTUNITIES: ${clip(opportunities)}
+THREATS: ${clip(threats)}
 VIABILITY: ${viability_score ?? 50}/100
+DIMENSION SCORES (0-10): ${dims}
+WEAKEST LINK: ${score_rationale || "Not available."}
+REAL SMALL COMPARABLES (from live web research): ${((comparables || []).join(" | ")).slice(0, MAX_SWOT_CONTEXT_CHARS) || "None found."}
 
 Generate 5-7 micro-actions with copy-paste templates.`;
 
@@ -176,6 +188,8 @@ Generate 5-7 micro-actions with copy-paste templates.`;
       },
       body: JSON.stringify({
         model: "gpt-4o",
+        temperature: 0.4,
+        max_tokens: 2500,
         response_format: {
           type: "json_schema",
           json_schema: {

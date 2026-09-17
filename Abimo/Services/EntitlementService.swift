@@ -1,0 +1,225 @@
+//
+//  EntitlementService.swift
+//  Abimo
+//
+//  StoreKit 2 layer for Abimo Plus. Singleton like MascotDirector — views
+//  observe it directly. Premium is derived from Transaction.currentEntitlements
+//  (verified, unrevoked), which StoreKit keeps available offline — no cache.
+//
+
+import Foundation
+import Combine
+import StoreKit
+import UIKit
+import Supabase
+
+@MainActor
+final class EntitlementService: ObservableObject {
+    static let shared = EntitlementService()
+
+    enum ProductID {
+        static let monthly = "com.mars.Abimo.plus.monthly"
+        static let yearly  = "com.mars.Abimo.plus.yearly"
+        static let all: Set<String> = [monthly, yearly]
+    }
+
+    /// Free tier: max ACTIVE ideas — deleting one frees a slot.
+    static let freeIdeaLimit = 3
+
+    #if DEBUG
+    /// TESTING OVERRIDE — treats debug builds as Abimo Plus without a
+    /// purchase. Flip to false to exercise the free tier and paywalls.
+    /// Compiled out of release builds entirely.
+    static let debugForcePremium = false
+    #endif
+
+    @Published private(set) var isPremium = false
+    @Published private(set) var products: [Product] = []   // sorted monthly-first
+    @Published private(set) var isLoadingProducts = false
+    @Published private(set) var purchaseInFlight = false
+    @Published var lastError: String?
+
+    private var updatesTask: Task<Void, Never>?
+
+    private init() {
+        // Listener must be alive before any purchase can occur (Apple guidance);
+        // it also catches renewals, refunds, and Ask-to-Buy approvals.
+        updatesTask = Task { [weak self] in
+            for await update in Transaction.updates {
+                if case .verified(let transaction) = update {
+                    await transaction.finish()
+                    await self?.refreshEntitlement()
+                }
+            }
+        }
+        Task {
+            await refreshEntitlement()
+            await loadProducts()
+        }
+    }
+
+    deinit {
+        updatesTask?.cancel()
+    }
+
+    // MARK: - Entitlement
+
+    func refreshEntitlement() async {
+        #if DEBUG
+        if Self.debugForcePremium {
+            isPremium = true
+            return
+        }
+        #endif
+        var premium = false
+        for await entitlement in Transaction.currentEntitlements {
+            // Only verified, unrevoked transactions count — never trust .unverified.
+            if case .verified(let transaction) = entitlement,
+               ProductID.all.contains(transaction.productID),
+               transaction.revocationDate == nil {
+                premium = true
+                break
+            }
+        }
+        let changed = hasResolvedOnce && premium != isPremium
+        if changed {
+            AnalyticsService.shared.log(.entitlementChanged(
+                from: isPremium ? "plus" : "free",
+                to: premium ? "plus" : "free",
+                source: "refresh"
+            ))
+        }
+        hasResolvedOnce = true
+        isPremium = premium
+        await syncServer(force: changed)
+    }
+
+    /// First resolution is the baseline, not a change.
+    private var hasResolvedOnce = false
+
+    // MARK: - Server mirror (profiles.is_premium)
+
+    /// Posts the current signed transaction to verify-entitlement so the
+    /// server can apply Plus caps and Plus-only functions. StoreKit stays the
+    /// source of truth for the UI; this is the server catching up. Throttled
+    /// to once a day unless the entitlement just changed.
+    private static let lastSyncKey = "entitlement_last_server_sync"
+
+    func syncServer(force: Bool = false) async {
+        let last = UserDefaults.standard.object(forKey: Self.lastSyncKey) as? Date ?? .distantPast
+        guard force || Date().timeIntervalSince(last) > 24 * 60 * 60 else { return }
+
+        var jws: String? = nil
+        for await entitlement in Transaction.currentEntitlements {
+            // The signed payload lives on the VerificationResult, not the
+            // decoded Transaction — the server re-verifies it against Apple.
+            if case .verified(let transaction) = entitlement,
+               ProductID.all.contains(transaction.productID),
+               transaction.revocationDate == nil {
+                jws = entitlement.jwsRepresentation
+                break
+            }
+        }
+
+        struct Body: Encodable { let jws: String? }
+        do {
+            _ = try await SupabaseService.shared.client.functions.invoke(
+                "verify-entitlement",
+                options: FunctionInvokeOptions(body: Body(jws: jws))
+            ) as EmptyResponse
+            UserDefaults.standard.set(Date(), forKey: Self.lastSyncKey)
+        } catch {
+            // Best-effort: the next launch retries. Never surface to the user.
+            print("verify-entitlement sync failed: \(error.localizedDescription)")
+        }
+    }
+
+    private struct EmptyResponse: Decodable {}
+
+    // MARK: - Products
+
+    func loadProducts() async {
+        guard !isLoadingProducts else { return }
+        isLoadingProducts = true
+        defer { isLoadingProducts = false }
+        do {
+            let loaded = try await Product.products(for: ProductID.all)
+            products = loaded.sorted { $0.price < $1.price }
+            if !loaded.isEmpty { lastError = nil }
+        } catch {
+            lastError = "Couldn't load plans: \(error.localizedDescription)"
+        }
+    }
+
+    // MARK: - Purchase / restore
+
+    /// Returns true only when the purchase verified successfully.
+    /// Cancelled and pending (Ask to Buy) resolve false without an error.
+    @discardableResult
+    func purchase(_ product: Product) async -> Bool {
+        guard !purchaseInFlight else { return false }
+        purchaseInFlight = true
+        defer { purchaseInFlight = false }
+        do {
+            guard let scene = activeScene else { return false }
+            let result = try await product.purchase(confirmIn: scene)
+            switch result {
+            case .success(.verified(let transaction)):
+                await transaction.finish()
+                await refreshEntitlement()
+                AnalyticsService.shared.log(.purchaseSucceeded(productId: product.id))
+                if transaction.offer?.type == .introductory {
+                    AnalyticsService.shared.log(.trialStarted(productId: product.id))
+                }
+                return true
+            case .success(.unverified):
+                lastError = "That purchase couldn't be verified. Try Restore Purchases."
+                AnalyticsService.shared.log(.purchaseFailed(reason: "unverified"))
+                return false
+            case .userCancelled:
+                AnalyticsService.shared.log(.purchaseFailed(reason: "cancelled"))
+                return false
+            case .pending:
+                AnalyticsService.shared.log(.purchaseFailed(reason: "pending"))
+                return false
+            @unknown default:
+                return false
+            }
+        } catch {
+            lastError = "Purchase failed: \(error.localizedDescription)"
+            AnalyticsService.shared.log(.purchaseFailed(reason: "error"))
+            return false
+        }
+    }
+
+    func restore() async {
+        do {
+            let wasPremium = isPremium
+            try await AppStore.sync()
+            await refreshEntitlement()
+            if isPremium && !wasPremium {
+                AnalyticsService.shared.log(.purchaseRestored)
+            }
+        } catch {
+            lastError = "Restore failed: \(error.localizedDescription)"
+        }
+    }
+
+    private var activeScene: UIWindowScene? {
+        let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+        return scenes.first { $0.activationState == .foregroundActive } ?? scenes.first
+    }
+}
+
+// MARK: - Premium roadmap
+//
+// Future Plus gates (documented only — not implemented this round):
+// - SWOT re-runs / action-plan regenerations: each costs an OpenAI edge-function
+//   call; first run on every idea stays free — that's the hook.
+// - Deeper analyses: competitor scan, market-size estimate, harsher
+//   "second opinion" critic mode as Plus-only pipeline stages.
+// - Mascot personality packs: alternate MascotVoice pools + mood art sets.
+// - Longer recordings, batch import, PDF pitch-sheet export.
+// - Server-side cap enforcement (security backstop before scale): voice_notes
+//   BEFORE INSERT trigger / RLS WITH CHECK against a profiles.is_premium flag,
+//   synced via App Store Server Notifications v2 → Supabase edge function.

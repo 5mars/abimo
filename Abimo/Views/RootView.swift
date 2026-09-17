@@ -8,14 +8,25 @@ import SwiftUI
 struct RootView: View {
     @StateObject private var authViewModel = AuthViewModel()
     @StateObject private var coordinator = NavigationCoordinator()
+    @AppStorage("hasSeenNotificationPermission") private var hasSeenPermission = false
+    // Once-per-process: the fullscreen intro never replays (sign-out included).
+    // In-app loading after launch is handled by each screen's own spinners.
+    @State private var introFinished = false
 
     var body: some View {
         ZStack {
-            if authViewModel.isLoading {
-                LoadingView()
-                    .transition(.opacity)
+            if !introFinished {
+                LaunchIntroView(isResolved: !authViewModel.isLoading) {
+                    introFinished = true
+                }
+                .transition(.opacity)
+            } else if authViewModel.isAuthenticated && !hasSeenPermission {
+                NotificationPermissionView {
+                    hasSeenPermission = true
+                }
+                .transition(.opacity)
             } else if authViewModel.isAuthenticated {
-                MainTabView()
+                MainContentView()
                     .environmentObject(authViewModel)
                     .environmentObject(coordinator)
                     .transition(.opacity)
@@ -25,183 +36,159 @@ struct RootView: View {
                     .transition(.opacity)
             }
         }
-        .animation(.easeInOut(duration: 0.4), value: authViewModel.isLoading)
+        .animation(.easeInOut(duration: 0.4), value: introFinished)
         .animation(.easeInOut(duration: 0.4), value: authViewModel.isAuthenticated)
+        .animation(.easeInOut(duration: 0.4), value: hasSeenPermission)
     }
 }
 
-// MARK: - Main Tab View
+// MARK: - Main Content View
 
-struct MainTabView: View {
+struct MainContentView: View {
     @EnvironmentObject var authViewModel: AuthViewModel
     @EnvironmentObject var coordinator: NavigationCoordinator
-
-    init() {
-        let appearance = UITabBarAppearance()
-        appearance.configureWithOpaqueBackground()
-        appearance.backgroundColor = UIColor.white
-        UITabBar.appearance().standardAppearance = appearance
-        UITabBar.appearance().scrollEdgeAppearance = appearance
-    }
+    @StateObject private var mascot = MascotDirector.shared
+    @StateObject private var walkIn = WalkInDirector.shared
+    @StateObject private var notificationRouter = NotificationRouter.shared
+    // One plans/streak view model shared by the Actions tab and Profile —
+    // both used to own separate instances that each refetched every plan.
+    @StateObject private var actionsVM = ActionsTabViewModel()
+    @State private var showMascotPaywall = false
 
     var body: some View {
-        TabView(selection: $coordinator.selectedTab) {
-            NavigationStack {
-                NotesListView()
+        // Content and tab bar are stacked — pages physically END at the top
+        // of the bar, so nothing can ever sit hidden behind it.
+        VStack(spacing: 0) {
+            ZStack {
+                // All views stay alive (preserving navigation state).
+                // The ZStack-level animation stays nil (dark-flash guard);
+                // only each page's opacity cross-fades, per-page below.
+                NavigationStack { NotesListView() }
+                    .environmentObject(actionsVM)   // Kitchen cards show plan progress
+                    .tabPage(.ideas, selected: coordinator.selectedTab)
+                NavigationStack { RecordingView() }
+                    .tabPage(.record, selected: coordinator.selectedTab)
+                NavigationStack { ActionsTabView() }
+                    .environmentObject(actionsVM)
+                    .tabPage(.actions, selected: coordinator.selectedTab)
+                ProfileView()
+                    .environmentObject(actionsVM)
+                    .tabPage(.profile, selected: coordinator.selectedTab)
             }
-            .tabItem {
-                Label("Notes", systemImage: "note.text")
-            }
-            .tag(AppTab.notes)
-
-            NavigationStack {
-                RecordingView()
-            }
-            .tabItem {
-                Label("Record", systemImage: "mic.fill")
-            }
-            .tag(AppTab.record)
-
-            NavigationStack {
-                ActionsTabView()
-            }
-            .tabItem {
-                Label("Actions", systemImage: "bolt.fill")
-            }
-            .tag(AppTab.actions)
-
-            ProfileView()
-                .tabItem {
-                    Label("Profile", systemImage: "person.fill")
-                }
-                .tag(AppTab.profile)
+            .animation(nil, value: coordinator.selectedTab) // Disable animation on content — prevents flash
+            CustomTabBar(selectedTab: $coordinator.selectedTab)
         }
-        .tint(.brand)
+        .walkInSpotlight(spotlightSpec)
+        // Notification taps land where they point (and a tap that arrives
+        // before this view exists is still waiting in pendingRoute).
+        .onAppear { consumeRoute(notificationRouter.pendingRoute) }
+        .onChange(of: notificationRouter.pendingRoute) { _, route in consumeRoute(route) }
+        .overlay {
+            // Walk-in beat 1: the first-ever welcome. The CTA deliberately
+            // does NOT switch tabs — the Record tab starts glowing instead,
+            // so the user learns the navigation themselves.
+            if let moment = walkIn.welcomeMoment {
+                MascotCenterPopup(
+                    moment: moment,
+                    onAction: { _ in walkIn.welcomeAcknowledged() },
+                    onDismiss: { walkIn.skip() }
+                )
+                .transition(.opacity)
+            }
+            // Global mascot moment — a rare center-screen popup (max 1/session)
+            else if let moment = mascot.currentMoment {
+                MascotCenterPopup(
+                    moment: moment,
+                    onAction: { handleMascotIntent($0) },
+                    onDismiss: { mascot.dismiss() }
+                )
+                .transition(.opacity)
+            }
+        }
+        .animation(.easeOut(duration: 0.2), value: mascot.currentMoment)
+        .animation(.easeOut(duration: 0.2), value: walkIn.welcomeMoment)
+        .animation(.easeOut(duration: 0.2), value: walkIn.step)
+        .task {
+            await walkIn.evaluateOnLaunch()
+            await mascot.evaluateStreakAtRisk()
+        }
+        .sheet(isPresented: $showMascotPaywall) {
+            PaywallView(context: .ideaCap)
+        }
+    }
+
+    /// The current spotlight beat for tour steps hosted at the root level.
+    /// The taste-test beats live in SWOTAnalysisView — it's a sheet, so it
+    /// hosts its own overlay above the presentation layer.
+    private var spotlightSpec: SpotlightSpec? {
+        switch walkIn.step {
+        case .record where coordinator.selectedTab != .record:
+            // Teach the navigation: the user taps the highlighted tab
+            // themselves (tap-through), nothing switches for them.
+            return SpotlightSpec(
+                target: .recordTab,
+                line: WalkInScript.tabHint,
+                shape: .circle,
+                tapThrough: true
+            )
+        case .record:
+            // On the Record screen: dare the first pitch. Tapping the mic
+            // through the cutout really starts recording; the anchor goes
+            // inactive while recording, so the spotlight vanishes with it.
+            return SpotlightSpec(
+                target: .micButton,
+                line: WalkInScript.pitchFallback,
+                shape: .circle,
+                cutoutPadding: 14,
+                tapThrough: true
+            )
+        case .actionPlan where coordinator.selectedTab == .actions:
+            return SpotlightSpec(
+                target: .firstActionCard,
+                line: WalkInScript.actionsNudge,
+                primaryLabel: WalkInScript.actionsNudgeButton,
+                primaryAction: { WalkInDirector.shared.finishFinalBeat() }
+            )
+        default:
+            return nil
+        }
+    }
+
+    private func handleMascotIntent(_ intent: MascotActionIntent) {
+        mascot.dismiss()
+        switch intent {
+        case .goRecord:
+            coordinator.selectedTab = .record
+        case .openPlans:
+            coordinator.selectedTab = .actions
+        case .showPaywall:
+            showMascotPaywall = true
+        case .openNote:
+            // No trigger produces this yet; land on the Kitchen as a safe default.
+            coordinator.selectedTab = .ideas
+        }
+    }
+
+    private func consumeRoute(_ route: DeepRoute?) {
+        guard let route else { return }
+        coordinator.handle(route)
+        notificationRouter.pendingRoute = nil
     }
 }
 
-// MARK: - Profile View
+// MARK: - Tab page visibility
 
-struct ProfileView: View {
-    @EnvironmentObject var authViewModel: AuthViewModel
-    @State private var showSignOutAlert = false
-
-    var body: some View {
-        NavigationStack {
-            ZStack {
-                Color.appBg.ignoresSafeArea()
-
-                ScrollView(showsIndicators: false) {
-                    VStack(spacing: 20) {
-                        Spacer().frame(height: 8)
-
-                        // Profile hero card
-                        VStack(spacing: 16) {
-                            ZStack {
-                                Circle()
-                                    .fill(LinearGradient.brand)
-                                    .frame(width: 80, height: 80)
-                                Image(systemName: "person.fill")
-                                    .font(.system(size: 32, weight: .semibold))
-                                    .foregroundColor(.white)
-                            }
-
-                            VStack(spacing: 6) {
-                                Text("My Account")
-                                    .font(.system(size: 22, weight: .bold, design: .rounded))
-                                    .foregroundColor(.textPri)
-                                if let email = authViewModel.currentUser?.email {
-                                    Text(email)
-                                        .font(.system(size: 14))
-                                        .foregroundColor(.textSec)
-                                        .lineLimit(1)
-                                }
-                            }
-                        }
-                        .frame(maxWidth: .infinity)
-                        .heroCard(color: Color(hex: "F0FAFA"))
-                        .padding(.horizontal, 16)
-
-                        // Stats row
-                        HStack(spacing: 12) {
-                            VStack(alignment: .leading, spacing: 10) {
-                                Image(systemName: "note.text")
-                                    .font(.system(size: 20, weight: .semibold))
-                                    .foregroundColor(.accentBlue)
-                                Text("—")
-                                    .font(.system(size: 28, weight: .bold, design: .rounded))
-                                    .foregroundColor(.textPri)
-                                Text("notes")
-                                    .font(.system(size: 12))
-                                    .foregroundColor(.textSec)
-                            }
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .tintedCard(color: .cardDarkBlue)
-
-                            VStack(alignment: .leading, spacing: 10) {
-                                Image(systemName: "chart.bar.fill")
-                                    .font(.system(size: 20, weight: .semibold))
-                                    .foregroundColor(.accentTeal)
-                                Text("—")
-                                    .font(.system(size: 28, weight: .bold, design: .rounded))
-                                    .foregroundColor(.textPri)
-                                Text("analyses")
-                                    .font(.system(size: 12))
-                                    .foregroundColor(.textSec)
-                            }
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .tintedCard(color: .cardDarkTeal)
-                        }
-                        .padding(.horizontal, 16)
-
-                        // Actions section
-                        VStack(spacing: 0) {
-                            HStack {
-                                Text("Actions")
-                                    .font(.system(size: 12, weight: .semibold))
-                                    .foregroundColor(.textSec)
-                                    .textCase(.uppercase)
-                                Spacer()
-                            }
-                            .padding(.bottom, 8)
-
-                            Button {
-                                showSignOutAlert = true
-                            } label: {
-                                HStack {
-                                    Image(systemName: "rectangle.portrait.and.arrow.right")
-                                        .font(.system(size: 14))
-                                        .foregroundColor(.brandRed)
-                                        .frame(width: 28)
-                                    Text("Sign Out")
-                                        .font(.system(size: 15, weight: .medium))
-                                        .foregroundColor(.brandRed)
-                                    Spacer()
-                                }
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 14)
-                            }
-                            .disabled(authViewModel.isLoading)
-                            .background(Color.cardSurface)
-                            .cornerRadius(16)
-                            }
-                        .padding(.horizontal, 16)
-
-                        Spacer()
-                    }
-                }
-            }
-            .navigationTitle("Profile")
-            .toolbarBackground(Color.appBg, for: .navigationBar)
-        }
-        .alert("Sign Out", isPresented: $showSignOutAlert) {
-            Button("Sign Out", role: .destructive) {
-                Task { await authViewModel.signOut() }
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("Are you sure you want to sign out?")
-        }
+private extension View {
+    /// Kept-alive tab page: visible + tappable only when selected, with an
+    /// opacity-only cross-fade. Geometry never animates, so the ZStack's
+    /// nil-animation flash guard stays intact.
+    func tabPage(_ tab: AppTab, selected: AppTab) -> some View {
+        opacity(selected == tab ? 1 : 0)
+            .allowsHitTesting(selected == tab)
+            .animation(
+                AnimationPolicy.reduceMotion ? nil : .easeOut(duration: 0.15),
+                value: selected
+            )
     }
 }
 

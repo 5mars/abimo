@@ -2,6 +2,11 @@
 //  JourneyPathView.swift
 //  Abimo
 //
+//  The plan as a path that READS: a header with the plan's purpose and
+//  progress, the next step as a hero card, then chapters — each a colored
+//  band of zigzag nodes with their titles and minutes beside them. Tapping
+//  a node opens StepDetailSheet; completion runs after the sheet dismisses.
+//
 
 import SwiftUI
 
@@ -9,161 +14,207 @@ import SwiftUI
 
 struct JourneyPathView: View {
     @ObservedObject var viewModel: ActionPlanViewModel
-    @Binding var selectedAction: MicroAction?
 
-    @State private var activeBubbleId: UUID? = nil
+    @State private var selectedAction: MicroAction?
+    @State private var pendingCompletion: (id: UUID, outcome: String, note: String?)?
+    @State private var pendingPick: UUID?
+    @State private var pendingUndo: UUID?
+    @State private var heroLine = MascotVoice.moment(for: .nextStepNudge).line
+    @Namespace private var riderNS
+
+    private let layout = JourneyLayout()
+    private let pathTopInset: CGFloat = 36   // room for the bobbing NEXT pill above the first node
+    private let pathBottomInset: CGFloat = 12
 
     var body: some View {
         ScrollView(showsIndicators: false) {
             ScrollViewReader { proxy in
-                VStack(spacing: 0) {
-                    // Header: ProgressRingView + plan title + list button
-                    VStack(spacing: 12) {
-                        ProgressRingView(
-                            progress: viewModel.progress,
-                            completed: viewModel.completedCount,
-                            total: viewModel.totalCount
-                        )
-                        if let plan = viewModel.actionPlan {
-                            HStack {
-                                Spacer()
-                                Text(plan.title)
-                                    .font(.system(size: 18, weight: .bold, design: .rounded))
-                                    .foregroundColor(.textPri)
-                                    .multilineTextAlignment(.center)
-                                Spacer()
-                                Button {
-                                    viewModel.showActionPicker = true
-                                } label: {
-                                    Image(systemName: "list.bullet")
-                                        .font(.system(size: 16, weight: .semibold))
-                                        .foregroundColor(.brand)
-                                        .padding(10)
-                                        .background(Color.brand.opacity(0.1))
-                                        .clipShape(Circle())
-                                }
-                                .buttonStyle(PlayfulButtonStyle())
-                            }
-                        }
-                    }
-                    .padding(.top, 16)
-                    .padding(.bottom, 32)
+                VStack(spacing: 20) {
+                    JourneyHeaderCard(
+                        summary: viewModel.actionPlan?.summary ?? "",
+                        completed: viewModel.completedCount,
+                        total: viewModel.totalCount,
+                        remainingMinutes: viewModel.remainingMinutes,
+                        streak: viewModel.streak,
+                        xpToday: viewModel.xpToday
+                    )
+                    .padding(.horizontal, 16)
+                    .padding(.top, 12)
+                    .cardEntrance(delay: 0.02)
 
-                    // Nodes
-                    ForEach(Array(viewModel.orderedActions.enumerated()), id: \.element.id) { index, action in
-                        let offset: CGFloat = index.isMultiple(of: 2) ? -60 : 60
-                        JourneyNodeView(
-                            action: action,
-                            state: nodeState(at: index, actions: viewModel.orderedActions),
-                            isLastNode: index == viewModel.orderedActions.count - 1,
-                            onTap: {
-                                AnimationPolicy.animate(.spring(response: 0.3, dampingFraction: 0.6)) {
-                                    activeBubbleId = activeBubbleId == action.id ? nil : action.id
-                                }
-                            },
-                            justCompletedActionId: viewModel.justCompletedActionId,
-                            index: index,
-                            actions: viewModel.orderedActions,
-                            zigzagOffset: offset,
-                            celebrationState: viewModel.celebrationState
+                    if let next = viewModel.nextRecommendedAction {
+                        NextStepHeroCard(
+                            action: next,
+                            xpPreview: viewModel.nextStepXP,
+                            mascotLine: heroLine,
+                            onStart: { selectedAction = next },
+                            onPickAnother: {
+                                let fresh = viewModel.userOrderedIds.isEmpty && viewModel.completedCount == 0
+                                viewModel.presentPicker(fresh ? .firstVisit : .browse)
+                            }
                         )
-                        .offset(x: offset)
-                        .id(action.id)
-                        .cardEntrance(delay: Double(index) * 0.05)
+                        .padding(.horizontal, 16)
+                        .cardEntrance(delay: 0.08)
+                    }
+
+                    ForEach(Array(viewModel.chapters.enumerated()), id: \.element.id) { chapterIndex, chapter in
+                        VStack(spacing: 12) {
+                            if chapter.kind != .steps {
+                                ChapterBannerView(chapter: chapter, index: chapterIndex)
+                                    .padding(.horizontal, 16)
+                            }
+                            chapterBand(chapter, proxy: proxy)
+                        }
+                        .cardEntrance(delay: 0.14 + Double(chapterIndex) * 0.06)
                     }
                 }
-                .padding(.horizontal, 60)
-                .padding(.bottom, 100)
-                .overlay(alignment: .topLeading) {
-                    GeometryReader { geo in
-                        bubbleOverlay(containerWidth: geo.size.width)
-                    }
-                }
+                .padding(.bottom, 140)
+                // The mascot rides to the new next node once the completed
+                // node's bounce and trail draw-on have landed.
+                .animation(
+                    AnimationPolicy.reduceMotion ? nil : .spring(response: 0.6, dampingFraction: 0.75).delay(0.75),
+                    value: viewModel.nextRecommendedAction?.id
+                )
                 .task {
                     // Defer scroll to after first layout pass
-                    try? await Task.sleep(nanoseconds: 50_000_000) // 50ms
-                    if let activeAction = viewModel.orderedActions.first(where: { !$0.isCompleted }) {
+                    try? await Task.sleep(nanoseconds: 80_000_000)
+                    if let next = viewModel.nextRecommendedAction, viewModel.completedCount > 0 {
                         AnimationPolicy.animate(.easeInOut(duration: 0.5)) {
-                            proxy.scrollTo(activeAction.id, anchor: .center)
+                            proxy.scrollTo(next.id, anchor: .center)
                         }
                     }
                 }
             }
         }
-        .simultaneousGesture(
-            DragGesture(minimumDistance: 10).onChanged { _ in
-                if activeBubbleId != nil {
-                    AnimationPolicy.animate(.easeOut(duration: 0.2)) {
-                        activeBubbleId = nil
-                    }
-                }
+        .background(
+            ZStack {
+                Color.journeyBg
+                DotGridBackground()
             }
+            .ignoresSafeArea()
         )
-        .onTapGesture {
-            if activeBubbleId != nil {
-                AnimationPolicy.animate(.easeOut(duration: 0.2)) {
-                    activeBubbleId = nil
-                }
-            }
+        .sheet(item: $selectedAction, onDismiss: runPending) { action in
+            StepDetailSheet(
+                action: action,
+                state: nodeState(for: action, nextId: viewModel.nextRecommendedAction?.id),
+                chapter: viewModel.chapters.first { $0.actions.contains { $0.id == action.id } },
+                xpPreview: viewModel.nextStepXP,
+                onPickAsNext: { pendingPick = action.id },
+                onComplete: { outcome, note in pendingCompletion = (action.id, outcome, note) },
+                onUndo: { pendingUndo = action.id }
+            )
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
+            .presentationBackground(Color.journeyBg)
         }
     }
 
-    // MARK: - Bubble Overlay
+    /// Runs whatever the step sheet asked for — after it has fully dismissed,
+    /// so the congrats sheet never fights it for the presentation slot.
+    private func runPending() {
+        if let p = pendingCompletion {
+            pendingCompletion = nil
+            Task { await viewModel.completeAction(id: p.id, outcome: p.outcome, note: p.note) }
+        }
+        if let id = pendingPick {
+            pendingPick = nil
+            viewModel.pickAction(id: id)
+        }
+        if let id = pendingUndo {
+            pendingUndo = nil
+            Task { await viewModel.toggleMicroAction(id: id, isCompleted: false) }
+        }
+    }
+
+    // MARK: - Chapter band
+
+    private func chapterBand(_ chapter: JourneyChapter, proxy: ScrollViewProxy) -> some View {
+        let pathHeight = layout.contentHeight(count: chapter.actions.count)
+        return GeometryReader { geo in
+            pathArea(chapter, width: geo.size.width)
+                .frame(width: geo.size.width, height: pathHeight, alignment: .topLeading)
+                .offset(y: pathTopInset)
+        }
+        .frame(height: pathHeight + pathTopInset + pathBottomInset)
+        .padding(.horizontal, 12)
+        .background(
+            RoundedRectangle(cornerRadius: DuoTokens.Radius.card, style: .continuous)
+                .fill(chapter.kind.bandColor)
+        )
+        .padding(.horizontal, 16)
+    }
 
     @ViewBuilder
-    private func bubbleOverlay(containerWidth: CGFloat) -> some View {
-        if let id = activeBubbleId,
-           let index = viewModel.orderedActions.firstIndex(where: { $0.id == id }) {
-            let action = viewModel.orderedActions[index]
-            let state = nodeState(at: index, actions: viewModel.orderedActions)
-            let zigzagOffset: CGFloat = index.isMultiple(of: 2) ? -60 : 60
+    private func pathArea(_ chapter: JourneyChapter, width: CGFloat) -> some View {
+        let nextId = viewModel.nextRecommendedAction?.id
 
-            // Positioning constants
-            let headerHeight: CGFloat = 162
-            let nodeStride: CGFloat = 136
-            let bubbleWidth: CGFloat = 290
-            let bubbleEstimatedHeight: CGFloat = 130
-            let arrowHeight: CGFloat = 8
-            let gapAboveNode: CGFloat = 4
+        ZStack(alignment: .topLeading) {
+            JourneyRouteCanvas(layout: layout, actions: chapter.actions, width: width)
 
-            // Vertical: place bubble so its arrow tip is just above the node center
-            let nodeCenterY = headerHeight + CGFloat(index) * nodeStride + 28
-            let yPos = nodeCenterY - 28 - arrowHeight - gapAboveNode - bubbleEstimatedHeight
-
-            // Horizontal: use actual container width from GeometryReader (not UIScreen)
-            let nodeCenterX = containerWidth / 2 + zigzagOffset
-            let rawX = nodeCenterX - bubbleWidth / 2
-            let xPos = max(8, min(containerWidth - bubbleWidth - 8, rawX))
-
-            // Dynamic arrow offset: distance from bubble left edge to node center
-            let arrowOffset = nodeCenterX - xPos
-
-            NodeBubbleView(
-                action: action,
-                state: state,
-                arrowOffset: arrowOffset,
-                onComplete: {
-                    activeBubbleId = nil
-                    Task { await viewModel.toggleMicroAction(id: action.id, isCompleted: true) }
-                },
-                onSwitch: {                  // SWAP-01 — opens action picker so user can choose next action
-                    activeBubbleId = nil
-                    viewModel.showActionPicker = true
-                },
-                onSeeMore: {
-                    activeBubbleId = nil
-                    selectedAction = action
-                },
-                onDismiss: {
-                    activeBubbleId = nil
-                }
+            JourneyCompletedTrail(
+                layout: layout,
+                actions: chapter.actions,
+                width: width,
+                justCompletedActionId: viewModel.justCompletedActionId
             )
-            .frame(width: bubbleWidth)
-            .offset(x: xPos, y: yPos)
-            .transition(.scale(scale: 0.01, anchor: .bottom).combined(with: .opacity))
-            .zIndex(10)
-            .id(id)
+
+            ForEach(Array(chapter.actions.enumerated()), id: \.element.id) { index, action in
+                let state = nodeState(for: action, nextId: nextId)
+                let label = layout.labelFrame(index, width: width)
+
+                JourneyNodeLabel(
+                    action: action,
+                    state: state,
+                    alignLeading: layout.isLeft(index),
+                    xpPreview: state == .next ? viewModel.nextStepXP : nil
+                )
+                .frame(width: label.width, height: label.height)
+                .position(x: label.midX, y: label.midY)
+
+                JourneyNodeView(
+                    action: action,
+                    state: state,
+                    onTap: { selectedAction = action },
+                    justCompletedActionId: viewModel.justCompletedActionId,
+                    nodeSize: layout.nodeSize,
+                    celebrationState: viewModel.celebrationState,
+                    celebratingActionId: viewModel.completingActionId
+                )
+                .position(layout.center(index, width: width))
+                .id(action.id)
+            }
+
+            // The critic stands beside whatever's next — and walks there.
+            if let nextIndex = chapter.actions.firstIndex(where: { $0.id == nextId }) {
+                MascotView(mood: .neutral, size: layout.mascotSize, motion: .idle)
+                    .matchedGeometryEffect(id: "rider", in: riderNS)
+                    .position(layout.mascotCenter(nextIndex, width: width))
+                    .allowsHitTesting(false)
+                    .transition(.opacity)
+            }
         }
+    }
+}
+
+// MARK: - Dot grid
+
+/// Faint dot texture so the cream ground reads as a surface, not a void.
+private struct DotGridBackground: View {
+    var body: some View {
+        Canvas { context, size in
+            let step: CGFloat = 22
+            let dot = Path(ellipseIn: CGRect(x: 0, y: 0, width: 2, height: 2))
+            var y: CGFloat = 8
+            while y < size.height {
+                var x: CGFloat = 8
+                while x < size.width {
+                    context.fill(dot.offsetBy(dx: x, dy: y), with: .color(Color.textSec.opacity(0.14)))
+                    x += step
+                }
+                y += step
+            }
+        }
+        .allowsHitTesting(false)
     }
 }
 
@@ -173,8 +224,6 @@ struct JourneyPathView: View {
     let viewModel = ActionPlanViewModel()
 
     return JourneyPathView(
-        viewModel: viewModel,
-        selectedAction: .constant(nil)
+        viewModel: viewModel
     )
-    .background(Color.appBg)
 }

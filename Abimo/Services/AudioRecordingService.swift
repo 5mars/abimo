@@ -64,11 +64,11 @@ class AudioRecordingService: NSObject, ObservableObject {
         // Start level monitoring
         levelTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [weak self] _ in
             guard let self = self else { return }
-            self.audioRecorder?.updateMeters()
-            let averagePower = self.audioRecorder?.averagePower(forChannel: 0) ?? -160
-            // Convert to 0-1 range
-            let normalized = max(0.0, min(1.0, (averagePower + 160) / 160))
             Task { @MainActor in
+                self.audioRecorder?.updateMeters()
+                let averagePower = self.audioRecorder?.averagePower(forChannel: 0) ?? -160
+                // Convert to 0-1 range using calibrated normalization
+                let normalized = Self.normalizeAudioLevel(averagePower: averagePower)
                 self.audioLevel = normalized
             }
         }
@@ -98,6 +98,15 @@ class AudioRecordingService: NSObject, ObservableObject {
         if let url = stopRecording() {
             try? FileManager.default.removeItem(at: url)
         }
+    }
+
+    /// Normalizes AVAudioRecorder averagePower (dB) to a 0–1 visual level.
+    /// Maps [-35, 0] dB linearly to [0.0, 1.0] then applies power curve for punch.
+    nonisolated static func normalizeAudioLevel(averagePower: Float) -> Float {
+        let floorDb: Float = -35.0
+        let clamped = max(floorDb, min(0.0, averagePower))
+        let linear = (clamped - floorDb) / (-floorDb)
+        return pow(linear, 0.6)
     }
 
     func formatDuration(_ duration: TimeInterval) -> String {

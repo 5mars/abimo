@@ -46,6 +46,7 @@ class AudioPlayerService: NSObject, ObservableObject {
         audioPlayer?.play()
         isPlaying = true
         startTimer()
+        DareEngine.markPitchReplayed()   // "Listen back to one of your pitches"
     }
 
     func pause() {

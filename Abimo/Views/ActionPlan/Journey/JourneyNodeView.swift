@@ -8,291 +8,202 @@ import Vortex
 
 // MARK: - NodeState
 
+/// Honest states. Micro-actions are independent by construction (the plan
+/// prompt has no dependency concept), so nothing is "locked": exactly one
+/// step is the recommended `next`, everything else undone is `open` and can
+/// be done — or promoted to next — at will.
 enum NodeState {
-    case locked
-    case active
-    case completed
+    case done
+    case next
+    case open
 }
 
 // MARK: - State Helper
 
-func nodeState(at index: Int, actions: [MicroAction]) -> NodeState {
-    let action = actions[index]
-    if action.isCompleted { return .completed }
-    let firstIncompleteIndex = actions.firstIndex(where: { !$0.isCompleted })
-    if firstIncompleteIndex == index { return .active }
-    return .locked
+func nodeState(for action: MicroAction, nextId: UUID?) -> NodeState {
+    if action.isCompleted { return .done }
+    return action.id == nextId ? .next : .open
 }
 
 // MARK: - JourneyNodeView
 
+/// A single 3D path node. Positioning is the parent's job (JourneyLayout);
+/// this view only renders the circle and its state animations.
 struct JourneyNodeView: View {
     let action: MicroAction
     let state: NodeState
-    let isLastNode: Bool
     let onTap: () -> Void
     let justCompletedActionId: UUID?
-    let index: Int
-    let actions: [MicroAction]
-    /// The horizontal offset applied to THIS node by the parent zigzag layout.
-    /// Used to calculate the diagonal connecting line to the next node.
-    var zigzagOffset: CGFloat = 0
+    var nodeSize: CGFloat = 64
     var celebrationState: CelebrationState = .idle
+    /// The action whose completion is being celebrated — a milestone plays
+    /// its (heavier) confetti on that node instead of a top banner.
+    var celebratingActionId: UUID? = nil
 
-    @State private var isAnimatingCompletion = false
-    @State private var unlockAnimating = false
-    @State private var animatedFillColor: Color = Color.textSec.opacity(0.3)
+    private var showsConfetti: Bool {
+        switch celebrationState {
+        case .inlineConfetti(let id): return id == action.id
+        case .milestone:              return celebratingActionId == action.id
+        default:                      return false
+        }
+    }
+
+    @State private var completionBounceTrigger = 0
+    @State private var unlockPulseTrigger = 0
+    @State private var animatedFillColor: Color = .white
+    @State private var animatedEdgeColor: Color = .cardEdge
+    @State private var nextBob = false
 
     var body: some View {
-        VStack(spacing: 0) {
-            // Circle node
-            Button(action: onTap) {
-                ZStack {
-                    // Fill circle
-                    Circle()
-                        .fill(animatedFillColor)
-                        .frame(width: 56, height: 56)
-
-                    // Content overlay
-                    nodeContent
-                }
-                .frame(width: 56, height: 56)
-                .shadow(
-                    color: state == .active ? Color.brand.opacity(0.4) : .clear,
-                    radius: 8,
-                    y: 2
-                )
-                .scaleEffect(isAnimatingCompletion ? 1.2 : 1.0)
-                .scaleEffect(unlockAnimating ? 1.15 : 1.0)
+        Button(action: onTap) {
+            nodeContent
+                .frame(width: nodeSize, height: nodeSize)
+        }
+        .buttonStyle(Duo3DCircleButtonStyle(fill: animatedFillColor, edge: animatedEdgeColor))
+        .background {
+            if state == .next {
+                PulseRing(color: .brand)
+                    .frame(width: nodeSize, height: nodeSize)
             }
-            .buttonStyle(.plain)
-            .overlay {
-                if case .inlineConfetti(let actionId) = celebrationState,
-                   actionId == action.id {
-                    InlineConfettiView()
-                        .allowsHitTesting(false)
-                }
-            }
-            .onAppear {
-                animatedFillColor = circleFillColor
-            }
-            .onChange(of: state) { oldValue, newValue in
-                if oldValue != .completed && newValue == .completed {
-                    // Bounce up + color change simultaneously (coral to green during bounce)
-                    AnimationPolicy.animate(.spring(response: 0.15, dampingFraction: 0.4)) {
-                        isAnimatingCompletion = true
-                        animatedFillColor = Color.brandGreen
-                    }
-                    // Bounce back
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                        AnimationPolicy.animate(.spring(response: 0.15, dampingFraction: 0.6)) {
-                            isAnimatingCompletion = false
+        }
+        .overlay(alignment: .top) {
+            if state == .next {
+                nextPill
+                    .offset(y: nextBob ? -32 : -36)
+                    .onAppear {
+                        if !AnimationPolicy.reduceMotion {
+                            withAnimation(.easeInOut(duration: 0.9).repeatForever(autoreverses: true)) {
+                                nextBob = true
+                            }
                         }
                     }
-                } else if oldValue != newValue {
-                    // Generic state change (e.g., active->locked on undo) — animate color
-                    AnimationPolicy.animate(.easeInOut(duration: 0.3)) {
-                        animatedFillColor = circleFillColor
-                    }
-                }
             }
-            .onChange(of: justCompletedActionId) { _, completedId in
-                guard let completedId = completedId,
-                      let completedIndex = actions.firstIndex(where: { $0.id == completedId }),
-                      index == completedIndex + 1 else { return }
-
-                // Beat 1: Pulse scale up
-                AnimationPolicy.animate(.spring(response: 0.3, dampingFraction: 0.6)) {
-                    unlockAnimating = true
-                }
-
-                // Beat 2: After pulse, scale down + color fade grey->coral
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                    AnimationPolicy.animate(.easeInOut(duration: 0.3)) {
-                        unlockAnimating = false
-                        animatedFillColor = Color.brand
-                    }
-                }
+        }
+        // Completion bounce: pop to 1.2x and settle, one keyframe pass.
+        .keyframeAnimator(initialValue: 1.0, trigger: completionBounceTrigger) { content, scale in
+            content.scaleEffect(scale)
+        } keyframes: { _ in
+            KeyframeTrack {
+                SpringKeyframe(1.2, duration: 0.15, spring: Spring(response: 0.15, dampingRatio: 0.4))
+                SpringKeyframe(1.0, duration: 0.15, spring: Spring(response: 0.15, dampingRatio: 0.6))
             }
-
-            // Connecting line (only if not last node)
-            if !isLastNode {
-                ConnectingLineView(
-                    isCompleted: state == .completed,
-                    zigzagOffset: zigzagOffset
-                )
+        }
+        // Becoming `next`: swell to 1.15x, then relax.
+        .keyframeAnimator(initialValue: 1.0, trigger: unlockPulseTrigger) { content, scale in
+            content.scaleEffect(scale)
+        } keyframes: { _ in
+            KeyframeTrack {
+                SpringKeyframe(1.15, duration: 0.3, spring: Spring(response: 0.3, dampingRatio: 0.6))
+                SpringKeyframe(1.0, duration: 0.3, spring: Spring(response: 0.3, dampingRatio: 0.7))
+            }
+        }
+        .overlay {
+            if showsConfetti {
+                InlineConfettiView()
+                    .allowsHitTesting(false)
+            }
+        }
+        .onAppear {
+            animatedFillColor = fillColor
+            animatedEdgeColor = edgeColor
+        }
+        .onChange(of: state) { oldValue, newValue in
+            if oldValue != .done && newValue == .done {
+                // Bounce (keyframes) + color morph to green together
+                if !AnimationPolicy.reduceMotion { completionBounceTrigger += 1 }
+                AnimationPolicy.animate(.spring(response: 0.15, dampingFraction: 0.4)) {
+                    animatedFillColor = .brandGreen
+                    animatedEdgeColor = .brandGreenDark
+                }
+            } else if newValue == .next && oldValue != .next {
+                // The path moved on to this step: swell while the colors turn
+                // coral once the pulse peaks. Works across chapters — it keys
+                // on state, not on array position.
+                if !AnimationPolicy.reduceMotion { unlockPulseTrigger += 1 }
+                AnimationPolicy.animate(.easeInOut(duration: 0.3).delay(AnimationPolicy.reduceMotion ? 0 : 0.3)) {
+                    animatedFillColor = .brand
+                    animatedEdgeColor = .brandDark
+                }
+            } else if oldValue != newValue {
+                AnimationPolicy.animate(.easeInOut(duration: 0.3)) {
+                    animatedFillColor = fillColor
+                    animatedEdgeColor = edgeColor
+                }
             }
         }
     }
 
     // MARK: - Private Helpers
 
-    private var circleFillColor: Color {
+    private var fillColor: Color {
         switch state {
-        case .locked:    return Color.textSec.opacity(0.3)
-        case .active:    return Color.brand
-        case .completed: return Color.brandGreen
+        case .open: return .white
+        case .next: return .brand
+        case .done: return .brandGreen
         }
+    }
+
+    private var edgeColor: Color {
+        switch state {
+        case .open: return .cardEdge
+        case .next: return .brandDark
+        case .done: return .brandGreenDark
+        }
+    }
+
+    private var nextPill: some View {
+        Text("NEXT")
+            .font(.system(size: 12, weight: .black, design: .rounded))
+            .foregroundColor(.brand)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 5)
+            .background(Capsule().fill(Color.white))
+            .overlay(Capsule().strokeBorder(Color.brand, lineWidth: 2))
+            .fixedSize()
+            .allowsHitTesting(false)
     }
 
     @ViewBuilder
     private var nodeContent: some View {
         switch state {
-        case .locked:
-            Text("🔒")
-                .font(.system(size: 24))
-        case .active:
+        case .open:
             Text(ActionIconMapper.icon(for: action.actionType).emoji)
-                .font(.system(size: 24))
-        case .completed:
+                .font(.system(size: 26))
+                .opacity(0.7)
+        case .next:
+            Text(ActionIconMapper.icon(for: action.actionType).emoji)
+                .font(.system(size: 26))
+        case .done:
             Image(systemName: "checkmark")
-                .font(.system(size: 20, weight: .bold))
+                .font(.system(size: 22, weight: .bold))
                 .foregroundColor(.white)
-        }
-    }
-}
-
-// MARK: - ConnectingLineView
-
-struct ConnectingLineView: View {
-    let isCompleted: Bool
-    let zigzagOffset: CGFloat
-
-    /// The horizontal distance from this node's center to the next node's center.
-    /// Since nodes alternate ±60, the delta is always 120 (or -120).
-    private var horizontalDelta: CGFloat {
-        -zigzagOffset * 2
-    }
-
-    var body: some View {
-        let lineColor: Color = isCompleted ? .brandGreen : .textSec.opacity(0.3)
-
-        Canvas { context, size in
-            let from = CGPoint(x: size.width / 2, y: 0)
-            let to = CGPoint(x: size.width / 2 + horizontalDelta, y: size.height)
-
-            var path = Path()
-            path.move(to: from)
-            let control1 = CGPoint(x: from.x, y: from.y + size.height * 0.45)
-            let control2 = CGPoint(x: to.x, y: to.y - size.height * 0.45)
-            path.addCurve(to: to, control1: control1, control2: control2)
-
-            if isCompleted {
-                context.stroke(path, with: .color(lineColor), lineWidth: 2.5)
-            } else {
-                context.stroke(
-                    path,
-                    with: .color(lineColor),
-                    style: StrokeStyle(lineWidth: 2, dash: [6, 4])
+                // Only the freshly completed node's checkmark pops — the
+                // Bool stays false (no value change, no bounce) elsewhere.
+                .symbolEffect(
+                    .bounce,
+                    value: !AnimationPolicy.reduceMotion && justCompletedActionId == action.id
                 )
-            }
         }
-        .frame(height: 80)
-        .allowsHitTesting(false)
     }
 }
 
 // MARK: - Preview
 
 #Preview {
-    let actions: [MicroAction] = [
+    let make: (String, Bool) -> MicroAction = { type, done in
         MicroAction(
-            id: UUID(),
-            actionPlanId: UUID(),
-            text: "Send email",
-            doneCriteria: "Email sent",
-            timeEstimateMinutes: 5,
-            priority: 1,
-            quadrant: nil,
-            template: nil,
-            actionType: "email",
-            deepLinkData: nil,
-            isCompleted: true,
-            completedAt: Date(),
-            isCommitted: false,
-            committedAt: nil,
-            scheduledFor: nil,
-            completionOutcome: nil,
-            completionNote: nil,
-            createdAt: Date()
-        ),
-        MicroAction(
-            id: UUID(),
-            actionPlanId: UUID(),
-            text: "Search online",
-            doneCriteria: "Found resources",
-            timeEstimateMinutes: 10,
-            priority: 2,
-            quadrant: nil,
-            template: nil,
-            actionType: "search",
-            deepLinkData: nil,
-            isCompleted: false,
-            completedAt: nil,
-            isCommitted: false,
-            committedAt: nil,
-            scheduledFor: nil,
-            completionOutcome: nil,
-            completionNote: nil,
-            createdAt: Date()
-        ),
-        MicroAction(
-            id: UUID(),
-            actionPlanId: UUID(),
-            text: "Post update",
-            doneCriteria: "Post published",
-            timeEstimateMinutes: 15,
-            priority: 3,
-            quadrant: nil,
-            template: nil,
-            actionType: "post",
-            deepLinkData: nil,
-            isCompleted: false,
-            completedAt: nil,
-            isCommitted: false,
-            committedAt: nil,
-            scheduledFor: nil,
-            completionOutcome: nil,
-            completionNote: nil,
-            createdAt: Date()
-        ),
-    ]
-
-    VStack(spacing: 0) {
-        JourneyNodeView(
-            action: actions[0],
-            state: .completed,
-            isLastNode: false,
-            onTap: {},
-            justCompletedActionId: nil,
-            index: 0,
-            actions: actions,
-            zigzagOffset: -60
+            id: UUID(), actionPlanId: UUID(), text: "Step", doneCriteria: "Done",
+            timeEstimateMinutes: 10, priority: 1, quadrant: nil, template: nil,
+            actionType: type, deepLinkData: nil, isCompleted: done,
+            completedAt: done ? Date() : nil, isCommitted: false, committedAt: nil,
+            scheduledFor: nil, completionOutcome: nil, completionNote: nil, createdAt: Date()
         )
-        .offset(x: -60)
-        JourneyNodeView(
-            action: actions[1],
-            state: .active,
-            isLastNode: false,
-            onTap: {},
-            justCompletedActionId: nil,
-            index: 1,
-            actions: actions,
-            zigzagOffset: 60
-        )
-        .offset(x: 60)
-        JourneyNodeView(
-            action: actions[2],
-            state: .locked,
-            isLastNode: true,
-            onTap: {},
-            justCompletedActionId: nil,
-            index: 2,
-            actions: actions,
-            zigzagOffset: -60
-        )
-        .offset(x: -60)
     }
-    .padding()
-    .background(Color.appBg)
+    HStack(spacing: 40) {
+        JourneyNodeView(action: make("email", true), state: .done, onTap: {}, justCompletedActionId: nil)
+        JourneyNodeView(action: make("search", false), state: .next, onTap: {}, justCompletedActionId: nil)
+        JourneyNodeView(action: make("post", false), state: .open, onTap: {}, justCompletedActionId: nil)
+    }
+    .padding(60)
+    .background(Color.journeyBg)
 }

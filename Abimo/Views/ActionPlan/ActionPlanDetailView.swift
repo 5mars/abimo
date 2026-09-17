@@ -10,28 +10,39 @@ struct ActionPlanDetailView: View {
     let analysisId: UUID
 
     @StateObject private var viewModel = ActionPlanViewModel()
-    @State private var selectedAction: MicroAction? = nil
-    @State private var pickerMode: PickerMode = .browse
 
     var body: some View {
         ZStack {
-            Color.appBg.ignoresSafeArea()
+            Color.journeyBg.ignoresSafeArea()
 
             if viewModel.isLoading {
                 LoadingView(text: "Loading your plan...")
             } else if viewModel.actionPlan != nil {
                 JourneyPathView(
-                    viewModel: viewModel,
-                    selectedAction: $selectedAction
+                    viewModel: viewModel
                 )
             }
 
-            // Milestone banner
-            if case .milestone(let count) = viewModel.celebrationState {
-                MilestoneBannerView(count: count)
-                    .transition(.move(edge: .top).combined(with: .opacity))
-                    .zIndex(1)
+            // Error toast (e.g. completion rollback after a failed save)
+            if let error = viewModel.errorMessage {
+                VStack {
+                    Spacer()
+                    Text(error)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 18)
+                        .padding(.vertical, 12)
+                        .background(Color.brand.opacity(0.92))
+                        .clipShape(Capsule())
+                        .padding(.bottom, 24)
+                        .onTapGesture { viewModel.errorMessage = nil }
+                }
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .zIndex(3)
             }
+
+            // Milestone / streak / goal / badge no longer stack banners here —
+            // they land as one RewardsStrip inside the congrats sheet.
 
             // Plan completion overlay
             if viewModel.celebrationState == .planComplete {
@@ -44,21 +55,23 @@ struct ActionPlanDetailView: View {
             }
         }
         .animation(.easeInOut(duration: 0.3), value: viewModel.celebrationState)
+        .animation(.easeInOut(duration: 0.25), value: viewModel.errorMessage)
+        .navigationTitle(viewModel.actionPlan?.title ?? "")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbarBackground(Color.appBg, for: .navigationBar)
-        .sheet(item: $selectedAction) { action in
-            let state = nodeStateForAction(action)
-            ActionDetailSheet(
-                action: action,
-                state: state,
-                viewModel: viewModel
-            )
-            .presentationDetents([.medium, .large])
-            .presentationDragIndicator(.visible)
-            .presentationBackground(Color.appBg)
+        .toolbarBackground(Color.journeyBg, for: .navigationBar)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button {
+                    viewModel.presentPicker(.browse)
+                } label: {
+                    Label("All steps", systemImage: "list.bullet")
+                        .font(.system(size: 14, weight: .semibold))
+                }
+                .tint(.brand)
+            }
         }
         .sheet(isPresented: $viewModel.showActionPicker) {
-            ActionPickerSheet(viewModel: viewModel, mode: pickerMode)
+            ActionPickerSheet(viewModel: viewModel, mode: viewModel.pickerMode)
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
                 .presentationBackground(Color.appBg)
@@ -70,15 +83,9 @@ struct ActionPlanDetailView: View {
             )
         }
         .task {
+            SoundEngine.prepare()
             await viewModel.loadActionPlan(analysisId: analysisId)
-            pickerMode = viewModel.userOrderedIds.isEmpty ? .firstVisit : .browse
         }
     }
 
-    private func nodeStateForAction(_ action: MicroAction) -> NodeState {
-        guard let index = viewModel.orderedActions.firstIndex(where: { $0.id == action.id }) else {
-            return .locked
-        }
-        return nodeState(at: index, actions: viewModel.orderedActions)
-    }
 }

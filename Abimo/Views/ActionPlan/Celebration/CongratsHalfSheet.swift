@@ -4,7 +4,6 @@
 //
 
 import SwiftUI
-import Lottie
 
 // MARK: - SheetPhase
 
@@ -19,67 +18,42 @@ struct CongratsHalfSheet: View {
     @ObservedObject var viewModel: ActionPlanViewModel
     let onAdvance: () -> Void
 
-    // Static message pool — 7 rotating congrats messages
-    static let messages = [
-        "Crushed it! \u{1F4AA}",
-        "Nice work! \u{2728}",
-        "Boom! Done! \u{1F4A5}",
-        "You're on fire! \u{1F525}",
-        "Nailed it! \u{1F3AF}",
-        "Keep going! \u{26A1}",
-        "One step closer! \u{1F680}"
-    ]
-
-    @State private var message: String = messages.randomElement()!
-    @State private var playbackMode: LottiePlaybackMode = .paused
+    @State private var moment: MascotMoment?
 
     var body: some View {
         VStack(spacing: 24) {
-            Group {
-                if let animation = LottieAnimation.named("starburst") {
-                    LottieView(animation: animation)
-                        .playbackMode(playbackMode)
-                } else {
-                    Image(systemName: "trophy.fill")
-                        .font(.system(size: 80))
-                        .foregroundStyle(
-                            LinearGradient(
-                                colors: [.yellow, .orange],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            )
-                        )
-                }
+            // The mascot IS the celebration — big, with confetti behind it
+            ZStack {
+                InlineConfettiView()
+                    .allowsHitTesting(false)
+                MascotView(mood: moment?.mood ?? .playful, size: 160, motion: .entrance)
             }
-            .frame(width: 200, height: 200)
+            .frame(width: 200, height: 180)
 
-            Text(message)
-                .font(.system(size: 20, weight: .bold, design: .rounded))
-                .foregroundColor(.textPri)
+            MascotCalloutLine(line: moment?.line ?? "Nice work! \u{2728}")
+                .padding(.horizontal, 16)
+
+            if let rewards = viewModel.lastRewards {
+                RewardsStrip(rewards: rewards)
+                    .padding(.horizontal, 8)
+            }
 
             Button {
-                HapticEngine.selection()
                 onAdvance()
             } label: {
-                Text("Keep the momentum?")
+                Text("What's next?")
                     .font(.system(size: 16, weight: .bold))
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
                     .frame(height: 52)
-                    .background(LinearGradient.brand)
-                    .cornerRadius(18)
             }
-            .buttonStyle(PlayfulButtonStyle())
+            .buttonStyle(Duo3DGradientButtonStyle(fill: .brand))
         }
         .padding(.horizontal, 16)
         .background(Color.appBg)
         .onAppear {
+            moment = MascotVoice.moment(for: .actionCompleted(count: viewModel.completedCount))
             HapticEngine.impact(style: .light)
-            if AnimationPolicy.reduceMotion {
-                playbackMode = .paused(at: .progress(1))
-            } else {
-                playbackMode = .playing(.fromProgress(0, toProgress: 1, loopMode: .playOnce))
-            }
         }
     }
 }
@@ -114,7 +88,7 @@ struct PostCompletionSheetContent: View {
     }
 
     private func advance() {
-        // 0.3s delay lets PlayfulButtonStyle scale animation complete
+        // 0.3s delay lets the press animation complete
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
             // Set detent first — SwiftUI animates it automatically
             selectedDetent = .large

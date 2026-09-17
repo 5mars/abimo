@@ -12,14 +12,20 @@ import Combine
 class NotesViewModel: ObservableObject {
     @Published var notes: [VoiceNote] = []
     @Published var isLoading = false
+    /// Tabs stay alive and refetch on every switch — only the first fetch may
+    /// show a loading screen; later ones refresh silently behind current content.
+    @Published private(set) var hasLoadedOnce = false
     @Published var errorMessage: String?
 
     private let supabase = SupabaseService.shared
 
     func fetchNotes() async {
-        isLoading = true
+        if !hasLoadedOnce { isLoading = true }
         errorMessage = nil
-        defer { isLoading = false }
+        defer {
+            isLoading = false
+            hasLoadedOnce = true
+        }
 
         do {
             notes = try await supabase.fetchVoiceNotes()
@@ -31,16 +37,15 @@ class NotesViewModel: ObservableObject {
     func deleteNote(_ note: VoiceNote) async {
         errorMessage = nil
 
+        // Optimistic removal — update UI immediately to prevent flicker
+        notes.removeAll { $0.id == note.id }
+
         do {
-            // Delete from database
             try await supabase.deleteVoiceNote(id: note.id)
-
-            // Delete audio file from storage
             try await supabase.deleteAudioFile(filePath: note.audioFileURL)
-
-            // Remove from local array
-            notes.removeAll { $0.id == note.id }
         } catch {
+            // Restore on failure
+            await fetchNotes()
             errorMessage = "Failed to delete note: \(error.localizedDescription)"
         }
     }

@@ -15,6 +15,12 @@ enum CelebrationState: Equatable {
     case idle
     case inlineConfetti(actionId: UUID)   // per-action node burst, auto-clears after 1.5s
     case milestone(count: Int)            // 3, 5, or 7 — banner + heavier confetti, auto-clears after 2.5s
+    // The three below are no longer emitted: streak, daily goal and badge
+    // land in CompletionRewards (the strip in the congrats sheet). Kept so
+    // the enum's shape — and every switch over it — stays stable.
+    case streakExtended(days: Int)
+    case dailyGoalHit(goalXP: Int)
+    case achievementUnlocked(Achievement)
     case planComplete                     // full-screen overlay, user-dismissed via Done button
 }
 
@@ -49,9 +55,18 @@ class ActionPlanViewModel: ObservableObject {
     @Published var completingActionId: UUID?
     @Published var justCompletedActionId: UUID? = nil
     @Published var celebrationState: CelebrationState = .idle
+    /// What the most recent completion earned — shown as one strip in the
+    /// congrats / plan-complete sheets instead of stacked banners.
+    @Published var lastRewards: CompletionRewards? = nil
 
     private let supabase = SupabaseService.shared
     private let aiService = AIAnalysisService()
+
+    // Isolated deinits (the default under MainActor default isolation) crash
+    // the Swift runtime when the deallocation happens inside a task-local
+    // scope — XCTest always sets one, so every unit test that releases this
+    // VM aborts the test host. Nothing here needs the main actor to tear down.
+    nonisolated deinit {}
 
     // MARK: - Computed
 
@@ -84,6 +99,68 @@ class ActionPlanViewModel: ObservableObject {
         orderedActions.first(where: { !$0.isCompleted })
     }
 
+    /// Chapters are a pure projection of orderedActions (see JourneyChapterBuilder).
+    var chapters: [JourneyChapter] { JourneyChapterBuilder.build(from: orderedActions) }
+
+    /// How many plan parts exist (1 = original plan only; 2+ after "Next chapter").
+    var partCount: Int { microActions.map(\.chapterNumber).max() ?? 1 }
+
+    // MARK: - Next chapter (Plus)
+
+    @Published var isExtending = false
+
+    /// Appends the next chapter to this plan (server-side Plus check; the
+    /// paywall runs before this is called). New steps land as `open`, the
+    /// first one becomes `next`, and the celebration overlay clears so the
+    /// journey is usable again.
+    func requestNextChapter() async throws {
+        guard let plan = actionPlan, !isExtending else { return }
+        isExtending = true
+        defer { isExtending = false }
+        AnalyticsService.shared.log(.nextChapterRequested(chapter: partCount + 1))
+        let (chapter, added) = try await aiService.extendActionPlan(plan, existing: microActions)
+        microActions.append(contentsOf: added)
+        celebrationState = .idle
+        lastRewards = nil
+        AnalyticsService.shared.log(.nextChapterGenerated(chapter: chapter, actions: added.count))
+        HapticEngine.success()
+    }
+
+    /// Minutes still on the plate — the "45 min left" in the journey header.
+    var remainingMinutes: Int {
+        microActions.filter { !$0.isCompleted }.reduce(0) { $0 + $1.timeEstimateMinutes }
+    }
+
+    /// Streak and today's XP for the journey header. Sourced from
+    /// CompletionStore because ActionsTabViewModel is NOT in the environment
+    /// when this screen is pushed from the Kitchen.
+    @Published var streak: Int = 0
+    @Published var xpToday: Int = 0
+
+    /// What completing the next step is worth right now.
+    var nextStepXP: Int { XPEngine.actionXP + (xpToday == 0 ? XPEngine.firstOfDayBonus : 0) }
+
+    func refreshMomentum() async {
+        let completions = await CompletionStore.shared.completionDates()
+        let activity = await CompletionStore.shared.activityDates()
+        streak = Self.streakInfo(completionDates: activity).streak
+        xpToday = XPEngine.xpToday(completionDates: completions)
+    }
+
+    /// Which picker the sheet shows; `showActionPicker` stays the presentation
+    /// flag (tests pin it). Always present through here so the two agree.
+    @Published var pickerMode: PickerMode = .browse
+
+    func presentPicker(_ mode: PickerMode) {
+        pickerMode = mode
+        showActionPicker = true
+    }
+
+    /// One CTA rule for every door into the journey.
+    static func journeyCTA(completed: Int, committed: Bool) -> String {
+        completed == 0 && !committed ? "Start your plan" : "Continue your plan"
+    }
+
     var committedAction: MicroAction? {
         guard let commitment = activeCommitment else { return nil }
         return microActions.first(where: { $0.id == commitment.microActionId })
@@ -104,7 +181,7 @@ class ActionPlanViewModel: ObservableObject {
             )
             actionPlan = plan
             microActions = actions
-            showActionPicker = true
+            presentPicker(.firstVisit)
         } catch {
             errorMessage = "Failed to generate action plan: \(error.localizedDescription)"
         }
@@ -128,6 +205,7 @@ class ActionPlanViewModel: ObservableObject {
 
             computeNudges()
             mergeUserOrder(planId: plan.id)
+            await refreshMomentum()
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -137,25 +215,56 @@ class ActionPlanViewModel: ObservableObject {
 
     func toggleMicroAction(id: UUID, isCompleted: Bool) async {
         if isCompleted {
-            // Auto-confirm with default outcome, then show post-completion sheet
-            await confirmCompletion(id: id, outcome: "did_it", note: nil)
-            completingActionId = id
-
-            // Only show congrats sheet if there are remaining actions (not plan complete)
-            let hasRemaining = microActions.contains(where: { !$0.isCompleted && $0.id != id })
-            if hasRemaining {
-                if postCompletionSheet == nil {
-                    postCompletionSheet = .congrats(actionId: id)
-                } else {
-                    // Previous sheet still animating out — defer one runloop tick
-                    DispatchQueue.main.async { [weak self] in
-                        self?.postCompletionSheet = .congrats(actionId: id)
-                    }
-                }
-            }
+            await completeAction(id: id, outcome: "did_it", note: nil)
         } else {
             // Unchecking — just toggle directly
+            lastRewards = nil
+            AnalyticsService.shared.log(.actionUncompleted)
             await performToggle(id: id, isCompleted: false)
+        }
+    }
+
+    /// Completes a step with the founder's own verdict on it — "did_it" or
+    /// "didnt_work" — and an optional note. A step that was tried and failed
+    /// is still a completed step: it earns the same XP and the same streak
+    /// day, and the outcome is shown on the path so the plan reads as a log.
+    func completeAction(id: UUID, outcome: String, note: String?) async {
+        // First check-off completes the walk-in tour (no-op otherwise)
+        WalkInDirector.shared.microActionCompleted()
+
+        // Cancel nudge for completed action + streak-risk
+        NotificationScheduler.shared.cancelActionNudge(actionId: id)
+        NotificationService.shared.cancelNotification(id: "streak-risk")
+
+        let trimmed = note?.trimmingCharacters(in: .whitespacesAndNewlines)
+        await confirmCompletion(id: id, outcome: outcome, note: (trimmed?.isEmpty ?? true) ? nil : trimmed)
+        completingActionId = id
+
+        if let action = microActions.first(where: { $0.id == id }) {
+            let today = microActions.filter {
+                guard let d = $0.completedAt else { return false }
+                return Calendar.current.isDateInToday(d)
+            }.count
+            AnalyticsService.shared.log(.actionCompleted(
+                quadrant: action.quadrant ?? "none",
+                minutes: action.timeEstimateMinutes,
+                outcome: outcome,
+                completionsToday: today,
+                streak: streak
+            ))
+        }
+
+        // Only show congrats sheet if there are remaining actions (not plan complete)
+        let hasRemaining = microActions.contains(where: { !$0.isCompleted && $0.id != id })
+        if hasRemaining {
+            if postCompletionSheet == nil {
+                postCompletionSheet = .congrats(actionId: id)
+            } else {
+                // Previous sheet still animating out — defer one runloop tick
+                DispatchQueue.main.async { [weak self] in
+                    self?.postCompletionSheet = .congrats(actionId: id)
+                }
+            }
         }
     }
 
@@ -185,6 +294,7 @@ class ActionPlanViewModel: ObservableObject {
             }
 
             computeNudges()
+            await evaluateStreakCelebration()
         } catch {
             if let idx = microActions.firstIndex(where: { $0.id == id }) {
                 microActions[idx].isCompleted = false
@@ -192,7 +302,129 @@ class ActionPlanViewModel: ObservableObject {
                 microActions[idx].completionOutcome = nil
                 microActions[idx].completionNote = nil
             }
+            // The optimistic checkmark just vanished — tell the user why
+            celebrationState = .idle
+            HapticEngine.impact(style: .heavy)
+            errorMessage = "That didn't save — check your connection and try again"
+            DispatchQueue.main.asyncAfter(deadline: .now() + 4) { [weak self] in
+                if self?.errorMessage != nil { self?.errorMessage = nil }
+            }
         }
+    }
+
+    /// Streak across every plan the user has, plus how many completions landed
+    /// today — used to detect "first completion of the day" after a save.
+    static func streakInfo(completionDates: [Date], calendar: Calendar = .current, now: Date = Date()) -> (streak: Int, completionsToday: Int) {
+        let today = calendar.startOfDay(for: now)
+        let completionsToday = completionDates.filter { calendar.isDate($0, inSameDayAs: now) }.count
+        let days = Set(completionDates.map { calendar.startOfDay(for: $0) })
+        guard days.contains(today) else { return (0, completionsToday) }
+
+        var streak = 0
+        var check = today
+        while days.contains(check) {
+            streak += 1
+            guard let prev = calendar.date(byAdding: .day, value: -1, to: check) else { break }
+            check = prev
+        }
+        return (streak, completionsToday)
+    }
+
+    /// The streak a user is about to lose: consecutive days ending YESTERDAY,
+    /// with nothing completed today yet. Returns 0 if today is already covered
+    /// (nothing at risk) or there was no run ending yesterday.
+    static func streakEndingYesterday(completionDates: [Date], calendar: Calendar = .current, now: Date = Date()) -> Int {
+        let today = calendar.startOfDay(for: now)
+        let days = Set(completionDates.map { calendar.startOfDay(for: $0) })
+        guard !days.contains(today),
+              let yesterday = calendar.date(byAdding: .day, value: -1, to: today),
+              days.contains(yesterday) else { return 0 }
+
+        var streak = 0
+        var check = yesterday
+        while days.contains(check) {
+            streak += 1
+            guard let prev = calendar.date(byAdding: .day, value: -1, to: check) else { break }
+            check = prev
+        }
+        return streak
+    }
+
+    /// Fires the streak-extended flame banner (and the dormant streak-milestone
+    /// notification) on the first completion of the day, then the daily-goal
+    /// banner, then any badge earned by this completion — each queued behind
+    /// whatever is already on screen; planComplete owns the screen alone.
+    private func evaluateStreakCelebration() async {
+        // The completion that triggered this just saved — refetch fresh.
+        CompletionStore.shared.invalidate()
+        let actionsByPlan = await CompletionStore.shared.actionsByPlan()
+        guard !actionsByPlan.isEmpty else { return }
+
+        let dates = actionsByPlan.values.flatMap { $0 }.compactMap(\.completedAt)
+        let completedPlanCount = actionsByPlan.values
+            .filter { !$0.isEmpty && $0.allSatisfy(\.isCompleted) }
+            .count
+
+        // Streak counts recordings too; XP and "first completion today" don't.
+        let activity = await CompletionStore.shared.activityDates()
+        let info = Self.streakInfo(completionDates: dates)
+        let activityStreak = Self.streakInfo(completionDates: activity).streak
+        streak = activityStreak
+        xpToday = XPEngine.xpToday(completionDates: dates)
+
+        if info.completionsToday == 1, [3, 7, 14, 30].contains(activityStreak) {
+            NotificationScheduler.shared.sendStreakMilestone(days: activityStreak)
+        }
+        if info.completionsToday == 1, activityStreak >= 2 {
+            AnalyticsService.shared.log(.streakExtended(days: activityStreak, via: "action"))
+        }
+
+        // Everything this completion earned goes into ONE receipt (the
+        // rewards strip in the congrats sheet) — no banner queue.
+        var rewards = lastRewards ?? CompletionRewards(xp: XPEngine.actionXP)
+        rewards.firstOfDay = info.completionsToday == 1
+        rewards.xp = CompletionRewards.baseXP(firstOfDay: rewards.firstOfDay)
+        if info.completionsToday == 1, activityStreak >= 2 {
+            rewards.streak = activityStreak
+        }
+
+        let goalXP = UserDefaults.standard.object(forKey: DailyGoalTier.storageKey) as? Int
+            ?? DailyGoalTier.fallback.rawValue
+        if XPEngine.completionCrossesGoal(completionsTodayAfter: info.completionsToday, goal: goalXP) {
+            AnalyticsService.shared.log(.dailyGoalHit(tier: DailyGoalTier(storedXP: goalXP).analyticsName))
+            rewards.goalHit = goalXP
+        }
+
+        // Badges this completion just earned, celebrated where they're
+        // earned instead of waiting for a Profile visit. Only the action/
+        // streak/XP-derived badges can trigger here — idea-, analysis- and
+        // score-based fields are zeroed, which can only delay those badges
+        // (the Profile grid still catches them), never unlock them falsely.
+        // Same latch key as the grid, so nothing fires twice.
+        let context = AchievementContext(
+            ideaCount: 0,
+            analysisCount: 0,
+            completedActionCount: dates.count,
+            completedPlanCount: completedPlanCount,
+            currentStreak: info.streak,
+            bestScore: nil,
+            completedActionsByAnalysisId: [:],
+            scoresByAnalysisId: [:],
+            totalXP: XPEngine.totalXP(completionDates: dates)
+        )
+        let previous = Achievement.decodeLatch(
+            UserDefaults.standard.string(forKey: Achievement.latchStorageKey) ?? ""
+        )
+        let fresh = Achievement.freshUnlocks(in: context, previous: previous)
+        if let badge = fresh.sorted(by: { $0.rawValue < $1.rawValue }).first {
+            UserDefaults.standard.set(
+                Achievement.encodeLatch(previous.union(fresh)),
+                forKey: Achievement.latchStorageKey
+            )
+            rewards.badge = badge
+        }
+
+        lastRewards = rewards
     }
 
     /// Evaluates and sets celebrationState after an action is marked complete.
@@ -202,13 +434,22 @@ class ActionPlanViewModel: ObservableObject {
         let newCompletedCount = microActions.filter(\.isCompleted).count
         let allDone = newCompletedCount == microActions.count && !microActions.isEmpty
 
+        // Start the receipt here (sync) so the milestone is captured even if
+        // the streak fetch that enriches it is slow; base XP until then.
+        lastRewards = CompletionRewards(
+            xp: XPEngine.actionXP,
+            milestone: !allDone && [3, 5, 7].contains(newCompletedCount) ? newCompletedCount : nil
+        )
+
         if allDone {
             // planComplete takes priority — skip milestone even if count is 3, 5, or 7
             celebrationState = .planComplete
             HapticEngine.success()
+            SoundEngine.fanfare()
         } else if [3, 5, 7].contains(newCompletedCount) {
             celebrationState = .milestone(count: newCompletedCount)
             HapticEngine.impact(style: .medium)
+            SoundEngine.chime()
             // Auto-clear after 2.5s
             DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { [weak self] in
                 if self?.celebrationState == .milestone(count: newCompletedCount) {
@@ -218,6 +459,7 @@ class ActionPlanViewModel: ObservableObject {
         } else {
             celebrationState = .inlineConfetti(actionId: completedId)
             HapticEngine.success()
+            SoundEngine.pop()
             // Auto-clear after 1.5s
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
                 if self?.celebrationState == .inlineConfetti(actionId: completedId) {
@@ -295,6 +537,16 @@ class ActionPlanViewModel: ObservableObject {
         showActionPicker = false
         HapticEngine.selection()
         Task { await silentCommit(actionId: id) }
+
+        // Schedule nudge if action not completed within 24h
+        if let action = orderedActions.first(where: { $0.id == id }) {
+            NotificationScheduler.shared.scheduleActionNudge(
+                actionId: id,
+                actionText: action.text,
+                planId: actionPlan?.id,
+                analysisId: actionPlan?.analysisId
+            )
+        }
     }
 
     /// Deprecated: In-sheet content swap replaces dismiss+re-present pattern.
@@ -407,6 +659,11 @@ class ActionsTabViewModel: ObservableObject {
     @Published var microActionsByPlan: [UUID: [MicroAction]] = [:]
     @Published var activeCommitment: Commitment?
     @Published var isLoading = false
+    /// Only the first fetch shows the loading screen; refetches on tab switch
+    /// are silent. `plans.isEmpty` is the wrong signal — it stays true forever
+    /// on an empty account and would flash the loader on every switch.
+    @Published private(set) var hasLoadedOnce = false
+    @Published var errorMessage: String?
 
     private let supabase = SupabaseService.shared
 
@@ -448,12 +705,30 @@ class ActionsTabViewModel: ObservableObject {
         return result
     }
 
-    func loadAllPlans() async {
-        let isFirstLoad = plans.isEmpty
-        if isFirstLoad { isLoading = true }
-        defer { if isFirstLoad { isLoading = false } }
+    /// The founder's ideas — what the daily loop needs to know whether there
+    /// is anything raw to taste, and to count recordings toward the streak.
+    @Published var notes: [VoiceNote] = []
 
-        guard let userId = try? await supabase.getCurrentUser()?.id else { return }
+    /// Completions ∪ recordings — what the streak and week dots read.
+    var activityDates: [Date] {
+        allCompletionDates + notes.map(\.createdAt)
+    }
+
+    func loadAllPlans() async {
+        if !hasLoadedOnce { isLoading = true }
+        defer {
+            isLoading = false
+            hasLoadedOnce = true
+        }
+
+        errorMessage = nil
+
+        guard let userId = try? await supabase.getCurrentUser()?.id else {
+            errorMessage = "Couldn't load your plans"
+            return
+        }
+
+        notes = (try? await supabase.fetchVoiceNotes()) ?? notes
 
         do {
             let fetchedPlans = try await supabase.fetchAllActionPlans(userId: userId)
@@ -464,9 +739,12 @@ class ActionsTabViewModel: ObservableObject {
             }
             plans = fetchedPlans
             microActionsByPlan = fetchedActions
+            // This fetch is the freshest view of every plan — share it so
+            // the mascot/notification streak checks don't refetch.
+            CompletionStore.shared.seed(fetchedActions)
             activeCommitment = try? await supabase.fetchActiveCommitment(userId: userId)
         } catch {
-            // Silent failure — tab just shows empty state
+            errorMessage = "Couldn't load your plans: \(error.localizedDescription)"
         }
     }
 
@@ -521,12 +799,13 @@ class ActionsTabViewModel: ObservableObject {
             .compactMap(\.completedAt)
     }
 
-    /// Current streak: consecutive days ending today with at least one completion
+    /// Current streak: consecutive days ending today with at least one
+    /// completion OR recording.
     var currentStreak: Int {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
 
-        let completionDays = Set(allCompletionDates.map { calendar.startOfDay(for: $0) })
+        let completionDays = Set(activityDates.map { calendar.startOfDay(for: $0) })
 
         guard completionDays.contains(today) else { return 0 }
 
@@ -540,11 +819,11 @@ class ActionsTabViewModel: ObservableObject {
         return streak
     }
 
-    /// 7 bools for Mon–Sun of the current week
+    /// 7 bools for Mon–Sun of the current week (completions or recordings)
     var weekActivity: [Bool] {
         let calendar = Calendar.current
         let today = Date()
-        let completionDays = Set(allCompletionDates.map { calendar.startOfDay(for: $0) })
+        let completionDays = Set(activityDates.map { calendar.startOfDay(for: $0) })
 
         // Find Monday of this week
         var components = calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: today)

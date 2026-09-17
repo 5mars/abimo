@@ -4,20 +4,36 @@
 //
 
 import SwiftUI
-import Lottie
 import Vortex
+import Lottie
 
 struct PlanCompletionView: View {
     @ObservedObject var viewModel: ActionPlanViewModel
     let onDismiss: () -> Void
 
-    @State private var playbackMode: LottiePlaybackMode = .paused
     @State private var appeared = false
+    @State private var moment: MascotMoment?
+    @State private var showWrapUp = false
 
     var body: some View {
         ZStack {
             // Background
             Color.appBg.ignoresSafeArea()
+
+            if showWrapUp {
+                PlanWrapUpView(viewModel: viewModel, onDismiss: onDismiss)
+                    .transition(.move(edge: .trailing).combined(with: .opacity))
+                    .zIndex(1)
+            } else {
+                celebration
+                    .transition(.opacity)
+            }
+        }
+        .animation(AnimationPolicy.reduceMotion ? nil : .spring(response: 0.45, dampingFraction: 0.85), value: showWrapUp)
+    }
+
+    private var celebration: some View {
+        ZStack {
 
             // Confetti behind everything
             if !AnimationPolicy.reduceMotion {
@@ -36,17 +52,33 @@ struct PlanCompletionView: View {
             VStack(spacing: 24) {
                 Spacer()
 
-                // Lottie trophy animation
-                LottieView(animation: .named("trophy"))
-                    .playbackMode(playbackMode)
-                    .frame(width: 200, height: 200)
+                // The mascot takes the podium
+                MascotView(mood: moment?.mood ?? .playful, size: 220, motion: .celebrating)
 
-                // Champion message
-                Text("\u{1F3C6} Champion! All \(viewModel.completedCount) actions done in \(viewModel.completedMinutes) min \u{1F525}")
-                    .font(.system(size: 22, weight: .bold, design: .rounded))
-                    .foregroundColor(.textPri)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 24)
+                // The critic's closing remarks
+                MascotCalloutLine(line: moment?.line ?? "No complaints. This is new.")
+                    .padding(.horizontal, 32)
+
+                // Trophy moment — animated cup when motion is allowed,
+                // the emoji stays as the reduce-motion fallback.
+                if AnimationPolicy.reduceMotion {
+                    Text("\u{1F3C6} All \(viewModel.completedCount) actions done in \(viewModel.completedMinutes) min \u{1F525}")
+                        .font(.system(size: 18, weight: .bold, design: .rounded))
+                        .foregroundColor(.textPri)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 24)
+                } else {
+                    LottieView(animation: .named("trophy"))
+                        .playing(loopMode: .playOnce)
+                        .frame(width: 110, height: 110)
+                        .allowsHitTesting(false)
+
+                    Text("All \(viewModel.completedCount) actions done in \(viewModel.completedMinutes) min \u{1F525}")
+                        .font(.system(size: 18, weight: .bold, design: .rounded))
+                        .foregroundColor(.textPri)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 24)
+                }
 
                 // Plan title
                 if let plan = viewModel.actionPlan {
@@ -57,12 +89,14 @@ struct PlanCompletionView: View {
                         .padding(.horizontal, 24)
                 }
 
-                // Placeholder for future "What's next" feature (CELB-04 deferred)
-                Color.clear.frame(height: 48)
+                if let rewards = viewModel.lastRewards {
+                    RewardsStrip(rewards: rewards)
+                        .padding(.horizontal, 32)
+                }
 
-                // Done button
-                GradientButton(title: "Done") {
-                    onDismiss()
+                // Second beat: recap + what's next (was a dead-end "Done")
+                GradientButton(title: "What did we learn?") {
+                    showWrapUp = true
                 }
                 .padding(.horizontal, 32)
 
@@ -72,11 +106,9 @@ struct PlanCompletionView: View {
             .scaleEffect(appeared ? 1 : 0.8)
         }
         .onAppear {
+            moment = MascotVoice.moment(for: .planComplete)
             AnimationPolicy.animate(.spring(response: 0.6, dampingFraction: 0.8)) {
                 appeared = true
-            }
-            if !AnimationPolicy.reduceMotion {
-                playbackMode = .playing(.fromProgress(0, toProgress: 1, loopMode: .playOnce))
             }
         }
     }
