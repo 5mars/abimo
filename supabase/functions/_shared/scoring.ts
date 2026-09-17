@@ -330,8 +330,15 @@ export function applyEvidenceCaps(
     if (facts.paidComparables === 0 && (facts.quality === "ok" || facts.quality === "rich") &&
         !facts.strongPositive) {
       cap("demandEvidence", 4, "we looked: nobody is charging money for this");
-    } else if (facts.paidComparables < 2 && !founderNumbers) {
-      cap("demandEvidence", 6, "demand 7+ needs two paid comparables or your own numbers");
+    } else if (!founderNumbers && !facts.strongPositive) {
+      // Comparables charging money prove a market exists — not that anyone
+      // wants THIS founder's version. Calibration 2026-09-17: without this,
+      // "decent, unproven" ideas landed at 73 beside poll-backed ones at 80.
+      cap("demandEvidence", 6, "paid comparables prove a market, not your demand: 7+ needs your own numbers or a strong signal");
+    }
+    if ((facts.saturation === "crowded" || facts.saturation === "dominated") && out.differentiation <= 3) {
+      cap("demandEvidence", Math.max(3, out.differentiation + 1),
+          "crowded niche and nothing different: the category's demand isn't yours yet");
     }
     if (facts.strongNegative) {
       cap("demandEvidence", 5, `strong negative signal: ${facts.strongNegativeText}`.trim());

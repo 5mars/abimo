@@ -168,7 +168,7 @@ RESEARCH DIGEST
 The user message may include a RESEARCH DIGEST from live web search, with a "market" block of numbers.
 
 When a digest is PRESENT: treat it as ground truth. It can raise OR lower a score:
-- market.paid_comparables_found of 2 or more, with prices → demandEvidence may reach 7-8.
+- market.paid_comparables_found of 2 or more, with prices → demandEvidence may reach 6. It reaches 7-8 ONLY with a strong positive signal in the digest or the founder's own numbers (poll, waitlist). Comparables prove a market exists, not that people want this founder's version. In a crowded or dominated niche with differentiation ≤ 3, demand is capped at differentiation + 1 — the category's demand isn't theirs.
 - paid_comparables_found 0 with search_quality ok or rich → demandEvidence at most 4: we looked, and nobody is paying.
 - saturation "dominated" or giant_blocks_niche yes → marketQuality at most 4. "crowded" → at most 5. free_alternatives_dominate yes → at most 4.
 - small_players_making_money yes → marketQuality may reach 7-8; otherwise at most 6.
@@ -220,7 +220,7 @@ demandEvidence — What signals suggest people would use or pay for this?
   0-2: Pure speculation; the founder is guessing
   3-4: Plausible, but zero evidence in the transcript or research
   5-6: Analogous small products succeed, or founder cites real personal experience
-  7-8: The research digest shows 2+ small players charging real money (prices in the digest), or the founder cites a poll or waitlist with numbers
+  7-8: The founder cites a poll or waitlist with numbers, OR the digest holds a STRONG positive signal (many people asking or paying). Paid comparables alone justify 6, not 7
   9-10: Founder cites pre-payments, revenue, or a waitlist of 50+ — numbers, not vibes
 
 marketQuality — Is the BEACHHEAD NICHE worth entering? (Not the global market — the first few hundred customers this founder could actually reach.)

@@ -98,7 +98,8 @@ Deno.test("band is diagnostic only — never clamps", () => {
   assertEquals(weak.score, 30);
   assert(weak.meta.bandMismatch);
   const strong = computeScoreV2({ dims: dims(8, 7, 7, 7, 7), verdictBand: "needs_seasoning", fatalFlaw: false, research: GROUNDED });
-  assert(strong.score >= 78, `expected strong profile ≥78, got ${strong.score}`);
+  // demand 7 without founder numbers or a strong signal is capped to 6 → 77
+  assert(strong.score >= 72, `expected strong profile ≥72, got ${strong.score}`);
 });
 
 Deno.test("great problem with guessed demand is pulled down by the consistency cap", () => {
@@ -204,4 +205,44 @@ Deno.test("bandFor mirrors ScoreVerdict", () => {
   assertEquals(bandFor(59), "needs_seasoning");
   assertEquals(bandFor(60), "simmering");
   assertEquals(bandFor(80), "chefs_kiss");
+});
+
+// ---------------------------------------------------------- calibration 2026-09-17
+
+Deno.test("paid comparables alone lift demand to 6, not 7 — decent-unproven stays under poll-backed", () => {
+  // T3 (wedding-DJ FAQ tool): model dims 7,7,6,7,6; two paid comparables,
+  // moderate signals only, founder lives the problem but has no numbers.
+  const t3 = computeScoreV2({
+    dims: dims(7, 7, 6, 7, 6), verdictBand: "simmering", fatalFlaw: false,
+    founder: founder("personal_experience"), research: { ...GROUNDED, paidComparables: 2, quality: "ok" },
+  });
+  assertEquals(t3.meta.cappedDims.demandEvidence, 6);
+  assertEquals(t3.score, 69);
+  // T4 (tutor billing with a poll): same shape plus founder numbers → demand keeps 8.
+  const t4 = computeScoreV2({
+    dims: dims(7, 8, 7, 8, 7), verdictBand: "simmering", fatalFlaw: false,
+    founder: founder("poll"), research: GROUNDED,
+  });
+  assertEquals(t4.meta.cappedDims.demandEvidence, 8);
+  assert(t4.score - t3.score >= 10, `poll-backed should sit ≥10 above decent-unproven, got ${t4.score} vs ${t3.score}`);
+  // A strong positive signal in the digest also unlocks 7.
+  const loud = computeScoreV2({
+    dims: dims(7, 7, 6, 7, 6), verdictBand: "simmering", fatalFlaw: false,
+    research: { ...GROUNDED, strongPositive: true },
+  });
+  assertEquals(loud.meta.cappedDims.demandEvidence, 7);
+});
+
+Deno.test("a me-too clone in a crowded niche cannot borrow the category's demand", () => {
+  // T2b (habit tracker with a mascot): model dims 4,7,4,7,3; crowded, 3 paid comparables.
+  const facts: ResearchFacts = { ...GROUNDED, saturation: "crowded", priceHigh: 10 };
+  const { dims: d, caps } = applyEvidenceCaps(dims(4, 7, 4, 7, 3), facts, NO_FOUNDER_EVIDENCE);
+  assertEquals(d.demandEvidence, 4);
+  assertEquals(d.marketQuality, 4);
+  assert(caps.some((c) => c.reason.includes("nothing different")));
+  const r = computeScoreV2({ dims: dims(4, 7, 4, 7, 3), verdictBand: "half_baked", fatalFlaw: false, research: facts });
+  assertEquals(r.score, 41);
+  // Differentiate and the cap lifts: same idea with a real angle (x=6) scores well above.
+  const angle = computeScoreV2({ dims: dims(4, 6, 4, 7, 6), verdictBand: "needs_seasoning", fatalFlaw: false, research: facts });
+  assert(angle.score >= 48, `differentiated clone should clear 48, got ${angle.score}`);
 });

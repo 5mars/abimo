@@ -19,7 +19,7 @@
   {
     "id": "T1",
     "label": "terrible: social network for everything",
-    "target": [8, 20],
+    "target": [4, 18],
     "transcript": "Okay so, hear me out — an app that's like, a social network but for everything. AI powered. People can post stuff, buy stuff, date, find jobs, everything in one app. Nobody's done all of it together.",
     "fixture": {
       "comparables": [],
@@ -52,7 +52,7 @@
   {
     "id": "T2b",
     "label": "crowded clone: habit tracker with mascot",
-    "target": [18, 32],
+    "target": [26, 42],
     "transcript": "A habit tracker app but with streaks and a cute mascot. People love streaks. I'd charge like five bucks a month.",
     "fixture": {
       "comparables": [
@@ -86,7 +86,7 @@
   {
     "id": "T3",
     "label": "decent: wedding-DJ FAQ tool",
-    "target": [44, 60],
+    "target": [58, 72],
     "transcript": "I'm a wedding DJ. Couples email me the same 40 questions before every gig, and I retype answers every time. I want a little tool that builds a shareable FAQ-plus-questionnaire page for event vendors, like ten bucks a month. Every DJ I know has this problem and we all hack it with Google Docs.",
     "fixture": {
       "comparables": [
