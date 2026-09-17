@@ -198,23 +198,29 @@ watch `pct_mid` for `scoring_version = 2` vs the v1 rows.
 from `scoring_test.ts` whenever the math changes — the model fights stale
 anchors by inflating dimensions.
 
-## Plus is the second chapter (built 2026-09-16, NOT yet deployed) — reference
+## Plus is the second chapter (built 2026-09-16; migration + verify-entitlement LIVE 2026-09-17, tier caps HELD) — reference
 
 Server-side tiers. Free = one full taste + chapter 1 per idea, 3 active ideas,
 daily AI caps 3 (research/transcribe) / 6 (analyze/plan). Plus = next chapters,
 re-taste, full evidence, unlimited ideas, caps 10/10/20/20.
 
 **Order of operations (the client ships last):**
-1. `supabase db push` → `20260916130000_profiles_plus.sql` (profiles + `is_plus()`
-   + tier-aware voice_notes trigger + `micro_actions.chapter` +
-   `swot_analyses.score_history/retaste_count`). Verify in the dashboard:
-   `select count(*) from profiles;` equals `select count(*) from auth.users;`.
-   If pg_cron isn't enabled the migration prints a NOTICE — enable it and
-   re-run the `cron.schedule('expire-lapsed-plus', …)` block by hand.
-2. Deploy all six functions (command above). From this point free users are
-   capped at 3/3/6/6 and Plus users are capped at 3/3/6/6 TOO until their
-   app syncs an entitlement — so ship the iOS build promptly, and warn in
-   release notes that Plus users should open the app once.
+1. ✅ DONE 2026-09-17 — `supabase db push` applied `20260916130000_profiles_plus.sql`
+   (profiles + `is_plus()` + tier-aware voice_notes trigger + `micro_actions.chapter`
+   + `swot_analyses.score_history/retaste_count`) and `verify-entitlement` is
+   deployed (smoke-tested: null JWS → 200 + row stamped; garbage JWS → 400;
+   no auth → 401). Backfill verified for the calibration user.
+   ⚠️ pg_cron is NOT installed on the project: Database → Extensions → enable
+   `pg_cron`, then run the `cron.schedule('expire-lapsed-plus', …)` block from
+   the migration by hand in the SQL editor. Until then a lapsed subscriber
+   keeps Plus server-side until their app next syncs (the client downgrades
+   them regardless — StoreKit is the UI's source of truth).
+2. ⏳ HELD — deploy the other five functions
+   (`analyze-swot research-market generate-action-plan transcribe-audio
+   extend-action-plan`). This also carries the calibration round-1 scoring fix.
+   From this point free users are capped at 3/3/6/6 and Plus users are capped
+   at 3/3/6/6 TOO until their app syncs an entitlement — so ship the iOS build
+   promptly, and warn in release notes that Plus users should open the app once.
 3. Ship the iOS build. On launch `EntitlementService.syncServer()` posts the
    StoreKit 2 `jwsRepresentation` to `verify-entitlement`, which verifies the
    x5c chain to Apple Root CA G3 locally and upserts `profiles`.
