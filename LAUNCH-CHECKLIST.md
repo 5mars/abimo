@@ -88,6 +88,16 @@ Answer **No** to "do you use data for tracking" — the app has no IDFA/ads.
 
 ---
 
+### 2e. App icon redraw (palette change, Sept 2026)
+The app moved to the horse's beige/brown palette — the only red left anywhere
+is the raster app icon (`Abimo/Assets.xcassets/AppIcon.appiconset/*.png`, three
+1024×1024 variants: light, dark, tinted). Redraw it on caramel `#A8622E` /
+cream `#FFFBF5` (the horse on a cream circle works) and drop the three PNGs
+back in with the same filenames. Until then the launch screen (caramel) and
+the icon (coral) disagree.
+
+---
+
 ## 3. Archive & upload (~15 min)
 
 1. In Xcode select the **Abimo** scheme, destination **Any iOS Device (arm64)**.

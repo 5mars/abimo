@@ -226,7 +226,7 @@ struct PlanWrapUpView: View {
     /// The re-taste verdict, in place of the door: "46 → 58".
     private func retasteRow(_ result: (old: Int, new: Int)) -> some View {
         let delta = result.new - result.old
-        let tint: Color = delta > 0 ? .brandGreen : delta < 0 ? .brand : .textSec
+        let tint: Color = delta > 0 ? .brandGreen : delta < 0 ? .danger : .textSec
         return HStack(spacing: 12) {
             Image(systemName: delta > 0 ? "arrow.up.right" : delta < 0 ? "arrow.down.right" : "equal")
                 .font(.system(size: 15, weight: .bold))

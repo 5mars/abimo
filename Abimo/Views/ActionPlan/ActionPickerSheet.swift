@@ -186,8 +186,10 @@ struct ActionPickerSheet: View {
                 }
             } label: {
                 HStack(spacing: 12) {
-                    Text(ActionIconMapper.icon(for: action.actionType).emoji)
-                        .font(.system(size: 24))
+                    Image(NodeIconCatalog.icon(for: action, in: viewModel.chapters))
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 28, height: 28)
 
                     VStack(alignment: .leading, spacing: 3) {
                         Text(action.text)

@@ -178,7 +178,7 @@ enum MarketTrendStyle {
     static func color(for direction: String?) -> Color {
         switch direction {
         case "up":   return .brandGreen
-        case "down": return .brand
+        case "down": return .danger
         default:     return .brandAmber
         }
     }

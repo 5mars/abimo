@@ -181,7 +181,7 @@ struct EvidenceReceiptSheet: View {
             ForEach(signals) { s in
                 HStack(alignment: .top, spacing: 10) {
                     Image(systemName: s.direction == "negative" ? "arrow.down.circle.fill" : "arrow.up.circle.fill")
-                        .foregroundColor(s.direction == "negative" ? .brand : .brandGreen)
+                        .foregroundColor(s.direction == "negative" ? .danger : .brandGreen)
                         .font(.system(size: 16))
                     VStack(alignment: .leading, spacing: 3) {
                         Text(s.text)

@@ -109,7 +109,7 @@ struct SettingsView: View {
                         Button {
                             showDeleteAlert = true
                         } label: {
-                            settingsRow(icon: "trash", title: "Delete Account", color: .brand)
+                            settingsRow(icon: "trash", title: "Delete Account", color: .danger)
                         }
                         Divider().overlay(Color.cardEdge)
                         Button {

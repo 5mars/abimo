@@ -1,19 +1,32 @@
 //
-//  ChapterBannerView.swift
+//  ChapterHeaderView.swift
 //  Abimo
 //
-//  The colored banner that opens each chapter of the path, with its own
-//  progress ring — the per-section progress the v1.0 spec asked for.
+//  The colored banner that opens each chapter of the path (Duolingo's unit
+//  header), with its own progress ring. The same view renders inline at the
+//  top of the chapter and as the sticky bar that takes over once the inline
+//  one scrolls away.
 //
 
 import SwiftUI
 
-struct ChapterBannerView: View {
+struct ChapterHeaderView: View {
+    enum Style { case inline, sticky }
+
     let chapter: JourneyChapter
     let index: Int
+    var style: Style = .inline
+
+    /// Fixed by construction (system fonts at fixed sizes), so the sticky
+    /// threshold can be computed without measuring.
+    static let inlineHeight: CGFloat = 66
 
     private var progress: Double {
         chapter.actions.isEmpty ? 0 : Double(chapter.completedCount) / Double(chapter.actions.count)
+    }
+
+    private var minutesLeft: Int {
+        chapter.actions.filter { !$0.isCompleted }.reduce(0) { $0 + $1.timeEstimateMinutes }
     }
 
     var body: some View {
@@ -55,22 +68,33 @@ struct ChapterBannerView: View {
                         .foregroundColor(.white)
                 }
             }
-            .frame(width: 32, height: 32)
+            .frame(width: 28, height: 28)
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 12)
+        .padding(.vertical, 11)
+        .frame(height: Self.inlineHeight - DuoTokens.Edge.card)
         .background(shape.fill(chapter.kind.color))
         .background(shape.fill(chapter.kind.edgeColor).offset(y: DuoTokens.Edge.card))
         .padding(.bottom, DuoTokens.Edge.card)
+        .duoShadow(enabled: style == .sticky)
         // Closing a chapter gets its own beat: the ring fills and the
-        // device gives one sharp tap.
+        // device gives one sharp tap — once, from the inline copy only.
         .onChange(of: chapter.isComplete) { _, done in
-            if done { HapticEngine.impact(style: .rigid) }
+            if done && style == .inline { HapticEngine.impact(style: .rigid) }
         }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Chapter \(index + 1), \(chapter.title), \(chapter.completedCount) of \(chapter.actions.count) done")
     }
 
     private var eyebrow: String {
-        let steps = chapter.actions.count
-        return "CHAPTER \(index + 1) · \(steps) STEP\(steps == 1 ? "" : "S") · \(chapter.totalMinutes) MIN"
+        if chapter.isComplete { return "CHAPTER \(index + 1) · DONE" }
+        return "CHAPTER \(index + 1) · \(chapter.completedCount)/\(chapter.actions.count) DONE · \(minutesLeft) MIN LEFT"
+    }
+}
+
+private extension View {
+    @ViewBuilder
+    func duoShadow(enabled: Bool) -> some View {
+        if enabled { self.duoShadow() } else { self }
     }
 }

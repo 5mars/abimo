@@ -48,7 +48,7 @@ enum ScoreVerdict: CaseIterable {
 
     var color: Color {
         switch self {
-        case .burnt:          return .brand
+        case .burnt:          return .danger
         case .halfBaked:      return Color.brandOrange
         case .needsSeasoning: return .brandAmber
         case .simmering:      return .brandBlue

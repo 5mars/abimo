@@ -2,34 +2,41 @@
 //  JourneyLayout.swift
 //  Abimo
 //
-//  Single source of truth for journey-path geometry. Node placement, route
-//  drawing, and bubble anchoring all read from here — no magic constants
-//  scattered across views, so a spacing tweak can't silently misalign them.
+//  Single source of truth for journey-path geometry. Node placement and
+//  route drawing read from here — no magic constants scattered across
+//  views, so a spacing tweak can't silently misalign them.
+//
+//  Duolingo-style: big round nodes on a centred sine — centre, right,
+//  centre, left — restarting centred at every chapter.
 //
 
 import SwiftUI
 
 struct JourneyLayout {
-    var nodeSize: CGFloat = 64
-    var stride: CGFloat = 112        // node-center to node-center Y
-    var mascotSize: CGFloat = 56
-    private let maxAmplitude: CGFloat = 56
-    private let labelGutter: CGFloat = 12
-    private let edgeInset: CGFloat = 8
+    var nodeSize: CGFloat = 76
+    var stride: CGFloat = 104        // node-center to node-center Y
+    var iconSize: CGFloat = 42
+    /// Room above the first node for the bobbing START pill.
+    var topInset: CGFloat = 44
+    var bottomInset: CGFloat = 16
+    private let maxAmplitude: CGFloat = 76
 
-    /// Zigzag ±x from the centerline, clamped so nodes keep a margin on
-    /// narrow devices.
+    /// Lateral slot per index: 0 = centre, +1 = right, −1 = left.
+    static let lateralPattern: [CGFloat] = [0, 1, 0, -1]
+
+    func lateralSlot(_ index: Int) -> CGFloat {
+        Self.lateralPattern[index % Self.lateralPattern.count]
+    }
+
+    /// How far the side slots sit from the centreline, clamped so nodes
+    /// keep a margin on narrow devices.
     func amplitude(width: CGFloat) -> CGFloat {
-        min(maxAmplitude, (width - nodeSize) / 2 - 16)
+        max(0, min(maxAmplitude, (width - nodeSize) / 2 - 20))
     }
 
     func xOffset(_ index: Int, width: CGFloat) -> CGFloat {
-        let a = amplitude(width: width)
-        return index.isMultiple(of: 2) ? -a : a
+        lateralSlot(index) * amplitude(width: width)
     }
-
-    /// Even nodes sit left of center, odd nodes right.
-    func isLeft(_ index: Int) -> Bool { index.isMultiple(of: 2) }
 
     func center(_ index: Int, width: CGFloat) -> CGPoint {
         CGPoint(
@@ -38,40 +45,41 @@ struct JourneyLayout {
         )
     }
 
-    /// Where a node's title/meta label goes: the inner side of the zigzag,
-    /// from the node's edge to the opposite margin, one stride tall.
-    func labelFrame(_ index: Int, width: CGFloat) -> CGRect {
-        let c = center(index, width: width)
-        let nodeEdge = nodeSize / 2 + labelGutter
-        let minX = isLeft(index) ? c.x + nodeEdge : edgeInset
-        let maxX = isLeft(index) ? width - edgeInset : c.x - nodeEdge
-        return CGRect(x: minX, y: c.y - stride / 2, width: max(0, maxX - minX), height: stride)
-    }
-
-    /// Where the mascot stands: the outer side of the node, feet on its centerline.
-    func mascotCenter(_ index: Int, width: CGFloat) -> CGPoint {
-        let c = center(index, width: width)
-        let dx = nodeSize / 2 + 6 + mascotSize / 2
-        return CGPoint(x: isLeft(index) ? c.x - dx : c.x + dx, y: c.y)
-    }
-
+    /// Height of the node column alone (no insets).
     func contentHeight(count: Int) -> CGFloat {
         guard count > 0 else { return 0 }
         return CGFloat(count - 1) * stride + nodeSize + DuoTokens.Edge.node
     }
+
+    /// Height of a chapter's path area including the pill room and tail.
+    func sectionHeight(count: Int) -> CGFloat {
+        guard count > 0 else { return 0 }
+        return topInset + contentHeight(count: count) + bottomInset
+    }
 }
 
-/// The dash recipe shared by the grey base trail and the green overlay —
-/// one definition so the two can never fall out of step.
+// MARK: - Sticky header selection
+
+/// Which chapter the sticky header should show: the last one (in display
+/// order) whose inline header has scrolled up past `threshold`. Pure, so the
+/// scroll math is unit-testable without a ScrollView.
+enum JourneyStickyModel {
+    static func currentChapterId(order: [String], tops: [String: CGFloat], threshold: CGFloat) -> String? {
+        order.last { (tops[$0] ?? .infinity) <= threshold }
+    }
+}
+
+// MARK: - Trail
+
+/// One stroke recipe for the faint route and the golden completed overlay —
+/// a single definition so the two can never fall out of step.
 enum JourneyTrailStyle {
-    static let stroke = StrokeStyle(lineWidth: 6, lineCap: .round, dash: [10, 14])
+    static let stroke = StrokeStyle(lineWidth: 5, lineCap: .round)
 }
 
-// MARK: - JourneyRouteCanvas
-
-/// Draws the full route once, behind the nodes, in muted grey. Completed
-/// segments are painted green by JourneyCompletedTrail overlaid on top,
-/// so a fresh completion can draw itself on instead of hard-switching.
+/// Draws the full route once, behind the nodes, as a faint solid connector.
+/// Completed segments are painted gold by JourneyCompletedTrail on top, so
+/// a fresh completion can draw itself on instead of hard-switching.
 struct JourneyRouteCanvas: View {
     let layout: JourneyLayout
     let actions: [MicroAction]
@@ -85,18 +93,16 @@ struct JourneyRouteCanvas: View {
             for i in 0..<(points.count - 1) {
                 let path = JourneySegmentShape(from: points[i], to: points[i + 1])
                     .path(in: .zero)
-                context.stroke(path, with: .color(Color.textSec.opacity(0.25)), style: JourneyTrailStyle.stroke)
+                context.stroke(path, with: .color(Color.textSec.opacity(0.18)), style: JourneyTrailStyle.stroke)
             }
         }
         .allowsHitTesting(false)
     }
 }
 
-// MARK: - JourneySegmentShape
-
 /// One node-to-node curve of the route, as a Shape so it can be trimmed.
-/// Same cubic as the Canvas trail (control points at 45% of the Y gap);
-/// points are absolute in the path area's coordinate space.
+/// Control points at 45% of the Y gap; points are absolute in the path
+/// area's coordinate space.
 struct JourneySegmentShape: Shape {
     let from: CGPoint
     let to: CGPoint
@@ -114,9 +120,7 @@ struct JourneySegmentShape: Shape {
     }
 }
 
-// MARK: - JourneyCompletedTrail
-
-/// Green overlay for every completed segment. Segments that were already
+/// Golden overlay for every completed segment. Segments that were already
 /// complete render fully; the one belonging to the action that just
 /// completed draws itself on top-to-bottom, timed to land between the
 /// node's completion bounce and the next node's unlock pulse.
@@ -154,7 +158,7 @@ struct JourneyCompletedTrail: View {
         var body: some View {
             shape
                 .trim(from: 0, to: progress)
-                .stroke(Color.brandGreen, style: JourneyTrailStyle.stroke)
+                .stroke(Color.nodeDone, style: JourneyTrailStyle.stroke)
                 .allowsHitTesting(false)
                 .onAppear {
                     guard progress < 1 else { return }

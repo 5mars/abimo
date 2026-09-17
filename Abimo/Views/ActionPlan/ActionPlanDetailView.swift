@@ -11,6 +11,12 @@ struct ActionPlanDetailView: View {
 
     @StateObject private var viewModel = ActionPlanViewModel()
 
+    /// The plan-level progress the old header card used to show.
+    private var progressSubtitle: String {
+        guard viewModel.totalCount > 0 else { return "" }
+        return "\(viewModel.completedCount) of \(viewModel.totalCount) · \(viewModel.remainingMinutes) min left"
+    }
+
     var body: some View {
         ZStack {
             Color.journeyBg.ignoresSafeArea()
@@ -32,7 +38,7 @@ struct ActionPlanDetailView: View {
                         .foregroundColor(.white)
                         .padding(.horizontal, 18)
                         .padding(.vertical, 12)
-                        .background(Color.brand.opacity(0.92))
+                        .background(Color.danger.opacity(0.92))
                         .clipShape(Capsule())
                         .padding(.bottom, 24)
                         .onTapGesture { viewModel.errorMessage = nil }
@@ -57,6 +63,7 @@ struct ActionPlanDetailView: View {
         .animation(.easeInOut(duration: 0.3), value: viewModel.celebrationState)
         .animation(.easeInOut(duration: 0.25), value: viewModel.errorMessage)
         .navigationTitle(viewModel.actionPlan?.title ?? "")
+        .navigationSubtitle(progressSubtitle)
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(Color.journeyBg, for: .navigationBar)
         .toolbar {

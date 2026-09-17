@@ -23,40 +23,59 @@ extension Color {
         self.init(.sRGB, red: Double(r) / 255, green: Double(g) / 255, blue: Double(b) / 255)
     }
 
-    // Brand palette — bold saturated colors on pure white (Duolingo-style)
-    static let brand        = Color(hex: "FF5252")  // Punchy coral
-    static let brandLight   = Color(hex: "FF7B70")  // Gradient endpoint
-    static let brandAmber   = Color(hex: "FFB800")  // Bold amber
-    static let brandGreen   = Color(hex: "2EC46F")  // Bold green
-    static let brandBlue    = Color(hex: "3B82F6")  // Bold blue
-    static let brandOrange  = Color(hex: "FF8A3D")  // Verdict-scale orange (coral↔amber)
+    // Brand palette — the horse's colours: caramel body, espresso mane,
+    // cream muzzle. Warm, matte, no red anywhere (negatives use `danger`).
+    static let brand        = Color(hex: "A8622E")  // Caramel — primary actions, tab selection
+    static let brandLight   = Color(hex: "C98A50")  // Mascot body — gradient endpoint
+    static let brandAmber   = Color(hex: "E0A526")  // Golden — XP, done nodes, "needs seasoning"
+    static let brandGreen   = Color(hex: "7FA86F")  // Sage — success, streaks, "chef's kiss"
+    static let brandBlue    = Color(hex: "6B8FB5")  // Dusty blue — "simmering", links
+    static let brandOrange  = Color(hex: "D98B4A")  // Verdict-scale orange ("half-baked")
+    /// The ONE negative colour: errors, fatal flaw, "burnt", delete, trends down.
+    static let danger       = Color(hex: "C65D3B")  // Terracotta
 
     // Surfaces
-    static let appBg               = Color.white
-    static let journeyBg           = Color(hex: "FFF8F0")  // Warm cream — the action-plan path lives here
+    static let appBg               = Color(hex: "FFFBF5")  // Warm off-white
+    static let journeyBg           = Color(hex: "F8EEDF")  // Beige — the path and its sheets live here
     static let cardBg              = Color.white            // White card (alias)
     static let cardSurface         = Color.white            // White card
     static let cardSurfaceElevated = Color.white            // White elevated card
-    static let textPri             = Color(hex: "3C3C43")  // Soft charcoal
-    static let textSec             = Color(hex: "AFAFB4")  // Medium gray
-    static let textTertiary        = Color(hex: "C7C7CC")  // Chevrons, dots, decorative glyphs
-    static let insetBg             = Color(hex: "F7F7F7")  // duoInset well background
+    static let textPri             = Color(hex: "3D2B1F")  // Espresso
+    static let textSec             = Color(hex: "9C8A78")  // Warm taupe
+    static let textTertiary        = Color(hex: "C4B5A2")  // Chevrons, dots, decorative glyphs
+    static let insetBg             = Color(hex: "F5EBDC")  // duoInset well background
 
-    // Tinted light card surfaces (cooler, tuned for pure white)
-    static let cardDarkBlue   = Color(hex: "EDF4FE")  // Light blue tint
-    static let cardDarkTeal   = Color(hex: "EAF9F1")  // Light green tint
-    static let cardDarkOrange = Color(hex: "FFF6E3")  // Light amber tint
-    static let cardDarkRed    = Color(hex: "FFEFEF")  // Light coral tint
-    static let cardDarkMint   = Color(hex: "F2FBF7")  // Pale mint hero surface
+    // Tinted light card surfaces (warm, tuned for the off-white ground)
+    static let cardDarkBlue   = Color(hex: "E7EEF5")  // Dusty-blue tint
+    static let cardDarkTeal   = Color(hex: "E9F0E3")  // Sage tint
+    static let cardDarkOrange = Color(hex: "FAEFD8")  // Golden tint
+    static let cardDarkRed    = Color(hex: "F7E3DA")  // Terracotta tint
+    static let cardDarkMint   = Color(hex: "F1F4EA")  // Pale sage hero surface
 
     // Duo3D darker-edge variants (bottom edges of 3D buttons/nodes/cards)
-    static let brandDark       = Color(hex: "E03E3E")  // edge for brand FF5252
-    static let brandGreenDark  = Color(hex: "25A65C")  // edge for brandGreen 2EC46F
-    static let brandAmberDark  = Color(hex: "DB9E00")  // edge for brandAmber FFB800
-    static let brandBlueDark   = Color(hex: "2563EB")  // edge for brandBlue 3B82F6
-    static let cardEdge        = Color(hex: "E5E5E5")  // grey — white-card borders/edges
-    static let lockedFace      = Color(hex: "EBEBEB")  // locked node face / disabled button
-    static let lockedEdge      = Color(hex: "CDCDCD")  // locked node edge
+    static let brandDark       = Color(hex: "7B4A25")  // Mane — edge for brand
+    static let brandGreenDark  = Color(hex: "5E8752")  // edge for brandGreen
+    static let brandAmberDark  = Color(hex: "B8841C")  // edge for brandAmber
+    static let brandBlueDark   = Color(hex: "4F6F94")  // edge for brandBlue
+    static let cardEdge        = Color(hex: "E8DCC8")  // warm sand — white-card borders/edges
+    static let lockedFace      = Color(hex: "EFE6D8")  // locked node face / disabled button
+    static let lockedEdge      = Color(hex: "D6C8B2")  // locked node edge
+
+    // Journey chapters (Duolingo "units") — each chapter owns a colour + edge
+    static let chapterTerracotta     = Color(hex: "C96F4A")
+    static let chapterTerracottaEdge = Color(hex: "A5563A")
+    static let chapterSage           = brandGreen
+    static let chapterSageEdge       = brandGreenDark
+    static let chapterGolden         = brandAmber
+    static let chapterGoldenEdge     = brandAmberDark
+    static let chapterMocha          = Color(hex: "8B6A52")
+    static let chapterMochaEdge      = Color(hex: "6B4F3B")
+
+    // Journey nodes
+    static let nodeDone     = brandAmber            // completed step — gold, like a crown
+    static let nodeDoneEdge = brandAmberDark
+    static let nodeOpenFace = Color(hex: "FBF3E6")  // not-yet step — cream
+    static let nodeOpenEdge = Color(hex: "D9C9B3")
 
 }
 
@@ -71,21 +90,21 @@ extension LinearGradient {
         colors: [.brand, .brand],
         startPoint: .topLeading, endPoint: .bottomTrailing
     )
-    // SWOT quadrant gradients — S=green, W=coral, O=blue, T=amber
+    // SWOT quadrant gradients — S=sage, W=terracotta, O=dusty blue, T=golden
     static let swotStrength = LinearGradient(
-        colors: [Color(hex: "2EC46F"), Color(hex: "5AD68F")],
+        colors: [.brandGreen, Color(hex: "9DBF8E")],
         startPoint: .topLeading, endPoint: .bottomTrailing
     )
     static let swotWeakness = LinearGradient(
-        colors: [Color(hex: "FF5252"), Color(hex: "FF7B70")],
+        colors: [.danger, Color(hex: "D98366")],
         startPoint: .topLeading, endPoint: .bottomTrailing
     )
     static let swotOpportunity = LinearGradient(
-        colors: [Color(hex: "3B82F6"), Color(hex: "6FA5F9")],
+        colors: [.brandBlue, Color(hex: "8FAACB")],
         startPoint: .topLeading, endPoint: .bottomTrailing
     )
     static let swotThreat = LinearGradient(
-        colors: [Color(hex: "FFB800"), Color(hex: "FFCB3D")],
+        colors: [.brandAmber, Color(hex: "EBBE5A")],
         startPoint: .topLeading, endPoint: .bottomTrailing
     )
 }

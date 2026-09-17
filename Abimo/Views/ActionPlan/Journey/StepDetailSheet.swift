@@ -15,6 +15,8 @@ struct StepDetailSheet: View {
     let action: MicroAction
     let state: NodeState
     let chapter: JourneyChapter?
+    /// The same kawaii icon the node wears on the path.
+    var iconName: String = NodeIconCatalog.icons(for: .steps)[0]
     let xpPreview: Int
     let onPickAsNext: () -> Void
     let onComplete: (_ outcome: String, _ note: String?) -> Void
@@ -43,8 +45,10 @@ struct StepDetailSheet: View {
                 }
 
                 HStack(alignment: .top, spacing: 12) {
-                    Text(ActionIconMapper.icon(for: action.actionType).emoji)
-                        .font(.system(size: 36))
+                    Image(iconName)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 40, height: 40)
                     Text(action.text)
                         .font(.system(size: 20, weight: .bold, design: .rounded))
                         .foregroundColor(.textPri)
@@ -252,7 +256,7 @@ struct StepDetailSheet: View {
     private var doneLine: String {
         var s = "Done"
         if let d = action.completedAt {
-            s += " \(JourneyNodeLabel.dayLabel(for: d)) at \(d.formatted(date: .omitted, time: .shortened))"
+            s += " \(Self.dayLabel(for: d)) at \(d.formatted(date: .omitted, time: .shortened))"
         }
         switch action.completionOutcome {
         case "didnt_work": s += " · Tried, didn't work"
@@ -269,5 +273,15 @@ struct StepDetailSheet: View {
             .padding(.horizontal, 8)
             .padding(.vertical, 3)
             .background(Capsule().fill(fill))
+    }
+}
+
+extension StepDetailSheet {
+    /// "today" / "yesterday" / "Tue" — the human day a step was finished.
+    static func dayLabel(for date: Date, calendar: Calendar = .current, now: Date = Date()) -> String {
+        if calendar.isDate(date, inSameDayAs: now) { return "today" }
+        if let yesterday = calendar.date(byAdding: .day, value: -1, to: now),
+           calendar.isDate(date, inSameDayAs: yesterday) { return "yesterday" }
+        return date.formatted(.dateTime.weekday(.abbreviated))
     }
 }

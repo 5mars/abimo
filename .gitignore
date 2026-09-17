@@ -112,3 +112,7 @@ coverage/
 .cache/
 tmp/
 supabase/.temp/
+
+# macOS / iCloud Desktop-sync duplicate copies ("Foo 2.swift")
+* 2.*
+!Abimo/Assets.xcassets/AppIcon.appiconset/*

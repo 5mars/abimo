@@ -627,7 +627,7 @@ struct ViabilityGaugeView: View {
                     Text("\(delta > 0 ? "+" : "")\(delta) since your last tasting (was \(previousScore))")
                         .font(.system(size: 12, weight: .semibold, design: .rounded))
                 }
-                .foregroundColor(delta > 0 ? .brandGreen : .brand)
+                .foregroundColor(delta > 0 ? .brandGreen : .danger)
             }
 
             Text(verdict.caption)
@@ -642,11 +642,11 @@ struct ViabilityGaugeView: View {
                 HStack(alignment: .top, spacing: 8) {
                     Image(systemName: "flame.fill")
                         .font(.system(size: 13, weight: .bold))
-                        .foregroundColor(.brand)
+                        .foregroundColor(.danger)
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Fatal flaw, as described")
                             .font(.system(size: 12, weight: .bold, design: .rounded))
-                            .foregroundColor(.brand)
+                            .foregroundColor(.danger)
                         if let fatalFlawReason, !fatalFlawReason.isEmpty {
                             Text(fatalFlawReason)
                                 .font(.system(size: 12))
@@ -659,7 +659,7 @@ struct ViabilityGaugeView: View {
                 .padding(10)
                 .background(
                     RoundedRectangle(cornerRadius: DuoTokens.Radius.inset, style: .continuous)
-                        .fill(Color.brand.opacity(0.10))
+                        .fill(Color.danger.opacity(0.10))
                 )
             }
 
