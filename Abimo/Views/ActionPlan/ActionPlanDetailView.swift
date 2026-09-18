@@ -10,6 +10,8 @@ struct ActionPlanDetailView: View {
     let analysisId: UUID
 
     @StateObject private var viewModel = ActionPlanViewModel()
+    @AppStorage(JourneyIntroSheet.seenKey) private var introSeen = false
+    @State private var showIntro = false
 
     /// The plan-level progress the old header card used to show.
     private var progressSubtitle: String {
@@ -83,6 +85,11 @@ struct ActionPlanDetailView: View {
                 .presentationDragIndicator(.visible)
                 .presentationBackground(Color.appBg)
         }
+        .sheet(isPresented: $showIntro, onDismiss: { introSeen = true }) {
+            JourneyIntroSheet(onDismiss: { showIntro = false })
+                .presentationDetents([.medium])
+                .presentationDragIndicator(.visible)
+        }
         .sheet(item: $viewModel.postCompletionSheet) { _ in
             PostCompletionSheetContent(
                 viewModel: viewModel,
@@ -92,6 +99,11 @@ struct ActionPlanDetailView: View {
         .task {
             SoundEngine.prepare()
             await viewModel.loadActionPlan(analysisId: analysisId)
+            // First plan ever: one closable line from the horse, then never again.
+            if !introSeen, viewModel.totalCount > 0 {
+                try? await Task.sleep(nanoseconds: 400_000_000)
+                showIntro = true
+            }
         }
     }
 

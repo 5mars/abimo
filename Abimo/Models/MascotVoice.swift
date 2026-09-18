@@ -17,6 +17,7 @@ enum MascotMomentTrigger: Equatable {
     case dailyGoalHit
     case daresCleared
     case chapterComplete                 // congrats sheet line when a step closes its chapter
+    case journeyIntro                    // once-ever half-sheet the first time a plan opens
     case planComplete
     // Popup triggers — the ONLY ones that go through MascotDirector.
     // Popups are rare by design: max one per session, each with an action.
@@ -38,6 +39,7 @@ enum MascotMomentTrigger: Equatable {
         case .dailyGoalHit:         return "dailyGoalHit"
         case .daresCleared:         return "daresCleared"
         case .chapterComplete:      return "chapterComplete"
+        case .journeyIntro:         return "journeyIntro"
         case .planComplete:         return "planComplete"
         case .walkInWelcome:        return "walkInWelcome"
         case .returnedAfterAbsence: return "returnedAfterAbsence"
@@ -104,7 +106,7 @@ enum MascotVoice {
         case .streakAtRisk:
             return MascotAction(label: "Save the streak", intent: .openPlans)
         case .scoreRevealed, .actionCompleted, .streakExtended, .dailyGoalHit,
-             .daresCleared, .chapterComplete, .planComplete, .emptyKitchen,
+             .daresCleared, .chapterComplete, .journeyIntro, .planComplete, .emptyKitchen,
              .recordPrompt, .launching, .ideaCapReached:
             return nil
         }
@@ -175,6 +177,13 @@ enum MascotVoice {
                 "All three dares. Show-off.",
                 "Dares cleared. I'm running out of things to dare you.",
                 "Three for three. The kitchen's speechless. Briefly.",
+            ], .playful)
+
+        case .journeyIntro:
+            return ([
+                "Tap the glowing step. Ten minutes. That's the whole trick.",
+                "One lit step at a time. I'll light the next one when you're done.",
+                "This is the path. Only one step is glowing. Start there.",
             ], .playful)
 
         case .chapterComplete:
