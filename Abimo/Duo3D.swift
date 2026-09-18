@@ -25,7 +25,7 @@ enum DuoTokens {
     enum Edge {
         static let button: CGFloat = 4
         static let card: CGFloat = 3
-        static let node: CGFloat = 5
+        static let node: CGFloat = 7
     }
     enum Spacing {
         static let xs: CGFloat = 4
@@ -61,6 +61,26 @@ private struct PressHaptic: ViewModifier {
     }
 }
 
+// MARK: - Press motion
+
+/// The Duo press: the face sinks onto its edge and squashes a hair on the
+/// way down (snappy), then springs back with a small overshoot on release —
+/// the "pop" that makes a tap feel answered. Reduce Motion keeps the sink
+/// (it is the press confirmation) and drops the scale.
+private struct DuoPressMotion: ViewModifier {
+    let isPressed: Bool
+    var scale: CGFloat = 0.97
+    var release: Animation = .spring(response: 0.28, dampingFraction: 0.55)
+
+    func body(content: Content) -> some View {
+        content
+            .scaleEffect(AnimationPolicy.reduceMotion ? 1 : (isPressed ? scale : 1))
+            // Chosen from the NEW value: press-in eases fast, release springs.
+            .animation(isPressed ? .easeOut(duration: 0.08) : release, value: isPressed)
+            .modifier(PressHaptic(isPressed: isPressed))
+    }
+}
+
 // MARK: - Duo3DButtonStyle (rounded-rect, solid fill)
 
 /// The composed view is `edgeHeight` taller than the label frame — callers
@@ -78,8 +98,7 @@ struct Duo3DButtonStyle: ButtonStyle {
             .offset(y: configuration.isPressed ? edgeHeight : 0)
             .background(shape.fill(edge).offset(y: edgeHeight))
             .padding(.bottom, edgeHeight)
-            .animation(.easeOut(duration: 0.08), value: configuration.isPressed)
-            .modifier(PressHaptic(isPressed: configuration.isPressed))
+            .modifier(DuoPressMotion(isPressed: configuration.isPressed))
     }
 }
 
@@ -98,8 +117,7 @@ struct Duo3DGradientButtonStyle: ButtonStyle {
             .offset(y: configuration.isPressed ? edgeHeight : 0)
             .background(shape.fill(edge).offset(y: edgeHeight))
             .padding(.bottom, edgeHeight)
-            .animation(.easeOut(duration: 0.08), value: configuration.isPressed)
-            .modifier(PressHaptic(isPressed: configuration.isPressed))
+            .modifier(DuoPressMotion(isPressed: configuration.isPressed))
     }
 }
 
@@ -116,8 +134,11 @@ struct Duo3DCircleButtonStyle: ButtonStyle {
             .offset(y: configuration.isPressed ? edgeHeight : 0)
             .background(Circle().fill(edge).offset(y: edgeHeight))
             .padding(.bottom, edgeHeight)
-            .animation(.easeOut(duration: 0.08), value: configuration.isPressed)
-            .modifier(PressHaptic(isPressed: configuration.isPressed))
+            .modifier(DuoPressMotion(
+                isPressed: configuration.isPressed,
+                scale: 0.94,
+                release: .spring(response: 0.32, dampingFraction: 0.5)
+            ))
     }
 }
 
@@ -136,8 +157,7 @@ struct Duo3DSecondaryButtonStyle: ButtonStyle {
             .offset(y: configuration.isPressed ? edgeHeight : 0)
             .background(shape.fill(Color.cardEdge).offset(y: edgeHeight))
             .padding(.bottom, edgeHeight)
-            .animation(.easeOut(duration: 0.08), value: configuration.isPressed)
-            .modifier(PressHaptic(isPressed: configuration.isPressed))
+            .modifier(DuoPressMotion(isPressed: configuration.isPressed))
     }
 }
 
@@ -180,7 +200,7 @@ struct DuoCardButtonStyle: ButtonStyle {
                 edgeHeight: edgeHeight,
                 isPressed: configuration.isPressed
             ))
-            .modifier(PressHaptic(isPressed: configuration.isPressed))
+            .modifier(DuoPressMotion(isPressed: configuration.isPressed, scale: 0.985))
     }
 }
 
@@ -217,9 +237,7 @@ extension View {
 struct DuoPressStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .scaleEffect(configuration.isPressed ? 0.92 : 1.0)
-            .animation(.spring(response: 0.22, dampingFraction: 0.55), value: configuration.isPressed)
-            .modifier(PressHaptic(isPressed: configuration.isPressed))
+            .modifier(DuoPressMotion(isPressed: configuration.isPressed, scale: 0.92))
     }
 }
 

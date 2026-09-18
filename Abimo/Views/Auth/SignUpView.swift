@@ -89,7 +89,7 @@ struct SignUpView: View {
                                 Text(feedbackLine)
                                     .font(.system(size: 13))
                             }
-                            .foregroundColor(.brand)
+                            .foregroundColor(.danger)
                             .frame(maxWidth: .infinity, alignment: .leading)
                         }
 

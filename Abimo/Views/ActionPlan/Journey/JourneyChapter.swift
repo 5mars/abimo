@@ -29,32 +29,21 @@ enum JourneyChapterKind: String, CaseIterable {
 
     var color: Color {
         switch self {
-        case .fixWeakSpot:  return .brand
-        case .proveDemand:  return .brandBlue
-        case .playYourEdge: return .brandGreen
-        case .watchRisks:   return .brandAmber
-        case .steps:        return .brand
+        case .fixWeakSpot:  return .chapterTerracotta
+        case .proveDemand:  return .chapterSage
+        case .playYourEdge: return .chapterGolden
+        case .watchRisks:   return .chapterMocha
+        case .steps:        return .chapterMocha
         }
     }
 
     var edgeColor: Color {
         switch self {
-        case .fixWeakSpot:  return .brandDark
-        case .proveDemand:  return .brandBlueDark
-        case .playYourEdge: return .brandGreenDark
-        case .watchRisks:   return .brandAmberDark
-        case .steps:        return .brandDark
-        }
-    }
-
-    /// Tinted band behind the chapter's stretch of path.
-    var bandColor: Color {
-        switch self {
-        case .fixWeakSpot:  return .cardDarkRed
-        case .proveDemand:  return .cardDarkBlue
-        case .playYourEdge: return .cardDarkTeal
-        case .watchRisks:   return .cardDarkOrange
-        case .steps:        return .insetBg
+        case .fixWeakSpot:  return .chapterTerracottaEdge
+        case .proveDemand:  return .chapterSageEdge
+        case .playYourEdge: return .chapterGoldenEdge
+        case .watchRisks:   return .chapterMochaEdge
+        case .steps:        return .chapterMochaEdge
         }
     }
 

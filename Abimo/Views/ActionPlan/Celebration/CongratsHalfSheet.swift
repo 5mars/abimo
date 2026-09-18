@@ -52,7 +52,11 @@ struct CongratsHalfSheet: View {
         .padding(.horizontal, 16)
         .background(Color.appBg)
         .onAppear {
-            moment = MascotVoice.moment(for: .actionCompleted(count: viewModel.completedCount))
+            // Closing a whole chapter gets its own line; a plain step gets the usual one.
+            let closedChapter = viewModel.chapters
+                .first { $0.actions.contains { $0.id == viewModel.completingActionId } }?
+                .isComplete ?? false
+            moment = MascotVoice.moment(for: closedChapter ? .chapterComplete : .actionCompleted(count: viewModel.completedCount))
             HapticEngine.impact(style: .light)
         }
     }

@@ -10,6 +10,14 @@ struct ActionPlanDetailView: View {
     let analysisId: UUID
 
     @StateObject private var viewModel = ActionPlanViewModel()
+    @AppStorage(JourneyIntroSheet.seenKey) private var introSeen = false
+    @State private var showIntro = false
+
+    /// The plan-level progress the old header card used to show.
+    private var progressSubtitle: String {
+        guard viewModel.totalCount > 0 else { return "" }
+        return "\(viewModel.completedCount) of \(viewModel.totalCount) · \(viewModel.remainingMinutes) min left"
+    }
 
     var body: some View {
         ZStack {
@@ -32,7 +40,7 @@ struct ActionPlanDetailView: View {
                         .foregroundColor(.white)
                         .padding(.horizontal, 18)
                         .padding(.vertical, 12)
-                        .background(Color.brand.opacity(0.92))
+                        .background(Color.danger.opacity(0.92))
                         .clipShape(Capsule())
                         .padding(.bottom, 24)
                         .onTapGesture { viewModel.errorMessage = nil }
@@ -57,6 +65,7 @@ struct ActionPlanDetailView: View {
         .animation(.easeInOut(duration: 0.3), value: viewModel.celebrationState)
         .animation(.easeInOut(duration: 0.25), value: viewModel.errorMessage)
         .navigationTitle(viewModel.actionPlan?.title ?? "")
+        .navigationSubtitle(progressSubtitle)
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(Color.journeyBg, for: .navigationBar)
         .toolbar {
@@ -76,6 +85,11 @@ struct ActionPlanDetailView: View {
                 .presentationDragIndicator(.visible)
                 .presentationBackground(Color.appBg)
         }
+        .sheet(isPresented: $showIntro, onDismiss: { introSeen = true }) {
+            JourneyIntroSheet(onDismiss: { showIntro = false })
+                .presentationDetents([.medium])
+                .presentationDragIndicator(.visible)
+        }
         .sheet(item: $viewModel.postCompletionSheet) { _ in
             PostCompletionSheetContent(
                 viewModel: viewModel,
@@ -85,6 +99,11 @@ struct ActionPlanDetailView: View {
         .task {
             SoundEngine.prepare()
             await viewModel.loadActionPlan(analysisId: analysisId)
+            // First plan ever: one closable line from the horse, then never again.
+            if !introSeen, viewModel.totalCount > 0 {
+                try? await Task.sleep(nanoseconds: 400_000_000)
+                showIntro = true
+            }
         }
     }
 

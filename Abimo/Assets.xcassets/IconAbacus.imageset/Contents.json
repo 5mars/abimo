@@ -1,0 +1,8 @@
+{
+  "images" : [
+    { "filename" : "abacus_1x.png", "idiom" : "universal", "scale" : "1x" },
+    { "filename" : "abacus_2x.png", "idiom" : "universal", "scale" : "2x" },
+    { "filename" : "abacus_3x.png", "idiom" : "universal", "scale" : "3x" }
+  ],
+  "info" : { "author" : "xcode", "version" : 1 }
+}

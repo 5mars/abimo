@@ -2,24 +2,22 @@
 //  JourneyNodeView.swift
 //  Abimo
 //
+//  One big round 3D node on the path, Duolingo-style: a kawaii icon on a
+//  fat-edged circle. Three honest states — done, next, open — nothing is
+//  ever "locked": any open step can be started or promoted.
+//
 
 import SwiftUI
-import Vortex
 
 // MARK: - NodeState
 
-/// Honest states. Micro-actions are independent by construction (the plan
-/// prompt has no dependency concept), so nothing is "locked": exactly one
-/// step is the recommended `next`, everything else undone is `open` and can
-/// be done — or promoted to next — at will.
 enum NodeState {
     case done
-    case next
-    case open
+    case next   // the recommended step — the one lit node on the path
+    case open   // any other unfinished step; tappable
 }
 
-// MARK: - State Helper
-
+/// Which state an action renders in, given the recommended next id.
 func nodeState(for action: MicroAction, nextId: UUID?) -> NodeState {
     if action.isCompleted { return .done }
     return action.id == nextId ? .next : .open
@@ -27,14 +25,17 @@ func nodeState(for action: MicroAction, nextId: UUID?) -> NodeState {
 
 // MARK: - JourneyNodeView
 
-/// A single 3D path node. Positioning is the parent's job (JourneyLayout);
-/// this view only renders the circle and its state animations.
+/// Positioning is the parent's job (JourneyLayout); this view only renders
+/// the circle, its icon and its state animations.
 struct JourneyNodeView: View {
     let action: MicroAction
     let state: NodeState
+    let chapterKind: JourneyChapterKind
+    let iconName: String
     let onTap: () -> Void
     let justCompletedActionId: UUID?
-    var nodeSize: CGFloat = 64
+    var nodeSize: CGFloat = 76
+    var iconSize: CGFloat = 42
     var celebrationState: CelebrationState = .idle
     /// The action whose completion is being celebrated — a milestone plays
     /// its (heavier) confetti on that node instead of a top banner.
@@ -50,9 +51,9 @@ struct JourneyNodeView: View {
 
     @State private var completionBounceTrigger = 0
     @State private var unlockPulseTrigger = 0
-    @State private var animatedFillColor: Color = .white
-    @State private var animatedEdgeColor: Color = .cardEdge
-    @State private var nextBob = false
+    @State private var animatedFillColor: Color = .nodeOpenFace
+    @State private var animatedEdgeColor: Color = .nodeOpenEdge
+    @State private var startBob = false
 
     var body: some View {
         Button(action: onTap) {
@@ -62,18 +63,18 @@ struct JourneyNodeView: View {
         .buttonStyle(Duo3DCircleButtonStyle(fill: animatedFillColor, edge: animatedEdgeColor))
         .background {
             if state == .next {
-                PulseRing(color: .brand)
+                PulseRing(color: chapterKind.color)
                     .frame(width: nodeSize, height: nodeSize)
             }
         }
         .overlay(alignment: .top) {
             if state == .next {
-                nextPill
-                    .offset(y: nextBob ? -32 : -36)
+                startPill
+                    .offset(y: startBob ? -(nodeSize / 2) + 4 : -(nodeSize / 2))
                     .onAppear {
                         if !AnimationPolicy.reduceMotion {
                             withAnimation(.easeInOut(duration: 0.9).repeatForever(autoreverses: true)) {
-                                nextBob = true
+                                startBob = true
                             }
                         }
                     }
@@ -103,26 +104,30 @@ struct JourneyNodeView: View {
                     .allowsHitTesting(false)
             }
         }
+        .anchorPreference(key: NodeAnchorKey.self, value: .bounds) { [action.id: $0] }
+        .accessibilityLabel(action.text)
+        .accessibilityValue(accessibilityState)
+        .accessibilityHint("Shows step options")
         .onAppear {
             animatedFillColor = fillColor
             animatedEdgeColor = edgeColor
         }
         .onChange(of: state) { oldValue, newValue in
             if oldValue != .done && newValue == .done {
-                // Bounce (keyframes) + color morph to green together
+                // Bounce (keyframes) + color morph to gold together
                 if !AnimationPolicy.reduceMotion { completionBounceTrigger += 1 }
                 AnimationPolicy.animate(.spring(response: 0.15, dampingFraction: 0.4)) {
-                    animatedFillColor = .brandGreen
-                    animatedEdgeColor = .brandGreenDark
+                    animatedFillColor = .nodeDone
+                    animatedEdgeColor = .nodeDoneEdge
                 }
             } else if newValue == .next && oldValue != .next {
                 // The path moved on to this step: swell while the colors turn
-                // coral once the pulse peaks. Works across chapters — it keys
-                // on state, not on array position.
+                // to the chapter's once the pulse peaks. Works across chapters —
+                // it keys on state, not on array position.
                 if !AnimationPolicy.reduceMotion { unlockPulseTrigger += 1 }
                 AnimationPolicy.animate(.easeInOut(duration: 0.3).delay(AnimationPolicy.reduceMotion ? 0 : 0.3)) {
-                    animatedFillColor = .brand
-                    animatedEdgeColor = .brandDark
+                    animatedFillColor = chapterKind.color
+                    animatedEdgeColor = chapterKind.edgeColor
                 }
             } else if oldValue != newValue {
                 AnimationPolicy.animate(.easeInOut(duration: 0.3)) {
@@ -137,52 +142,80 @@ struct JourneyNodeView: View {
 
     private var fillColor: Color {
         switch state {
-        case .open: return .white
-        case .next: return .brand
-        case .done: return .brandGreen
+        case .open: return .nodeOpenFace
+        case .next: return chapterKind.color
+        case .done: return .nodeDone
         }
     }
 
     private var edgeColor: Color {
         switch state {
-        case .open: return .cardEdge
-        case .next: return .brandDark
-        case .done: return .brandGreenDark
+        case .open: return .nodeOpenEdge
+        case .next: return chapterKind.edgeColor
+        case .done: return .nodeDoneEdge
         }
     }
 
-    private var nextPill: some View {
-        Text("NEXT")
+    private var accessibilityState: String {
+        switch state {
+        case .done: return "Done"
+        case .next: return "Next step"
+        case .open: return "Open"
+        }
+    }
+
+    private var startPill: some View {
+        Text("START")
             .font(.system(size: 12, weight: .black, design: .rounded))
-            .foregroundColor(.brand)
+            .foregroundColor(chapterKind.color)
             .padding(.horizontal, 12)
             .padding(.vertical, 5)
             .background(Capsule().fill(Color.white))
-            .overlay(Capsule().strokeBorder(Color.brand, lineWidth: 2))
+            .overlay(Capsule().strokeBorder(chapterKind.color, lineWidth: 2))
             .fixedSize()
             .allowsHitTesting(false)
+            .accessibilityHidden(true)
+    }
+
+    private var icon: some View {
+        Image(iconName)
+            .resizable()
+            .scaledToFit()
+            .frame(width: iconSize, height: iconSize)
     }
 
     @ViewBuilder
     private var nodeContent: some View {
         switch state {
         case .open:
-            Text(ActionIconMapper.icon(for: action.actionType).emoji)
-                .font(.system(size: 26))
+            icon
+                .saturation(0.25)
                 .opacity(0.7)
         case .next:
-            Text(ActionIconMapper.icon(for: action.actionType).emoji)
-                .font(.system(size: 26))
-        case .done:
-            Image(systemName: "checkmark")
-                .font(.system(size: 22, weight: .bold))
-                .foregroundColor(.white)
-                // Only the freshly completed node's checkmark pops — the
-                // Bool stays false (no value change, no bounce) elsewhere.
-                .symbolEffect(
-                    .bounce,
-                    value: !AnimationPolicy.reduceMotion && justCompletedActionId == action.id
+            icon
+                .overlay(
+                    Circle()
+                        .strokeBorder(Color.white.opacity(0.9), lineWidth: 3)
+                        .frame(width: nodeSize - 8, height: nodeSize - 8)
                 )
+        case .done:
+            icon
+                .overlay(alignment: .bottomTrailing) {
+                    ZStack {
+                        Circle().fill(Color.white)
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 11, weight: .black))
+                            .foregroundColor(.nodeDoneEdge)
+                            // Only the freshly completed node's checkmark pops — the
+                            // Bool stays false (no value change, no bounce) elsewhere.
+                            .symbolEffect(
+                                .bounce,
+                                value: !AnimationPolicy.reduceMotion && justCompletedActionId == action.id
+                            )
+                    }
+                    .frame(width: 22, height: 22)
+                    .offset(x: 10, y: 8)
+                }
         }
     }
 }
@@ -200,9 +233,9 @@ struct JourneyNodeView: View {
         )
     }
     HStack(spacing: 40) {
-        JourneyNodeView(action: make("email", true), state: .done, onTap: {}, justCompletedActionId: nil)
-        JourneyNodeView(action: make("search", false), state: .next, onTap: {}, justCompletedActionId: nil)
-        JourneyNodeView(action: make("post", false), state: .open, onTap: {}, justCompletedActionId: nil)
+        JourneyNodeView(action: make("email", true), state: .done, chapterKind: .fixWeakSpot, iconName: "IconHammer", onTap: {}, justCompletedActionId: nil)
+        JourneyNodeView(action: make("search", false), state: .next, chapterKind: .proveDemand, iconName: "IconTarget", onTap: {}, justCompletedActionId: nil)
+        JourneyNodeView(action: make("post", false), state: .open, chapterKind: .playYourEdge, iconName: "IconStar", onTap: {}, justCompletedActionId: nil)
     }
     .padding(60)
     .background(Color.journeyBg)

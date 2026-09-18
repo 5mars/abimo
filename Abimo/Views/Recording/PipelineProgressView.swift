@@ -107,7 +107,7 @@ struct PipelineProgressView: View {
         switch state {
         case .completed: return .brandGreen
         case .active:    return Color.brand.opacity(0.12)
-        case .failed:    return .brand
+        case .failed:    return .danger
         case .pending:   return .lockedFace
         }
     }
@@ -156,7 +156,7 @@ struct PipelineProgressView: View {
                     // Cap block: the recording is retained — retry re-enters
                     // at .saving once the user upgrades or frees a slot.
                     GradientButton(title: "Unlock Abimo Plus") { showPaywall = true }
-                    secondaryButton("I freed a slot — retry", tint: .brand) { onRetry() }
+                    secondaryButton("I freed a slot — retry", tint: .danger) { onRetry() }
                     secondaryButton("Discard recording", tint: .textSec) { onDiscard() }
                 } else if pipeline.dailyCapHit {
                     // Free daily AI budget spent: the note is saved, so the
@@ -166,7 +166,7 @@ struct PipelineProgressView: View {
                 } else {
                     GradientButton(title: "Try again") { onRetry() }
                     if step == .saving {
-                        secondaryButton("Discard recording", tint: .brand) { onDiscard() }
+                        secondaryButton("Discard recording", tint: .danger) { onDiscard() }
                     } else {
                         secondaryButton("I'll come back later", tint: .textSec) { onBackground() }
                     }

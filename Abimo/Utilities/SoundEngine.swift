@@ -19,14 +19,22 @@ enum SoundEngine {
     }
 
     static var isEnabled: Bool {
-        UserDefaults.standard.object(forKey: "sound_enabled") as? Bool ?? true
+        !isRunningTests && (UserDefaults.standard.object(forKey: "sound_enabled") as? Bool ?? true)
     }
+
+    /// Unit tests never want sound — and when the simulator's audio server is
+    /// wedged, AVAudioSession.setActive blocks for minutes per call, which
+    /// turned a 1-second suite into a 40-minute one.
+    private static let isRunningTests =
+        ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
+        || NSClassFromString("XCTestCase") != nil
 
     private static var players: [Sound: AVAudioPlayer] = [:]
 
     /// Call from a view's .onAppear to pre-load the players.
     /// Safe to call multiple times.
     static func prepare() {
+        guard !isRunningTests else { return }
         for sound in Sound.allCases where players[sound] == nil {
             guard let url = Bundle.main.url(forResource: sound.rawValue, withExtension: "caf") else { continue }
             let player = try? AVAudioPlayer(contentsOf: url)

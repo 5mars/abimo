@@ -1,0 +1,8 @@
+{
+  "images" : [
+    { "filename" : "compass_1x.png", "idiom" : "universal", "scale" : "1x" },
+    { "filename" : "compass_2x.png", "idiom" : "universal", "scale" : "2x" },
+    { "filename" : "compass_3x.png", "idiom" : "universal", "scale" : "3x" }
+  ],
+  "info" : { "author" : "xcode", "version" : 1 }
+}

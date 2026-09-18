@@ -39,7 +39,7 @@ struct SWOTCourse: Identifiable {
             switch self {
             case .strengths:     return .brandGreen
             case .opportunities: return .brandBlue
-            case .weaknesses:    return .brand
+            case .weaknesses:    return .danger
             case .threats:       return .brandAmber
             }
         }

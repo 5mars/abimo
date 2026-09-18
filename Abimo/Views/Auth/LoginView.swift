@@ -71,7 +71,7 @@ struct LoginView: View {
                                 Text(errorMessage)
                                     .font(.system(size: 13))
                             }
-                            .foregroundColor(.brand)
+                            .foregroundColor(.danger)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(.top, 2)
                         }

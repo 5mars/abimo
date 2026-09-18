@@ -46,7 +46,14 @@ struct ActionsTabView: View {
 
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 24) {
-                    Spacer().frame(height: 4)
+                    // Hand-drawn title, like the Kitchen — the system large
+                    // title ignores the palette.
+                    Text("Actions")
+                        .font(.duoScreenTitle)
+                        .foregroundColor(.textPri)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 20)
+                        .padding(.top, 12)
 
                     if viewModel.isLoading && !viewModel.hasLoadedOnce {
                         MascotLoadingView(mode: .inline, text: "Loading your actions...")
@@ -111,7 +118,7 @@ struct ActionsTabView: View {
                 ActionPlanDetailView(planId: pending.planId, analysisId: pending.analysisId)
             }
         }
-        .navigationTitle("Actions")
+        .navigationTitle("")
         .toolbarBackground(Color.appBg, for: .navigationBar)
         .toolbarColorScheme(.light, for: .navigationBar)
         .task {

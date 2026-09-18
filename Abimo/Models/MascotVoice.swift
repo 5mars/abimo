@@ -16,7 +16,8 @@ enum MascotMomentTrigger: Equatable {
     case streakExtended(days: Int)
     case dailyGoalHit
     case daresCleared
-    case nextStepNudge                   // journey hero card, beside the next step
+    case chapterComplete                 // congrats sheet line when a step closes its chapter
+    case journeyIntro                    // once-ever half-sheet the first time a plan opens
     case planComplete
     // Popup triggers — the ONLY ones that go through MascotDirector.
     // Popups are rare by design: max one per session, each with an action.
@@ -37,7 +38,8 @@ enum MascotMomentTrigger: Equatable {
         case .streakExtended:       return "streakExtended"
         case .dailyGoalHit:         return "dailyGoalHit"
         case .daresCleared:         return "daresCleared"
-        case .nextStepNudge:        return "nextStepNudge"
+        case .chapterComplete:      return "chapterComplete"
+        case .journeyIntro:         return "journeyIntro"
         case .planComplete:         return "planComplete"
         case .walkInWelcome:        return "walkInWelcome"
         case .returnedAfterAbsence: return "returnedAfterAbsence"
@@ -104,7 +106,7 @@ enum MascotVoice {
         case .streakAtRisk:
             return MascotAction(label: "Save the streak", intent: .openPlans)
         case .scoreRevealed, .actionCompleted, .streakExtended, .dailyGoalHit,
-             .daresCleared, .nextStepNudge, .planComplete, .emptyKitchen,
+             .daresCleared, .chapterComplete, .journeyIntro, .planComplete, .emptyKitchen,
              .recordPrompt, .launching, .ideaCapReached:
             return nil
         }
@@ -177,14 +179,20 @@ enum MascotVoice {
                 "Three for three. The kitchen's speechless. Briefly.",
             ], .playful)
 
-        case .nextStepNudge:
+        case .journeyIntro:
             return ([
-                "Ten minutes. That's a coffee.",
-                "I'd start here. Not that you asked.",
-                "Small bite. Then we talk.",
-                "This one's ready to serve. The rest can wait.",
-                "Do it badly if you must. Just do it.",
-            ], .neutral)
+                "Tap the glowing step. Ten minutes. That's the whole trick.",
+                "One lit step at a time. I'll light the next one when you're done.",
+                "This is the path. Only one step is glowing. Start there.",
+            ], .playful)
+
+        case .chapterComplete:
+            return ([
+                "Chapter closed. The plot thickens.",
+                "That whole section, done. I'm adjusting my expectations upward. Slightly.",
+                "Section cleared. Next chapter's already simmering.",
+                "You finished a chapter. Most people finish a scroll.",
+            ], .playful)
 
         case .planComplete:
             return ([
