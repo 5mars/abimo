@@ -23,7 +23,7 @@ struct PipelineProgressView: View {
             VStack(spacing: 0) {
                 Spacer()
 
-                MascotView(mood: stageMood, size: 140)
+                MascotView(mood: stageMood, size: 140, expression: stageExpression)
 
                 Spacer().frame(height: 28)
 
@@ -64,13 +64,26 @@ struct PipelineProgressView: View {
         }
     }
 
+    /// One pose per stage — the critic takes notes, scouts, cooks, approves.
+    private var stageExpression: MascotExpression? {
+        switch pipeline.stage {
+        case .idle, .running(.saving):     return nil
+        case .running(.transcribing):      return .writing
+        case .running(.scouting):          return .sunglasses
+        case .running(.analyzing):         return .cooking
+        case .running(.planning):          return .writing
+        case .done:                        return .thumbsUp
+        case .failed:                      return .crying
+        }
+    }
+
     private var stageMood: MascotMood {
         switch pipeline.stage {
         case .idle, .running(.saving), .running(.transcribing),
              .running(.scouting):                               return .neutral
         case .running(.analyzing):                              return .sassy
         case .running(.planning), .done:                        return .playful
-        case .failed:                                           return .grumpy
+        case .failed:                                           return .sad
         }
     }
 
@@ -161,7 +174,7 @@ struct PipelineProgressView: View {
                 } else if pipeline.dailyCapHit {
                     // Free daily AI budget spent: the note is saved, so the
                     // user can upgrade and retry now or come back tomorrow.
-                    GradientButton(title: "Keep the burners on — go Plus") { showPaywall = true }
+                    GradientButton(title: "Keep the gate open — go Plus") { showPaywall = true }
                     secondaryButton("I'll come back tomorrow", tint: .textSec) { onBackground() }
                 } else {
                     GradientButton(title: "Try again") { onRetry() }

@@ -159,7 +159,7 @@ struct ActionsTabView: View {
             SparkCard(
                 kind: .buildPlan,
                 title: "\u{201C}\(title)\u{201D} is tasted but has no plan.",
-                line: "Critics talk, cooks do. Let's write the recipe.",
+                line: "Critics talk, riders ride. Let's write the recipe.",
                 buttonTitle: "Get the action plan",
                 onTap: {
                     AnalyticsService.shared.log(.sparkTapped(kind: SparkCard.Kind.buildPlan.rawValue))
@@ -171,7 +171,7 @@ struct ActionsTabView: View {
         case .allChaptersDone:
             SparkCard(
                 kind: .whatsNext,
-                title: "Every plan on the stove is done.",
+                title: "Every plan in the stable is done.",
                 line: MascotVoice.moment(for: .planComplete).line,
                 buttonTitle: "Record a new idea",
                 onTap: {
@@ -309,7 +309,7 @@ struct ActionsTabView: View {
                 Image(systemName: "exclamationmark.triangle.fill")
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundColor(.brandAmber)
-                Text("The kitchen hiccuped")
+                Text("The stable hiccuped")
                     .font(.system(size: 15, weight: .bold, design: .rounded))
                     .foregroundColor(.textPri)
                 Spacer()

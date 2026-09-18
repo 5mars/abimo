@@ -25,7 +25,7 @@ enum MascotMomentTrigger: Equatable {
     case returnedAfterAbsence(days: Int)
     case streakAtRisk(days: Int)         // streak from yesterday, nothing today
     // Static line sources (consumed via .line only, never popups)
-    case emptyKitchen
+    case emptyKitchen                    // the Stable with no ideas yet
     case recordPrompt
     case launching
     case ideaCapReached
@@ -121,39 +121,42 @@ enum MascotVoice {
             case .burnt:
                 return ([
                     "I've seen soup with a better business model.",
-                    "Sending this back to the kitchen. The kitchen declined.",
+                    "Sending this back to the stable. The stable declined.",
                     "Good news: from here, every direction is up.",
                     "The smoke alarm went off. That's my review.",
-                ], .grumpy)
+                    "Neigh. Just... neigh.",
+                ], .sad)
             case .halfBaked:
                 return ([
                     "Raw in the middle, ambitious at the edges.",
                     "There's a filling in there somewhere. Keep baking.",
                     "I've tasted worse. I've also tasted food.",
-                ], .grumpy)
+                ], .nope)
             case .needsSeasoning:
                 return ([
                     "Edible. Nobody said delicious.",
                     "A pinch of validation and this might actually be something.",
                     "Salt. It needs salt. And customers.",
-                ], .sassy)
+                ], .meh)
             case .simmering:
                 return ([
                     "Careful — I almost complimented you.",
                     "This one has aroma. Don't let it boil over.",
                     "I'm not smiling. This is my thinking face.",
-                ], .playful)
+                ], .sassy)
             case .chefsKiss:
                 return ([
                     "Fine. It's good. Don't make it weird.",
                     "I went back for thirds. Tell no one.",
                     "My review: I have no notes. First time for everything.",
-                ], .playful)
+                    "I'd bet the stable on it. Don't tell the other horses.",
+                ], .cool)
             }
 
         case .actionCompleted:
             return ([
-                "One down. Adjusting my expectations. Slightly.",
+                "One down. Giddy up.",
+                "Adjusting my expectations. Slightly.",
                 "You did the thing you said you'd do. Rare.",
                 "That's {count} done. Who ARE you today?",
             ], .playful)
@@ -162,12 +165,12 @@ enum MascotVoice {
             return ([
                 "{days} days straight. Suspiciously consistent.",
                 "A streak! I'd clap, but I'm holding a clipboard.",
-                "{days} days. The kitchen stays hot.",
+                "{days} days. Hot to trot.",
             ], .playful)
 
         case .dailyGoalHit:
             return ([
-                "Daily goal, plated. The kitchen approves.",
+                "Daily goal, done. Neigh-ce.",
                 "Quota met. Overachieving is allowed. Encouraged, even.",
                 "Goal hit. Tomorrow the menu resets.",
             ], .playful)
@@ -176,8 +179,8 @@ enum MascotVoice {
             return ([
                 "All three dares. Show-off.",
                 "Dares cleared. I'm running out of things to dare you.",
-                "Three for three. The kitchen's speechless. Briefly.",
-            ], .playful)
+                "Three for three. The whole stable's speechless. Briefly.",
+            ], .cool)
 
         case .journeyIntro:
             return ([
@@ -188,7 +191,7 @@ enum MascotVoice {
 
         case .chapterComplete:
             return ([
-                "Chapter closed. The plot thickens.",
+                "Chapter closed. Trot on.",
                 "That whole section, done. I'm adjusting my expectations upward. Slightly.",
                 "Section cleared. Next chapter's already simmering.",
                 "You finished a chapter. Most people finish a scroll.",
@@ -198,33 +201,33 @@ enum MascotVoice {
             return ([
                 "The whole plan. Finished. I need to sit down.",
                 "No complaints. This is new for both of us.",
-                "Full course, cleaned plate. Respect.",
-            ], .playful)
+                "Full gallop, clean finish. I need a carrot.",
+            ], .cool)
 
         case .returnedAfterAbsence:
             return ([
                 "Oh good, you remembered the app exists.",
                 "{days} days. Your ideas kept asking about you. Awkward.",
-                "Welcome back. Everything aged like milk.",
+                "Welcome back. The hay went stale.",
             ], .sassy)
 
         case .emptyKitchen:
             return ([
-                "An empty kitchen. Bold minimalist concept.",
-                "Record something. I can't roast air.",
+                "An empty stable. Bold minimalist concept.",
+                "Record something. I can't roast hay.",
             ], .neutral)
 
         case .walkInWelcome:
             return ([
-                "New in my kitchen? Let's cook. Follow me.",
-                "Fresh apron, empty counter. Let's fix that.",
-                "First day, chef. I'll show you where the fire is.",
+                "New in my stable? Saddle up. Follow me.",
+                "Fresh saddle, empty stall. Let's fix that.",
+                "First day, rider. I'll show you where the fire is.",
             ], .playful)
 
         case .streakAtRisk:
             return ([
                 "{days} days of momentum, about to expire at midnight. One tiny action.",
-                "Your {days}-day streak is on the counter getting cold. Do something.",
+                "Your {days}-day streak is out in the rain. Bring it in.",
                 "I don't do sentimental, but losing a {days}-day streak? Even I'd flinch.",
             ], .sassy)
 
@@ -232,7 +235,7 @@ enum MascotVoice {
             return ([
                 "Got an idea? Spill it.",
                 "Talk to me. I'm listening. Reluctantly.",
-                "The kitchen's open. What are we making?",
+                "The stable's open. What are we saddling up?",
                 "One tap. One idea. Go.",
             ], .neutral)
 
@@ -243,14 +246,15 @@ enum MascotVoice {
                 "Reviewing your life choices. One sec.",
                 "Sharpening the red pen.",
                 "Polishing the tasting spoon.",
+                "Shoeing the horse. One sec.",
             ], .neutral)
 
         case .ideaCapReached:
             return ([
-                "Three ideas on the stove already. I'm one critic, not a brigade.",
-                "Free menu's full. Clear a plate or buy the whole kitchen.",
-                "I only have two hands and three of your ideas.",
-                "The counter's full. Toss a dish or go pro.",
+                "Three stalls, three ideas. I'm one horse, not a herd.",
+                "Free stable's full. Retire an idea or buy the whole barn.",
+                "I only have four hooves and three of your ideas.",
+                "Every stall's taken. Muck one out or go pro.",
             ], .sassy)
         }
     }

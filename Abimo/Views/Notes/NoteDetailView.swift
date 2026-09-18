@@ -288,7 +288,7 @@ struct NoteDetailView: View {
             }
         }) {
             if let transcription = transcription {
-                SWOTAnalysisView(transcription: transcription, preloadedAnalysis: swotAnalysis, noteTitle: noteTitle)
+                SWOTAnalysisView(transcription: transcription, preloadedAnalysis: swotAnalysis, noteTitle: noteTitle, hasPlan: actionPlan != nil)
             }
         }
         .task {

@@ -37,16 +37,16 @@ enum Achievement: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .firstOrder:      return "First Order"
+        case .firstOrder:      return "First Neigh"
         case .tasteTested:     return "Taste Tested"
-        case .lineCook:        return "Line Cook"
-        case .onFire:          return "On Fire"
-        case .marathonChef:    return "Marathon Chef"
-        case .fullCourse:      return "Full Course"
+        case .lineCook:        return "Stable Hand"
+        case .onFire:          return "Hot to Trot"
+        case .marathonChef:    return "Steady Canter"
+        case .fullCourse:      return "Full Gallop"
         case .chefsKiss:       return "Chef's Kiss"
-        case .kitchenComeback: return "Kitchen Comeback"
-        case .prepCook:        return "Prep Cook"
-        case .sousChef:        return "Sous Chef"
+        case .kitchenComeback: return "Back in the Saddle"
+        case .prepCook:        return "Yearling"
+        case .sousChef:        return "Stallion"
         }
     }
 

@@ -132,7 +132,7 @@ final class IdeaPipelineService: ObservableObject {
                count >= EntitlementService.freeIdeaLimit {
                 capHit = true
                 AnalyticsService.shared.log(.gateHit(gate: "idea_cap", source: "pipeline"))
-                fail(.saving, "Kitchen's full — three dishes max on the free menu. Your recording is safe; free a slot or go Plus, then retry.")
+                fail(.saving, "Stable's full — three stalls on the free plan. Your recording is safe; free a stall or go Plus, then retry.")
                 return
             }
             guard let saved = await recordingVM.saveRecording(title: VoiceNote.makeAutoTitle()) else {
@@ -241,9 +241,9 @@ final class IdeaPipelineService: ObservableObject {
             if tier == "free" {
                 dailyCapHit = true
                 AnalyticsService.shared.log(.gateHit(gate: "daily_cap", source: "pipeline"))
-                return "The free kitchen closes after today's tastings. Your recording is safe — Plus keeps the burners on, or come back tomorrow."
+                return "The free stable closes after today's tastings. Your recording is safe — Plus keeps the gate open, or come back tomorrow."
             }
-            return "Even Plus chefs rest. You've hit today's cooking limit — burners are back on tomorrow."
+            return "Even Plus stallions rest. You've hit today's tasting limit — back in the saddle tomorrow."
         }
         return fallback
     }
@@ -265,7 +265,7 @@ final class IdeaPipelineService: ObservableObject {
         guard UIApplication.shared.applicationState != .active else { return }
         NotificationService.shared.scheduleNotification(
             id: "pipeline_done_\(note?.id.uuidString ?? UUID().uuidString)",
-            title: success ? "Order up! 🍽️" : "Kitchen incident 🔥",
+            title: success ? "Verdict's in 🐴" : "Stable incident 🔥",
             body: success
                 ? "The critic has tasted your idea. The verdict is plated and waiting."
                 : "Your idea hit a snag mid-cook. Come back and I'll take it from the top.",
