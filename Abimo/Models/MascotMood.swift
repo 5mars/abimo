@@ -25,6 +25,11 @@ enum MascotExpression: String, CaseIterable {
     case sitting    // slumped on the floor, bored — waiting
     case waving     // eyes-closed grin, waving — delighted
     case crying     // tears, drooping — the critic actually feels it
+    case shrug      // palms up, half-lidded — could go either way
+    case sunglasses // aviators, deadpan — too cool to be impressed, is impressed
+    case thumbsDown // one hoof down — nope
+    case writing    // notepad and pen — taking notes, making the plan
+    case cooking    // chef's hat at the stove — the critic at work
 
     /// Asset catalog name for this pose: "Mascot" + capitalized case name.
     var rawAssetName: String {
@@ -46,6 +51,9 @@ enum MascotMood: String, CaseIterable {
     case grumpy
     case sassy
     case sad        // burnt verdicts, failed cooks, lost streaks
+    case meh        // "needs seasoning" — a shrug
+    case nope       // "half-baked" — thumbs down
+    case cool       // chef's kiss, big streaks — sunglasses on
 
     /// Which pose carries each tone of voice. Edit here to move an emotion.
     var expression: MascotExpression {
@@ -55,6 +63,9 @@ enum MascotMood: String, CaseIterable {
         case .sassy:   return .thumbsUp
         case .playful: return .waving
         case .sad:     return .crying
+        case .meh:     return .shrug
+        case .nope:    return .thumbsDown
+        case .cool:    return .sunglasses
         }
     }
 
@@ -65,9 +76,10 @@ enum MascotMood: String, CaseIterable {
     static func forVerdict(_ verdict: ScoreVerdict) -> MascotMood {
         switch verdict {
         case .burnt:                   return .sad
-        case .halfBaked:               return .grumpy
-        case .needsSeasoning:          return .sassy
-        case .simmering, .chefsKiss:   return .playful
+        case .halfBaked:               return .nope
+        case .needsSeasoning:          return .meh
+        case .simmering:               return .sassy
+        case .chefsKiss:               return .cool
         }
     }
 }

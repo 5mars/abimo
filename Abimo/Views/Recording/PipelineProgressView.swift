@@ -23,7 +23,7 @@ struct PipelineProgressView: View {
             VStack(spacing: 0) {
                 Spacer()
 
-                MascotView(mood: stageMood, size: 140)
+                MascotView(mood: stageMood, size: 140, expression: stageExpression)
 
                 Spacer().frame(height: 28)
 
@@ -61,6 +61,19 @@ struct PipelineProgressView: View {
         .interactiveDismissDisabled()
         .sheet(isPresented: $showPaywall) {
             PaywallView(context: pipeline.dailyCapHit ? .dailyCap : .ideaCap)
+        }
+    }
+
+    /// One pose per stage — the critic takes notes, scouts, cooks, approves.
+    private var stageExpression: MascotExpression? {
+        switch pipeline.stage {
+        case .idle, .running(.saving):     return nil
+        case .running(.transcribing):      return .writing
+        case .running(.scouting):          return .sunglasses
+        case .running(.analyzing):         return .cooking
+        case .running(.planning):          return .writing
+        case .done:                        return .thumbsUp
+        case .failed:                      return .crying
         }
     }
 

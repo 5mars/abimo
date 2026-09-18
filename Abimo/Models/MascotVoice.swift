@@ -131,26 +131,26 @@ enum MascotVoice {
                     "Raw in the middle, ambitious at the edges.",
                     "There's a filling in there somewhere. Keep baking.",
                     "I've tasted worse. I've also tasted food.",
-                ], .grumpy)
+                ], .nope)
             case .needsSeasoning:
                 return ([
                     "Edible. Nobody said delicious.",
                     "A pinch of validation and this might actually be something.",
                     "Salt. It needs salt. And customers.",
-                ], .sassy)
+                ], .meh)
             case .simmering:
                 return ([
                     "Careful — I almost complimented you.",
                     "This one has aroma. Don't let it boil over.",
                     "I'm not smiling. This is my thinking face.",
-                ], .playful)
+                ], .sassy)
             case .chefsKiss:
                 return ([
                     "Fine. It's good. Don't make it weird.",
                     "I went back for thirds. Tell no one.",
                     "My review: I have no notes. First time for everything.",
                     "I'd bet the stable on it. Don't tell the other horses.",
-                ], .playful)
+                ], .cool)
             }
 
         case .actionCompleted:
@@ -180,7 +180,7 @@ enum MascotVoice {
                 "All three dares. Show-off.",
                 "Dares cleared. I'm running out of things to dare you.",
                 "Three for three. The whole stable's speechless. Briefly.",
-            ], .playful)
+            ], .cool)
 
         case .journeyIntro:
             return ([
@@ -202,7 +202,7 @@ enum MascotVoice {
                 "The whole plan. Finished. I need to sit down.",
                 "No complaints. This is new for both of us.",
                 "Full gallop, clean finish. I need a carrot.",
-            ], .playful)
+            ], .cool)
 
         case .returnedAfterAbsence:
             return ([

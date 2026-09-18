@@ -62,7 +62,8 @@ struct SWOTAnalysisView: View {
                     MascotLoadingView(
                         mode: .inline,
                         rotatingMessages: cookingMessages,
-                        subtitle: "This might take 15–30 seconds"
+                        subtitle: "This might take 15–30 seconds",
+                        expression: .cooking
                     )
                 } else {
                     ScrollView(.vertical, showsIndicators: false) {
