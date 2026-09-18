@@ -22,6 +22,11 @@ struct AbimoApp: App {
             "notif_streak": true,
             "sound_enabled": true
         ])
+        // System navigation titles (Actions tab, plan screen) follow the palette —
+        // every hand-drawn title already uses textPri.
+        let navBar = UINavigationBar.appearance()
+        navBar.largeTitleTextAttributes = [.foregroundColor: UIColor(Color.textPri)]
+        navBar.titleTextAttributes = [.foregroundColor: UIColor(Color.textPri)]
         // Start the StoreKit transaction listener before any purchase can occur.
         _ = EntitlementService.shared
         // Notification taps route into the app (must be set before launch finishes).
