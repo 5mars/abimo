@@ -34,9 +34,14 @@ struct SWOTAnalysisView: View {
         shareImage = Image(uiImage: ui)
     }
 
-    init(transcription: Transcription, preloadedAnalysis: SWOTAnalysis? = nil, noteTitle: String = "") {
+    /// True when this idea already has an action plan — the CTA then opens
+    /// it instead of promising to "get" one that exists.
+    private let hasPlan: Bool
+
+    init(transcription: Transcription, preloadedAnalysis: SWOTAnalysis? = nil, noteTitle: String = "", hasPlan: Bool = false) {
         self.transcription = transcription
         self.noteTitle = noteTitle
+        self.hasPlan = hasPlan
         if let existing = preloadedAnalysis {
             _viewModel = StateObject(wrappedValue: AnalysisViewModel(preloadedAnalysis: existing))
         } else {
@@ -507,10 +512,10 @@ struct SWOTAnalysisView: View {
                         .foregroundColor(.brand)
                 }
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("Turn this into action")
+                    Text(hasPlan ? "Your plan is saddled" : "Turn this into action")
                         .font(.system(size: 17, weight: .bold, design: .rounded))
                         .foregroundColor(.textPri)
-                    Text("Get a micro-action plan you can start right now")
+                    Text(hasPlan ? "The steps are on the path. Ride." : "Get a micro-action plan you can start right now")
                         .font(.system(size: 13))
                         .foregroundColor(.textSec)
                 }
@@ -523,7 +528,7 @@ struct SWOTAnalysisView: View {
                 HStack(spacing: 8) {
                     Image(systemName: "bolt.fill")
                         .font(.system(size: 14))
-                    Text("Get your action plan")
+                    Text(hasPlan ? "Open your plan" : "Get your action plan")
                         .font(.system(size: 16, weight: .bold))
                 }
                 .foregroundColor(.white)
