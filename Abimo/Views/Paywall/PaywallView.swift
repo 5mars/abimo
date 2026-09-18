@@ -154,6 +154,8 @@ struct PaywallView: View {
 
                     Spacer().frame(height: 32)
                 }
+                // Pin to the viewport width so nothing can pan sideways.
+                .containerRelativeFrame(.horizontal)
             }
         }
         .onChange(of: entitlements.isPremium) { _, premium in

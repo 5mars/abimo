@@ -68,9 +68,12 @@ struct SWOTAnalysisView: View {
                                 errorView
                             }
                         }
-                        .frame(maxWidth: .infinity)
                         .padding(.horizontal, 16)
                         .padding(.vertical, 16)
+                        // Pin the content to the viewport width: a vertical
+                        // ScrollView still pans sideways when any child lays
+                        // out wider than the screen. This makes that impossible.
+                        .containerRelativeFrame(.horizontal)
                     }
                 }
             }
