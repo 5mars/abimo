@@ -190,7 +190,7 @@ struct ProfileView: View {
                         Text("Go Plus")
                             .font(.duoCardTitle)
                             .foregroundColor(.textPri)
-                        Text("Next chapters, re-tastes, and more burners for the serious cooks")
+                        Text("Next chapters, re-tastes, and more gallop for the serious riders")
                             .font(.system(size: 13))
                             .foregroundColor(.textSec)
                     }

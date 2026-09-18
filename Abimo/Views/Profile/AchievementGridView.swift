@@ -22,7 +22,7 @@ struct AchievementGridView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("Kitchen Badges")
+                Text("Horseshoes")
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundColor(.textSec)
                     .textCase(.uppercase)

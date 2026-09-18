@@ -133,7 +133,7 @@ struct PlanWrapUpView: View {
                 }
 
                 Button(action: onDismiss) {
-                    Text("Back to the kitchen")
+                    Text("Back to the stable")
                         .font(.duoLabel)
                         .foregroundColor(.textSec)
                         .frame(maxWidth: .infinity)
@@ -261,7 +261,7 @@ struct PlanWrapUpView: View {
             try await viewModel.requestNextChapter()
             onDismiss()   // back to the journey, first new step already marked NEXT
         } catch {
-            doorError = Self.friendly(error, fallback: "The next chapter didn't cook. Try again in a moment.")
+            doorError = Self.friendly(error, fallback: "The next chapter didn't saddle up. Try again in a moment.")
         }
     }
 
@@ -300,9 +300,9 @@ struct PlanWrapUpView: View {
     private static func friendly(_ error: Error, fallback: String) -> String {
         if case FunctionsError.httpError(let code, _) = error {
             switch code {
-            case 403: return "That table is Plus-only. If you just subscribed, give the kitchen a minute to catch up."
+            case 403: return "That paddock is Plus-only. If you just subscribed, give the stable a minute to catch up."
             case 409: return "This plan has reached its final chapter. Re-taste it — or ship."
-            case 429: return "Even Plus chefs rest. Burners back on tomorrow."
+            case 429: return "Even Plus stallions rest. Back in the saddle tomorrow."
             default: break
             }
         }

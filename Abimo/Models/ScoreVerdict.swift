@@ -58,7 +58,7 @@ enum ScoreVerdict: CaseIterable {
 
     var caption: String {
         switch self {
-        case .burnt:          return "The critic sent it back. Good news: the kitchen's still open."
+        case .burnt:          return "The critic sent it back. Good news: the stable's still open."
         case .halfBaked:      return "There's something under the crust — it needs more time in the oven."
         case .needsSeasoning: return "Edible! But nobody's ordering seconds yet."
         case .simmering:      return "Smells promising. Time to see if anyone would pay for a plate."

@@ -112,8 +112,8 @@ struct NotesListView: View {
     private var labEmptyView: some View {
         MascotEmptyStateView(
             line: MascotVoice.moment(for: .emptyKitchen).line,
-            title: "Welcome to The Kitchen",
-            subtitle: "Record an idea and we'll turn it\ninto a real action plan",
+            title: "Welcome to The Stable",
+            subtitle: "Record an idea and we'll saddle it up\ninto a real action plan",
             ctaTitle: "Record your first idea",
             ctaAction: { coordinator.selectedTab = .record }
         )
@@ -199,16 +199,16 @@ struct LabHeaderView: View {
     private var tagline: String {
         let ideas = "\(count) idea\(count == 1 ? "" : "s") · "
         let hour = Calendar.current.component(.hour, from: Date())
-        if hour < 12 { return ideas + "morning grind, let's get it" }
-        if hour < 17 { return ideas + "ideas don't cook themselves" }
-        return ideas + "late night cooking hits different"
+        if hour < 12 { return ideas + "morning trot, let's get it" }
+        if hour < 17 { return ideas + "ideas don't saddle themselves" }
+        return ideas + "late-night gallop hits different"
     }
 
     private var atCap: Bool { count >= EntitlementService.freeIdeaLimit }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("The Kitchen")
+            Text("The Stable")
                 .font(.duoScreenTitle)
                 .foregroundColor(.textPri)
             Text(tagline)
@@ -231,7 +231,7 @@ struct LabHeaderView: View {
         } else {
             Button(action: onSlotsTap) {
                 pillLabel(
-                    "\(min(count, EntitlementService.freeIdeaLimit)) of \(EntitlementService.freeIdeaLimit) idea slots used",
+                    "\(min(count, EntitlementService.freeIdeaLimit)) of \(EntitlementService.freeIdeaLimit) stalls filled",
                     icon: atCap ? "lock.fill" : "tray.full",
                     fg: atCap ? .white : .brand,
                     bg: atCap ? Color.brand : Color.brand.opacity(0.12)
@@ -335,10 +335,6 @@ struct IdeaCardView: View {
                         .foregroundColor(.textSec)
 
                     Spacer()
-
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundColor(.textTertiary)
                 }
             }
 

@@ -17,6 +17,9 @@ private struct PlusLockedModifier: ViewModifier {
     func body(content: Content) -> some View {
         if locked {
             content
+                // The badge + CTA stack is ~100pt tall; a two-line host would
+                // otherwise let the button spill out of its card.
+                .frame(maxWidth: .infinity, minHeight: 104)
                 .blur(radius: 5)
                 .opacity(0.55)
                 .allowsHitTesting(false)

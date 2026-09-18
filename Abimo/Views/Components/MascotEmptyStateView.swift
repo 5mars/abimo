@@ -69,8 +69,8 @@ extension MascotEmptyStateView where Extra == EmptyView {
 #Preview {
     MascotEmptyStateView(
         line: "Record something. I can't roast air.",
-        title: "Welcome to The Kitchen",
-        subtitle: "Record an idea and we'll turn it\ninto a real action plan",
+        title: "Welcome to The Stable",
+        subtitle: "Record an idea and we'll saddle it up\ninto a real action plan",
         ctaTitle: "Record your first idea",
         ctaAction: {}
     )

@@ -131,7 +131,7 @@ struct RecordingView: View {
         VStack(spacing: 14) {
             Spacer()
 
-            Text("What's cooking?")
+            Text("What's galloping around in there?")
                 .font(.duoScreenTitle)
                 .foregroundColor(.textPri)
 
@@ -269,7 +269,7 @@ struct RecordingView: View {
                     showPaywall = true
                 }
                 .frame(width: 240)
-                Text("or delete an idea in The Kitchen")
+                Text("or retire an idea from The Stable")
                     .font(.system(size: 13))
                     .foregroundColor(.textSec)
             }

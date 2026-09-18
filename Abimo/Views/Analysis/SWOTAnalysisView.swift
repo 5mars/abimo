@@ -175,7 +175,7 @@ struct SWOTAnalysisView: View {
             } message: {
                 Text("The critic re-judges your idea as this remix. Your current score, analysis, and action plan get replaced.")
             }
-            .alert("Kitchen incident", isPresented: Binding(
+            .alert("Stable incident", isPresented: Binding(
                 get: { viewModel.errorMessage != nil && viewModel.analysis != nil },
                 set: { if !$0 { viewModel.errorMessage = nil } }
             )) {

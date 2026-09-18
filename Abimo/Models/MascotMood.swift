@@ -24,6 +24,7 @@ enum MascotExpression: String, CaseIterable {
     case thumbsUp   // smug approval, one eye squinted
     case sitting    // slumped on the floor, bored — waiting
     case waving     // eyes-closed grin, waving — delighted
+    case crying     // tears, drooping — the critic actually feels it
 
     /// Asset catalog name for this pose: "Mascot" + capitalized case name.
     var rawAssetName: String {
@@ -44,6 +45,7 @@ enum MascotMood: String, CaseIterable {
     case playful
     case grumpy
     case sassy
+    case sad        // burnt verdicts, failed cooks, lost streaks
 
     /// Which pose carries each tone of voice. Edit here to move an emotion.
     var expression: MascotExpression {
@@ -52,6 +54,7 @@ enum MascotMood: String, CaseIterable {
         case .grumpy:  return .grumpy
         case .sassy:   return .thumbsUp
         case .playful: return .waving
+        case .sad:     return .crying
         }
     }
 
@@ -61,7 +64,8 @@ enum MascotMood: String, CaseIterable {
     /// The face the critic makes when delivering a given score.
     static func forVerdict(_ verdict: ScoreVerdict) -> MascotMood {
         switch verdict {
-        case .burnt, .halfBaked:       return .grumpy
+        case .burnt:                   return .sad
+        case .halfBaked:               return .grumpy
         case .needsSeasoning:          return .sassy
         case .simmering, .chefsKiss:   return .playful
         }

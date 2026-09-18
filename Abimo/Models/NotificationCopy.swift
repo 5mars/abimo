@@ -69,15 +69,15 @@ struct NotificationCopy {
         switch sass {
         case .playful:
             return [
-                NotificationMessage(title: "The kitchen's suspiciously quiet", body: "One day without an idea. I'm sure that means you're 'thinking'.", mood: .playful),
-                NotificationMessage(title: "Everything okay over there?", body: "No new ideas since yesterday. I've started alphabetizing the spice rack.", mood: .playful),
+                NotificationMessage(title: "The stable's suspiciously quiet", body: "One day without an idea. I'm sure that means you're 'thinking'.", mood: .playful),
+                NotificationMessage(title: "Everything okay over there?", body: "No new ideas since yesterday. I've started alphabetizing the hay.", mood: .playful),
                 NotificationMessage(title: "Not to alarm you", body: "But your last idea is starting to look like your best idea. Fix that.", mood: .playful),
                 NotificationMessage(title: "I had a thought today", body: "Just one though. Your move.", mood: .playful),
                 NotificationMessage(title: "Quick question", body: "Do geniuses take days off? Asking for a food critic who's bored.", mood: .playful),
             ]
         case .sassy:
             return [
-                NotificationMessage(title: "Day 3. I've stopped setting the table.", body: "The stove's still warm. Barely. — Abimo", mood: .sassy),
+                NotificationMessage(title: "Day 3. I've stopped mucking the stall.", body: "The stove's still warm. Barely. — Abimo", mood: .sassy),
                 NotificationMessage(title: "Oh don't mind me", body: "I'll just keep polishing the same three ideas. Living the dream.", mood: .sassy),
                 NotificationMessage(title: "I made a reservation for your ideas", body: "Party of none, apparently. — Abimo", mood: .sassy),
                 NotificationMessage(title: "Fun fact", body: "Ideas don't age like wine. They age like milk. Yours are on day 3.", mood: .sassy),
@@ -85,8 +85,8 @@ struct NotificationCopy {
             ]
         case .guiltTrip:
             return [
-                NotificationMessage(title: "A week. I counted.", body: "I don't do feelings, but the empty kitchen is starting to echo. — Abimo", mood: .grumpy),
-                NotificationMessage(title: "I'm not saying you quit", body: "I'm just saying the kitchen lights are on a timer now. To save money.", mood: .grumpy),
+                NotificationMessage(title: "A week. I counted.", body: "I don't do feelings, but the empty stable is starting to echo. — Abimo", mood: .grumpy),
+                NotificationMessage(title: "I'm not saying you quit", body: "I'm just saying the stable lights are on a timer now. To save money.", mood: .grumpy),
                 NotificationMessage(title: "Your ideas asked about you", body: "I said you were 'busy'. We both know I lied for you. — Abimo", mood: .grumpy),
                 NotificationMessage(title: "Seven days", body: "I've reviewed restaurants that opened AND closed in less time. — Abimo", mood: .grumpy),
                 NotificationMessage(title: "Still here. Unfortunately.", body: "Me, your ideas, and a week of silence. Cozy. — Abimo", mood: .grumpy),
@@ -108,11 +108,11 @@ struct NotificationCopy {
             return [
                 NotificationMessage(title: "A month", body: "The stove is off. The pilot light isn't. One idea relights it. — Abimo", mood: .grumpy),
                 NotificationMessage(title: "30 days", body: "I've reviewed places that opened, peaked, and closed in less. Come cook.", mood: .grumpy),
-                NotificationMessage(title: "Your kitchen, a month on", body: "Dust on the knives. Ideas in the fridge. Still edible. Barely. — Abimo", mood: .grumpy),
+                NotificationMessage(title: "Your stable, a month on", body: "Dust on the knives. Ideas in the fridge. Still edible. Barely. — Abimo", mood: .grumpy),
             ]
         default:
             return [
-                NotificationMessage(title: "Sixty days", body: "I'm not mad. I'm a horse. But the kitchen misses you. — Abimo", mood: .grumpy),
+                NotificationMessage(title: "Sixty days", body: "I'm not mad. I'm a horse. But the stable misses you. — Abimo", mood: .grumpy),
                 NotificationMessage(title: "Two months", body: "Every big idea started as a small note someone came back to. Come back to yours.", mood: .grumpy),
                 NotificationMessage(title: "The door's still open", body: "Sixty days and I never changed the locks. One idea. Sixty seconds. — Abimo", mood: .grumpy),
             ]
@@ -176,7 +176,7 @@ struct NotificationCopy {
                 NotificationMessage(title: "I did everything but taste it", body: "Because that part needs YOU to tap one button. \"{context}\". — Abimo", mood: .grumpy),
                 NotificationMessage(title: "Some ideas get analyzed", body: "Others get \"{context}\"'d. Don't let that become a verb. — Abimo", mood: .grumpy),
                 NotificationMessage(title: "A moment of honesty", body: "\"{context}\" might be great. We'll never know. Unless — imagine — you run it.", mood: .grumpy),
-                NotificationMessage(title: "The kitchen keeps receipts", body: "\"{context}\", recorded and abandoned. Exhibit A. — Abimo", mood: .grumpy),
+                NotificationMessage(title: "The stable keeps receipts", body: "\"{context}\", recorded and abandoned. Exhibit A. — Abimo", mood: .grumpy),
             ]
         }
     }
@@ -220,19 +220,19 @@ struct NotificationCopy {
             return [
                 NotificationMessage(title: "3 days straight", body: "I'm not impressed. I'm... adjacent to impressed. Keep going.", mood: .playful),
                 NotificationMessage(title: "A hat trick", body: "Three days in a row. Fine. FINE. That's consistency. — Abimo", mood: .playful),
-                NotificationMessage(title: "Day 3, still cooking", body: "Statistically this is where people quit. Statistically. — Abimo", mood: .playful),
+                NotificationMessage(title: "Day 3, still trotting", body: "Statistically this is where people quit. Statistically. — Abimo", mood: .playful),
             ]
         case 7:
             return [
                 NotificationMessage(title: "A full week", body: "7 days. I checked the math twice because I didn't believe it either.", mood: .playful),
-                NotificationMessage(title: "Week one, done", body: "The kitchen ran hot for 7 straight days. I have no complaints. Write that down.", mood: .playful),
+                NotificationMessage(title: "Week one, done", body: "Seven days at a steady canter. I have no complaints. Write that down.", mood: .playful),
                 NotificationMessage(title: "7 days", body: "I'd say I never doubted you, but we both keep records. — Abimo", mood: .playful),
             ]
         case 14:
             return [
                 NotificationMessage(title: "Two weeks", body: "14 days. I've started telling other critics about you. Anonymously.", mood: .playful),
                 NotificationMessage(title: "14 days straight", body: "Most streaks don't survive one rainy Tuesday. Yours ate two of them. — Abimo", mood: .playful),
-                NotificationMessage(title: "Fortnight of fire", body: "Two weeks without missing. My skepticism is filing a complaint.", mood: .playful),
+                NotificationMessage(title: "Fortnight at full gallop", body: "Two weeks without missing. My skepticism is filing a complaint.", mood: .playful),
             ]
         default: // 30+
             return [
