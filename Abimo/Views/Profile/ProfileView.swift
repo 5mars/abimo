@@ -23,6 +23,14 @@ struct ProfileView: View {
 
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 20) {
+                        // Hand-drawn title, like the Kitchen — the system
+                        // large title ignores the palette.
+                        Text("Profile")
+                            .font(.duoScreenTitle)
+                            .foregroundColor(.textPri)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, 20)
+                            .padding(.top, 12)
                         Spacer().frame(height: 8)
 
                         heroCard
@@ -45,7 +53,7 @@ struct ProfileView: View {
                     }
                 }
             }
-            .navigationTitle("Profile")
+            .navigationTitle("")
             .toolbarBackground(Color.appBg, for: .navigationBar)
             .toolbarColorScheme(.light, for: .navigationBar)
             .toolbar {
