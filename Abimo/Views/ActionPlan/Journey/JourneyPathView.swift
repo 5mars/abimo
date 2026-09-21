@@ -113,8 +113,9 @@ struct JourneyPathView: View {
         .overlay(alignment: .top) {
             // Sticky chapter header: takes over the moment the inline header
             // reaches the top (they coincide, so nothing jumps), then the next
-            // chapter's header pushes it out. Opaque backing hides whatever
-            // scrolls underneath.
+            // chapter's header pushes it out. No backing — the pushed banner
+            // alone slides up and is clipped at the top edge; with the push,
+            // banners never overlap, so there is nothing to hide.
             ZStack(alignment: .top) {
                 Color.clear.frame(height: 1)
                     .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).minY } action: { overlayTop = $0 }
@@ -123,7 +124,6 @@ struct JourneyPathView: View {
                         .padding(.horizontal, sideMargin)
                         .offset(y: sticky.offset)
                         .frame(maxWidth: .infinity)
-                        .background(Color.journeyBg)
                         .frame(height: ChapterHeaderView.inlineHeight, alignment: .top)
                         .clipped()
                 }

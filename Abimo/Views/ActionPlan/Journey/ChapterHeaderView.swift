@@ -76,7 +76,6 @@ struct ChapterHeaderView: View {
         .background(shape.fill(chapter.kind.color))
         .background(shape.fill(chapter.kind.edgeColor).offset(y: DuoTokens.Edge.card))
         .padding(.bottom, DuoTokens.Edge.card)
-        .duoShadow(enabled: style == .sticky)
         // Closing a chapter gets its own beat: the ring fills and the
         // device gives one sharp tap — once, from the inline copy only.
         .onChange(of: chapter.isComplete) { _, done in
@@ -89,12 +88,5 @@ struct ChapterHeaderView: View {
     private var eyebrow: String {
         if chapter.isComplete { return "CHAPTER \(index + 1) · DONE" }
         return "CHAPTER \(index + 1) · \(chapter.completedCount)/\(chapter.actions.count) DONE · \(minutesLeft) MIN LEFT"
-    }
-}
-
-private extension View {
-    @ViewBuilder
-    func duoShadow(enabled: Bool) -> some View {
-        if enabled { self.duoShadow() } else { self }
     }
 }
