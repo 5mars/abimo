@@ -52,4 +52,21 @@ final class JourneyLayoutTests: XCTestCase {
                        "dictionary order must not matter; c is still above the threshold")
         XCTAssertNil(JourneyStickyModel.currentChapterId(order: order, tops: [:], threshold: -58), "unmeasured chapters never stick")
     }
+
+    func testPushOffsetSlidesTheStickyOutAsTheNextHeaderArrives() {
+        let h: CGFloat = 66
+        XCTAssertEqual(JourneyStickyModel.pushOffset(nextTop: nil, overlayTop: 100, headerHeight: h), 0, "last chapter: nothing pushes")
+        XCTAssertEqual(JourneyStickyModel.pushOffset(nextTop: 400, overlayTop: 100, headerHeight: h), 0, "next header far below: no push")
+        XCTAssertEqual(JourneyStickyModel.pushOffset(nextTop: 166, overlayTop: 100, headerHeight: h), 0, "touching the sticky's bottom edge: still no push")
+        XCTAssertEqual(JourneyStickyModel.pushOffset(nextTop: 133, overlayTop: 100, headerHeight: h), -33, "half-way in: pushed half out")
+        XCTAssertEqual(JourneyStickyModel.pushOffset(nextTop: 100, overlayTop: 100, headerHeight: h), -66, "coincident: fully out — the next chapter takes over")
+    }
+
+    func testPushKeepsTheSectionGapBetweenBanners() {
+        // With an 8pt gap, the push starts 8pt earlier and the sticky is a full
+        // gap further out when the next banner arrives — the two never touch.
+        XCTAssertEqual(JourneyStickyModel.pushOffset(nextTop: 174, overlayTop: 100, headerHeight: 66, spacing: 8), 0)
+        XCTAssertEqual(JourneyStickyModel.pushOffset(nextTop: 166, overlayTop: 100, headerHeight: 66, spacing: 8), -8)
+        XCTAssertEqual(JourneyStickyModel.pushOffset(nextTop: 100, overlayTop: 100, headerHeight: 66, spacing: 8), -74)
+    }
 }

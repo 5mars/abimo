@@ -89,12 +89,17 @@ Answer **No** to "do you use data for tracking" — the app has no IDFA/ads.
 ---
 
 ### 2e. App icon redraw (palette change, Sept 2026)
-The app moved to the horse's beige/brown palette — the only red left anywhere
-is the raster app icon (`Abimo/Assets.xcassets/AppIcon.appiconset/*.png`, three
-1024×1024 variants: light, dark, tinted). Redraw it on caramel `#A8622E` /
-cream `#FFFBF5` (the horse on a cream circle works) and drop the three PNGs
-back in with the same filenames. Until then the launch screen (caramel) and
-the icon (coral) disagree.
+The app moved to a teal-on-cream palette (the horse's brown is the accent,
+not the brand). The only red left anywhere is the raster app icon
+(`Abimo/Assets.xcassets/AppIcon.appiconset/AppIcon-light.png`, `-dark.png`,
+`-tinted.png`, 1024×1024). Redraw it on teal `#2A9D8F` / cream `#FFFBF5`
+(the horse on a teal circle works) and drop the three PNGs back in with the
+same filenames. Until then the launch screen (teal) and the icon (coral) disagree.
+
+### 2f. Project location
+The repo now lives at `~/Developer/abimo` — NOT under `~/Desktop`. iCloud's
+Desktop sync was creating `Foo 2.swift` duplicates that Xcode compiled as
+redeclarations. Open `~/Developer/abimo/Abimo.xcodeproj` from now on.
 
 ---
 

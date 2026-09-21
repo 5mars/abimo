@@ -3,10 +3,11 @@
 //  Abimo
 //
 //  The plan as a Duolingo path: chapters open with a colored header, then
-//  big round nodes on a centred sine. Exactly one node is lit (START); tap
-//  any node for a bubble with its title and what you can do; Start opens
-//  StepDetailSheet; completion runs after the sheet dismisses. A sticky
-//  copy of the current chapter's header takes over as you scroll.
+//  big round nodes on a centred sine. The path is linear — exactly one node
+//  is lit (START), everything after it is locked; tap any node for a bubble
+//  with its title; Start opens StepDetailSheet; completion runs after the
+//  sheet dismisses. A sticky copy of the current chapter's header takes
+//  over as you scroll, and the path ends on the next-chapter gate.
 //
 
 import SwiftUI
@@ -18,42 +19,80 @@ struct JourneyPathView: View {
 
     @State private var selectedAction: MicroAction?
     @State private var pendingCompletion: (id: UUID, outcome: String, note: String?)?
-    @State private var pendingPick: UUID?
     @State private var pendingUndo: UUID?
     @State private var bubbleActionId: UUID?
+    @State private var paywallContext: PaywallView.Context?
+    @State private var gateError: String?
+    @ObservedObject private var entitlements = EntitlementService.shared
     @State private var chapterTops: [String: CGFloat] = [:]
     @State private var overlayTop: CGFloat = 0
     @State private var pathWidth: CGFloat = 0
+    @State private var viewportHeight: CGFloat = 0
 
     private let layout = JourneyLayout()
     private let sideMargin: CGFloat = 16
+    private let sectionSpacing: CGFloat = 8
 
-    private var stickyChapter: (chapter: JourneyChapter, index: Int)? {
+    /// The chapter whose inline header has reached (or passed) the top, and
+    /// how far the following header has pushed it up.
+    private var stickyChapter: (chapter: JourneyChapter, index: Int, offset: CGFloat)? {
         let chapters = viewModel.chapters
         let id = JourneyStickyModel.currentChapterId(
             order: chapters.map(\.id),
             tops: chapterTops,
-            threshold: overlayTop - (ChapterHeaderView.inlineHeight - 8)
+            threshold: overlayTop + 0.5
         )
         guard let id, let index = chapters.firstIndex(where: { $0.id == id }) else { return nil }
-        return (chapters[index], index)
+        let nextTop = index + 1 < chapters.count ? chapterTops[chapters[index + 1].id] : nil
+        let offset = JourneyStickyModel.pushOffset(
+            nextTop: nextTop, overlayTop: overlayTop,
+            headerHeight: ChapterHeaderView.inlineHeight, spacing: sectionSpacing
+        )
+        return (chapters[index], index, offset)
+    }
+
+    /// Enough room under the last section for its header to reach the top,
+    /// so the sticky handoff never rests half-pushed at the end of the scroll.
+    private var bottomPadding: CGFloat {
+        guard let last = viewModel.chapters.last else { return 140 }
+        let tail = layout.sectionHeight(count: last.actions.count) + 12 + 190
+        return max(140, viewportHeight - tail)
     }
 
     var body: some View {
         ScrollView(showsIndicators: false) {
             ScrollViewReader { proxy in
-                VStack(spacing: 8) {
+                VStack(spacing: sectionSpacing) {
                     ForEach(Array(viewModel.chapters.enumerated()), id: \.element.id) { chapterIndex, chapter in
                         chapterSection(chapter, index: chapterIndex)
+                            // Global space on purpose: the sticky overlay is not a
+                            // descendant of the ScrollView, so a named space would
+                            // resolve differently on each side.
                             .onGeometryChange(for: CGFloat.self) { proxy in
-                                proxy.frame(in: .named("journey")).minY
+                                proxy.frame(in: .global).minY
                             } action: { top in
                                 chapterTops[chapter.id] = top
                             }
                     }
+                    if viewModel.partCount < ActionPlanViewModel.maxChapters, !viewModel.microActions.isEmpty {
+                        NextChapterGateCard(
+                            state: viewModel.isExtending ? .generating : (viewModel.nextRecommendedAction == nil ? .ready : .locked),
+                            nextChapter: viewModel.partCount + 1,
+                            isPlus: entitlements.isPremium,
+                            onUnlock: unlockNextChapter
+                        )
+                        .padding(.horizontal, sideMargin)
+                        .padding(.top, 12)
+                        if let gateError {
+                            Text(gateError)
+                                .font(.system(size: 12))
+                                .foregroundColor(.danger)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal, sideMargin)
+                        }
+                    }
                 }
-                .padding(.top, 8)
-                .padding(.bottom, 140)
+                .padding(.bottom, bottomPadding)
                 .overlayPreferenceValue(NodeAnchorKey.self) { anchors in
                     bubbleOverlay(anchors)
                 }
@@ -68,25 +107,31 @@ struct JourneyPathView: View {
                 }
             }
         }
-        .coordinateSpace(.named("journey"))
-        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { pathWidth = $0 }
+        .onGeometryChange(for: CGSize.self) { $0.size } action: { size in
+            pathWidth = size.width
+            viewportHeight = size.height
+        }
         .onScrollPhaseChange { _, phase in
             if phase != .idle, bubbleActionId != nil { bubbleActionId = nil }
         }
         .overlay(alignment: .top) {
-            // Sticky chapter header: fades in once the inline one has left.
+            // Sticky chapter header: takes over the moment the inline header
+            // reaches the top (they coincide, so nothing jumps), then the next
+            // chapter's header pushes it out. No backing — the pushed banner
+            // alone slides up and is clipped at the top edge; with the push,
+            // banners never overlap, so there is nothing to hide.
             ZStack(alignment: .top) {
                 Color.clear.frame(height: 1)
-                    .onGeometryChange(for: CGFloat.self) { $0.frame(in: .named("journey")).minY } action: { overlayTop = $0 }
+                    .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).minY } action: { overlayTop = $0 }
                 if let sticky = stickyChapter {
                     ChapterHeaderView(chapter: sticky.chapter, index: sticky.index, style: .sticky)
                         .padding(.horizontal, sideMargin)
-                        .padding(.top, 4)
-                        .id(sticky.chapter.id)
-                        .transition(.opacity)
+                        .offset(y: sticky.offset)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: ChapterHeaderView.inlineHeight, alignment: .top)
+                        .clipped()
                 }
             }
-            .animation(AnimationPolicy.reduceMotion ? nil : .easeInOut(duration: 0.2), value: stickyChapter?.chapter.id)
         }
         .background(
             ZStack {
@@ -95,6 +140,9 @@ struct JourneyPathView: View {
             }
             .ignoresSafeArea()
         )
+        .sheet(item: $paywallContext) { context in
+            PaywallView(context: context)
+        }
         .sheet(item: $selectedAction, onDismiss: runPending) { action in
             StepDetailSheet(
                 action: action,
@@ -102,7 +150,6 @@ struct JourneyPathView: View {
                 chapter: viewModel.chapters.first { $0.actions.contains { $0.id == action.id } },
                 iconName: NodeIconCatalog.icon(for: action, in: viewModel.chapters),
                 xpPreview: viewModel.nextStepXP,
-                onPickAsNext: { pendingPick = action.id },
                 onComplete: { outcome, note in pendingCompletion = (action.id, outcome, note) },
                 onUndo: { pendingUndo = action.id }
             )
@@ -119,13 +166,27 @@ struct JourneyPathView: View {
             pendingCompletion = nil
             Task { await viewModel.completeAction(id: p.id, outcome: p.outcome, note: p.note) }
         }
-        if let id = pendingPick {
-            pendingPick = nil
-            viewModel.pickAction(id: id)
-        }
         if let id = pendingUndo {
             pendingUndo = nil
             Task { await viewModel.toggleMicroAction(id: id, isCompleted: false) }
+        }
+    }
+
+    // MARK: - Next chapter gate
+
+    private func unlockNextChapter() {
+        gateError = nil
+        guard entitlements.isPremium else {
+            AnalyticsService.shared.log(.gateHit(gate: "next_chapter", source: "path"))
+            paywallContext = .nextChapter
+            return
+        }
+        Task {
+            do {
+                try await viewModel.requestNextChapter()
+            } catch {
+                gateError = "The next chapter didn't saddle up. Try again in a moment."
+            }
         }
     }
 
@@ -139,7 +200,28 @@ struct JourneyPathView: View {
             pathArea(chapter, width: sectionWidth)
                 .frame(width: sectionWidth, height: layout.sectionHeight(count: chapter.actions.count), alignment: .topLeading)
         }
+        .background(alignment: .topLeading) {
+            // One long road: a dotted link from the previous chapter's last
+            // node, under this header, to this chapter's first node.
+            if index > 0 {
+                interChapterConnector(from: viewModel.chapters[index - 1], to: chapter)
+            }
+        }
         .padding(.horizontal, sideMargin)
+    }
+
+    private func interChapterConnector(from previous: JourneyChapter, to chapter: JourneyChapter) -> some View {
+        let width = sectionWidth
+        let lastPrev = layout.center(previous.actions.count - 1, width: width)
+        // The previous node sits (bottomInset + section spacing) above this
+        // section's top, half a node above its own area's bottom edge.
+        let from = CGPoint(x: lastPrev.x, y: -(sectionSpacing + layout.bottomInset + layout.nodeSize / 2 + DuoTokens.Edge.node))
+        let first = layout.center(0, width: width)
+        let to = CGPoint(x: first.x, y: ChapterHeaderView.inlineHeight + layout.topInset + first.y)
+        return JourneySegmentShape(from: from, to: to)
+            .stroke(Color.textSec.opacity(0.4), style: JourneyInterChapterStyle.stroke)
+            .frame(width: width, height: 1, alignment: .topLeading)
+            .allowsHitTesting(false)
     }
 
     @ViewBuilder
@@ -230,10 +312,6 @@ struct JourneyPathView: View {
         case .start, .details:
             bubbleActionId = nil
             selectedAction = action
-        case .pickAsNext:
-            // Immediate: the node turns `next` under the open bubble, which
-            // re-renders as "Start" — the feedback is the point.
-            viewModel.pickAction(id: action.id)
         case .undo:
             bubbleActionId = nil
             Task { await viewModel.toggleMicroAction(id: action.id, isCompleted: false) }

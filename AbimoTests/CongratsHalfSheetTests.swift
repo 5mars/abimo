@@ -35,11 +35,4 @@ final class CongratsHalfSheetTests: XCTestCase {
                            "scoreRevealed moment must produce a line for \(verdict)")
         }
     }
-
-    func testSheetPhaseEnumHasBothCases() {
-        let congrats = SheetPhase.congrats
-        let picker = SheetPhase.picker
-        XCTAssertNotEqual(String(describing: congrats), String(describing: picker),
-                          "SheetPhase must have distinct congrats and picker cases")
-    }
 }

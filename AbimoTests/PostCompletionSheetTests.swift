@@ -87,20 +87,8 @@ final class PostCompletionSheetTests: XCTestCase {
     func testPostCompletionSheetIdentifiableIds() {
         let someUUID = UUID()
         let congratsSheet = PostCompletionSheet.congrats(actionId: someUUID)
-        let pickerSheet = PostCompletionSheet.actionPicker
-
         XCTAssertEqual(congratsSheet.id, "congrats-\(someUUID)",
                        ".congrats Identifiable id must be 'congrats-{uuid}'")
-        XCTAssertEqual(pickerSheet.id, "actionPicker",
-                       ".actionPicker Identifiable id must be 'actionPicker'")
-    }
-
-    // MARK: - showActionPicker
-
-    func testShowActionPickerDefaultsFalse() {
-        let vm = makeViewModel(actionCount: 3)
-        XCTAssertFalse(vm.showActionPicker,
-                       "showActionPicker must default to false on a fresh ViewModel")
     }
 
     // MARK: - Rapid Completion Guard
@@ -120,15 +108,5 @@ final class PostCompletionSheetTests: XCTestCase {
         } else {
             XCTFail("Expected .congrats but got \(String(describing: vm.postCompletionSheet))")
         }
-    }
-
-    func testAdvanceToPickerIsNoOp() {
-        let vm = makeViewModel(actionCount: 3)
-        simulateCompletion(vm: vm, at: 0)
-        let sheetBefore = vm.postCompletionSheet
-        vm.advanceToActionPicker()
-        // advanceToActionPicker is now a no-op — verify state unchanged
-        XCTAssertEqual(vm.postCompletionSheet, sheetBefore,
-                       "advanceToActionPicker() must be a no-op — in-sheet swap handles transition")
     }
 }

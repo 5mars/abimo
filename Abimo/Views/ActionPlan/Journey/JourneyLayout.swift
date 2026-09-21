@@ -67,6 +67,25 @@ enum JourneyStickyModel {
     static func currentChapterId(order: [String], tops: [String: CGFloat], threshold: CGFloat) -> String? {
         order.last { (tops[$0] ?? .infinity) <= threshold }
     }
+
+    /// How far the sticky header is pushed up by the next chapter's inline
+    /// header (Duolingo-style): 0 while the next header is still below the
+    /// sticky, then it slides the sticky out as it arrives, until the two
+    /// coincide and the next chapter takes over.
+    /// `spacing` is the gap between inline sections — kept during the push so
+    /// the two banners never touch (they don't anywhere else on the path).
+    static func pushOffset(nextTop: CGFloat?, overlayTop: CGFloat, headerHeight: CGFloat, spacing: CGFloat = 0) -> CGFloat {
+        guard let nextTop else { return 0 }
+        return min(0, nextTop - (overlayTop + headerHeight + spacing))
+    }
+}
+
+/// Dotted connector between two chapters: from the last node of one to the
+/// first node of the next, passing under the chapter header. Drawn in the
+/// next section's background with absolute points, so it starts above the
+/// section's own frame (SwiftUI doesn't clip).
+enum JourneyInterChapterStyle {
+    static let stroke = StrokeStyle(lineWidth: 5, lineCap: .round, dash: [0.1, 11])
 }
 
 // MARK: - Trail

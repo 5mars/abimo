@@ -3,8 +3,8 @@
 //  Abimo
 //
 //  One big round 3D node on the path, Duolingo-style: a kawaii icon on a
-//  fat-edged circle. Three honest states — done, next, open — nothing is
-//  ever "locked": any open step can be started or promoted.
+//  fat-edged circle. Three states — done, next, locked — and the path is
+//  linear: you do the lit step, the next one lights up.
 //
 
 import SwiftUI
@@ -13,14 +13,15 @@ import SwiftUI
 
 enum NodeState {
     case done
-    case next   // the recommended step — the one lit node on the path
-    case open   // any other unfinished step; tappable
+    case next     // the one lit node — the first unfinished step on the path
+    case locked   // further along the path; opens when the steps before it are done
 }
 
-/// Which state an action renders in, given the recommended next id.
+/// Which state an action renders in, given the id of the next step. The path
+/// is linear: everything after `next` is locked.
 func nodeState(for action: MicroAction, nextId: UUID?) -> NodeState {
     if action.isCompleted { return .done }
-    return action.id == nextId ? .next : .open
+    return action.id == nextId ? .next : .locked
 }
 
 // MARK: - JourneyNodeView
@@ -142,7 +143,7 @@ struct JourneyNodeView: View {
 
     private var fillColor: Color {
         switch state {
-        case .open: return .nodeOpenFace
+        case .locked: return .nodeOpenFace
         case .next: return chapterKind.color
         case .done: return .nodeDone
         }
@@ -150,7 +151,7 @@ struct JourneyNodeView: View {
 
     private var edgeColor: Color {
         switch state {
-        case .open: return .nodeOpenEdge
+        case .locked: return .nodeOpenEdge
         case .next: return chapterKind.edgeColor
         case .done: return .nodeDoneEdge
         }
@@ -160,7 +161,7 @@ struct JourneyNodeView: View {
         switch state {
         case .done: return "Done"
         case .next: return "Next step"
-        case .open: return "Open"
+        case .locked: return "Locked until the steps before it are done"
         }
     }
 
@@ -187,7 +188,7 @@ struct JourneyNodeView: View {
     @ViewBuilder
     private var nodeContent: some View {
         switch state {
-        case .open:
+        case .locked:
             icon
                 .saturation(0.25)
                 .opacity(0.7)
@@ -235,7 +236,7 @@ struct JourneyNodeView: View {
     HStack(spacing: 40) {
         JourneyNodeView(action: make("email", true), state: .done, chapterKind: .fixWeakSpot, iconName: "IconHammer", onTap: {}, justCompletedActionId: nil)
         JourneyNodeView(action: make("search", false), state: .next, chapterKind: .proveDemand, iconName: "IconTarget", onTap: {}, justCompletedActionId: nil)
-        JourneyNodeView(action: make("post", false), state: .open, chapterKind: .playYourEdge, iconName: "IconStar", onTap: {}, justCompletedActionId: nil)
+        JourneyNodeView(action: make("post", false), state: .locked, chapterKind: .playYourEdge, iconName: "IconStar", onTap: {}, justCompletedActionId: nil)
     }
     .padding(60)
     .background(Color.journeyBg)

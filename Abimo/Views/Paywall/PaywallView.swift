@@ -21,18 +21,18 @@ struct PaywallView: View {
 
         var mascotLine: String {
             switch self {
-            case .ideaCap:      return "Kitchen's full. Time to go pro."
+            case .ideaCap:      return "Stable's full. Time to go pro."
             case .general:      return "Fine. Here's the whole menu."
             case .fullAnalysis: return "You got the free sample. The full tasting menu is Plus."
-            case .nextChapter:  return "Chapter one, cleaned plate. Chapter two is on the Plus menu."
+            case .nextChapter:  return "Chapter one, cleared. Chapter two is behind the Plus gate."
             case .retaste:      return "You did the work. Want me to re-judge? That's a Plus table."
-            case .dailyCap:     return "Free kitchen closes after three tastings. Plus keeps the burners on."
+            case .dailyCap:     return "Free stable closes after three tastings. Plus keeps the gate open."
             }
         }
 
         var subtitle: String {
             switch self {
-            case .ideaCap:      return "Free kitchens hold 3 ideas. Yours is packed."
+            case .ideaCap:      return "Free stables hold 3 ideas. Yours is packed."
             case .general:      return "The first taste is free. Plus is what happens after you do the work."
             case .fullAnalysis: return "Every point, every detail, every market stat — no blur."
             case .nextChapter:  return "Plus builds the next chapter from what you learned."
@@ -154,6 +154,8 @@ struct PaywallView: View {
 
                     Spacer().frame(height: 32)
                 }
+                // Pin to the viewport width so nothing can pan sideways.
+                .containerRelativeFrame(.horizontal)
             }
         }
         .onChange(of: entitlements.isPremium) { _, premium in
@@ -247,7 +249,7 @@ struct PaywallView: View {
                        "The critic re-scores with your results as evidence. Watch the number move.")
             benefitRow("doc.text.magnifyingglass", "Full evidence",
                        "Every tasting note, market stat, and the receipt behind the score")
-            benefitRow("flame.fill", "Unlimited ideas, more burners",
+            benefitRow("flame.fill", "Unlimited stalls, more gallop",
                        "No 3-idea cap, and three times the daily tastings")
         }
         .frame(maxWidth: .infinity, alignment: .leading)

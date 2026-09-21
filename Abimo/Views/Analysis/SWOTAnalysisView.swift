@@ -34,9 +34,14 @@ struct SWOTAnalysisView: View {
         shareImage = Image(uiImage: ui)
     }
 
-    init(transcription: Transcription, preloadedAnalysis: SWOTAnalysis? = nil, noteTitle: String = "") {
+    /// True when this idea already has an action plan — the CTA then opens
+    /// it instead of promising to "get" one that exists.
+    private let hasPlan: Bool
+
+    init(transcription: Transcription, preloadedAnalysis: SWOTAnalysis? = nil, noteTitle: String = "", hasPlan: Bool = false) {
         self.transcription = transcription
         self.noteTitle = noteTitle
+        self.hasPlan = hasPlan
         if let existing = preloadedAnalysis {
             _viewModel = StateObject(wrappedValue: AnalysisViewModel(preloadedAnalysis: existing))
         } else {
@@ -57,7 +62,8 @@ struct SWOTAnalysisView: View {
                     MascotLoadingView(
                         mode: .inline,
                         rotatingMessages: cookingMessages,
-                        subtitle: "This might take 15–30 seconds"
+                        subtitle: "This might take 15–30 seconds",
+                        expression: .cooking
                     )
                 } else {
                     ScrollView(.vertical, showsIndicators: false) {
@@ -68,9 +74,12 @@ struct SWOTAnalysisView: View {
                                 errorView
                             }
                         }
-                        .frame(maxWidth: .infinity)
                         .padding(.horizontal, 16)
                         .padding(.vertical, 16)
+                        // Pin the content to the viewport width: a vertical
+                        // ScrollView still pans sideways when any child lays
+                        // out wider than the screen. This makes that impossible.
+                        .containerRelativeFrame(.horizontal)
                     }
                 }
             }
@@ -172,7 +181,7 @@ struct SWOTAnalysisView: View {
             } message: {
                 Text("The critic re-judges your idea as this remix. Your current score, analysis, and action plan get replaced.")
             }
-            .alert("Kitchen incident", isPresented: Binding(
+            .alert("Stable incident", isPresented: Binding(
                 get: { viewModel.errorMessage != nil && viewModel.analysis != nil },
                 set: { if !$0 { viewModel.errorMessage = nil } }
             )) {
@@ -504,10 +513,10 @@ struct SWOTAnalysisView: View {
                         .foregroundColor(.brand)
                 }
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("Turn this into action")
+                    Text(hasPlan ? "Your plan is saddled" : "Turn this into action")
                         .font(.system(size: 17, weight: .bold, design: .rounded))
                         .foregroundColor(.textPri)
-                    Text("Get a micro-action plan you can start right now")
+                    Text(hasPlan ? "The steps are on the path. Ride." : "Get a micro-action plan you can start right now")
                         .font(.system(size: 13))
                         .foregroundColor(.textSec)
                 }
@@ -520,7 +529,7 @@ struct SWOTAnalysisView: View {
                 HStack(spacing: 8) {
                     Image(systemName: "bolt.fill")
                         .font(.system(size: 14))
-                    Text("Get your action plan")
+                    Text(hasPlan ? "Open your plan" : "Get your action plan")
                         .font(.system(size: 16, weight: .bold))
                 }
                 .foregroundColor(.white)

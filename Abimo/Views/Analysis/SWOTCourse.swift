@@ -31,7 +31,7 @@ struct SWOTCourse: Identifiable {
             case .strengths:     return "The good stuff"
             case .opportunities: return "Room on the menu"
             case .weaknesses:    return "Needs seasoning"
-            case .threats:       return "Kitchen hazards"
+            case .threats:       return "Stable hazards"
             }
         }
 

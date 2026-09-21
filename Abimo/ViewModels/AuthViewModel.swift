@@ -103,7 +103,7 @@ class AuthViewModel: ObservableObject {
             return "That email and password combo isn't cooking."
         }
         if raw.contains("already registered") || raw.contains("already exists") {
-            return "That email's already in the kitchen — try signing in."
+            return "That email's already in the stable — try signing in."
         }
         if raw.contains("weak") || (raw.contains("password") && raw.contains("least")) {
             return "Password's a bit thin. Six characters minimum."
@@ -113,7 +113,7 @@ class AuthViewModel: ObservableObject {
         }
         if raw.contains("network") || raw.contains("connection") || raw.contains("offline")
             || raw.contains("timed out") || raw.contains("internet") {
-            return "Can't reach the kitchen. Check your connection."
+            return "Can't reach the stable. Check your connection."
         }
         if raw.contains("rate limit") || raw.contains("too many") {
             return "Too many attempts. Let it rest a minute."

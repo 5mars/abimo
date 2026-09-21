@@ -5,13 +5,6 @@
 
 import SwiftUI
 
-// MARK: - SheetPhase
-
-enum SheetPhase {
-    case congrats
-    case picker
-}
-
 // MARK: - CongratsHalfSheet
 
 struct CongratsHalfSheet: View {
@@ -41,7 +34,7 @@ struct CongratsHalfSheet: View {
             Button {
                 onAdvance()
             } label: {
-                Text("What's next?")
+                Text("Back to the path")
                     .font(.system(size: 16, weight: .bold))
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
@@ -68,40 +61,12 @@ struct PostCompletionSheetContent: View {
     @ObservedObject var viewModel: ActionPlanViewModel
     let completingActionId: UUID?
 
-    @State private var sheetPhase: SheetPhase = .congrats
-    @State private var selectedDetent: PresentationDetent = .medium
-
     var body: some View {
-        Group {
-            if sheetPhase == .congrats {
-                CongratsHalfSheet(viewModel: viewModel, onAdvance: advance)
-                    .transition(.opacity)
-            } else {
-                ActionPickerSheet(
-                    viewModel: viewModel,
-                    mode: .postCompletion,
-                    excludedActionId: completingActionId
-                )
-                .transition(.opacity)
-            }
-        }
-        .animation(.easeInOut(duration: 0.25), value: sheetPhase)
-        .presentationDetents([.medium, .large], selection: $selectedDetent)
-        .presentationDragIndicator(.visible)
-        .presentationBackground(Color.appBg)
-    }
-
-    private func advance() {
-        // 0.3s delay lets the press animation complete
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            // Set detent first — SwiftUI animates it automatically
-            selectedDetent = .large
-            // Stagger content swap by 0.05s to avoid jank
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-                AnimationPolicy.animate(.easeInOut(duration: 0.25)) {
-                    sheetPhase = .picker
-                }
-            }
-        }
+        // The path is linear: the next node is already lit behind this sheet,
+        // so "back to the path" is the whole flow.
+        CongratsHalfSheet(viewModel: viewModel, onAdvance: { viewModel.dismissPostCompletionSheet() })
+            .presentationDetents([.medium])
+            .presentationDragIndicator(.visible)
+            .presentationBackground(Color.appBg)
     }
 }

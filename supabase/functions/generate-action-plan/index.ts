@@ -113,7 +113,7 @@ ORDERING:
 
 When REAL SMALL COMPARABLES are provided, reference them by name in search/message templates (e.g. "PoolTrak alternatives pricing") instead of [competitor] placeholders.
 
-Generate exactly 5-7 actions. Spread across quadrants.
+Generate exactly 7-9 actions. Spread across quadrants, ordered so a founder can do them top to bottom.
 
 STRATEGY BY VIABILITY (scores spread the full range — treat the band as truth):
 0-19: The idea as described doesn't survive. Actions should hunt for a pivot or the real problem underneath.
@@ -178,7 +178,7 @@ DIMENSION SCORES (0-10): ${dims}
 WEAKEST LINK: ${score_rationale || "Not available."}
 REAL SMALL COMPARABLES (from live web research): ${((comparables || []).join(" | ")).slice(0, MAX_SWOT_CONTEXT_CHARS) || "None found."}
 
-Generate 5-7 micro-actions with copy-paste templates.`;
+Generate 7-9 micro-actions with copy-paste templates.`;
 
     const openaiRes = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",

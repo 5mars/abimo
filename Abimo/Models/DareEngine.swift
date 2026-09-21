@@ -46,10 +46,10 @@ enum Dare: String, CaseIterable, Identifiable {
         case .completeOne:  return "Check off 1 action"
         case .completeTwo:  return "Check off 2 actions"
         case .finishPlate:  return "Check off 3 actions"
-        case .quickBite:    return "Finish a step under 10 min"
-        case .earlyBird:    return "Complete an action before noon"
-        case .twoKitchens:  return "Work on 2 different ideas"
-        case .extendStreak: return "Keep the streak alive"
+        case .quickBite:    return "Quick trot: a step under 10 min"
+        case .earlyBird:    return "Trot out before noon"
+        case .twoKitchens:  return "Ride 2 different ideas today"
+        case .extendStreak: return "Keep the streak galloping"
         case .keepYourWord: return "Do the step you committed to"
         case .dropIdea:     return "Record a new idea"
         case .replayPitch:  return "Listen back to one of your pitches"
@@ -117,7 +117,10 @@ enum DareEngine {
             return seed
         }
 
-        var pool = Dare.allCases
+        // keepYourWord needs a commitment, and nothing creates commitments now
+        // that the path is linear — keep the case (persisted latches) but
+        // never deal it.
+        var pool = Dare.allCases.filter { $0 != .keepYourWord }
         var out: [Dare] = []
         while !pool.isEmpty {
             let idx = Int(next() % UInt64(pool.count))

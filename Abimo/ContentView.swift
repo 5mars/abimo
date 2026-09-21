@@ -23,59 +23,61 @@ extension Color {
         self.init(.sRGB, red: Double(r) / 255, green: Double(g) / 255, blue: Double(b) / 255)
     }
 
-    // Brand palette — the horse's colours: caramel body, espresso mane,
-    // cream muzzle. Warm, matte, no red anywhere (negatives use `danger`).
-    static let brand        = Color(hex: "A8622E")  // Caramel — primary actions, tab selection
-    static let brandLight   = Color(hex: "C98A50")  // Mascot body — gradient endpoint
+    // Brand palette — teal primary with the horse's caramel and gold as
+    // accents on cream. Teal is the complement of the mascot's brown, so
+    // he pops against every button; no red anywhere (negatives use `danger`).
+    static let brand        = Color(hex: "2A9D8F")  // Teal — primary actions, tab selection
+    static let brandLight   = Color(hex: "3DB4A5")  // Gradient endpoint
     static let brandAmber   = Color(hex: "E0A526")  // Golden — XP, done nodes, "needs seasoning"
     static let brandGreen   = Color(hex: "7FA86F")  // Sage — success, streaks, "chef's kiss"
-    static let brandBlue    = Color(hex: "6B8FB5")  // Dusty blue — "simmering", links
+    static let brandBlue    = Color(hex: "5B8FD6")  // Sky — "simmering", links
     static let brandOrange  = Color(hex: "D98B4A")  // Verdict-scale orange ("half-baked")
+    static let brandCaramel = Color(hex: "C98A50")  // The horse — small warm accents only
     /// The ONE negative colour: errors, fatal flaw, "burnt", delete, trends down.
     static let danger       = Color(hex: "C65D3B")  // Terracotta
 
     // Surfaces
     static let appBg               = Color(hex: "FFFBF5")  // Warm off-white
-    static let journeyBg           = Color(hex: "F8EEDF")  // Beige — the path and its sheets live here
+    static let journeyBg           = Color(hex: "FBF4E8")  // Light cream — the path and its sheets live here
     static let cardBg              = Color.white            // White card (alias)
     static let cardSurface         = Color.white            // White card
     static let cardSurfaceElevated = Color.white            // White elevated card
-    static let textPri             = Color(hex: "3D2B1F")  // Espresso
-    static let textSec             = Color(hex: "9C8A78")  // Warm taupe
-    static let textTertiary        = Color(hex: "C4B5A2")  // Chevrons, dots, decorative glyphs
-    static let insetBg             = Color(hex: "F5EBDC")  // duoInset well background
+    static let textPri             = Color(hex: "2F3634")  // Deep slate — reads black, leans teal
+    static let textSec             = Color(hex: "8C918E")  // Cool grey-green
+    static let textTertiary        = Color(hex: "C1C6C3")  // Chevrons, dots, decorative glyphs
+    static let insetBg             = Color(hex: "F4F0E8")  // duoInset well background
 
-    // Tinted light card surfaces (warm, tuned for the off-white ground)
-    static let cardDarkBlue   = Color(hex: "E7EEF5")  // Dusty-blue tint
-    static let cardDarkTeal   = Color(hex: "E9F0E3")  // Sage tint
+    // Tinted light card surfaces (tuned for the cream ground)
+    static let cardDarkBlue   = Color(hex: "E8EFF9")  // Sky tint
+    static let cardDarkTeal   = Color(hex: "E3F2EF")  // Teal tint
     static let cardDarkOrange = Color(hex: "FAEFD8")  // Golden tint
     static let cardDarkRed    = Color(hex: "F7E3DA")  // Terracotta tint
-    static let cardDarkMint   = Color(hex: "F1F4EA")  // Pale sage hero surface
+    static let cardDarkMint   = Color(hex: "EAF5F2")  // Pale teal hero surface
 
     // Duo3D darker-edge variants (bottom edges of 3D buttons/nodes/cards)
-    static let brandDark       = Color(hex: "7B4A25")  // Mane — edge for brand
+    static let brandDark       = Color(hex: "1F7A70")  // edge for brand
     static let brandGreenDark  = Color(hex: "5E8752")  // edge for brandGreen
     static let brandAmberDark  = Color(hex: "B8841C")  // edge for brandAmber
-    static let brandBlueDark   = Color(hex: "4F6F94")  // edge for brandBlue
-    static let cardEdge        = Color(hex: "E8DCC8")  // warm sand — white-card borders/edges
-    static let lockedFace      = Color(hex: "EFE6D8")  // locked node face / disabled button
-    static let lockedEdge      = Color(hex: "D6C8B2")  // locked node edge
+    static let brandBlueDark   = Color(hex: "3F6FB5")  // edge for brandBlue
+    static let cardEdge        = Color(hex: "E4DED3")  // sand — white-card borders/edges
+    static let lockedFace      = Color(hex: "EEEAE2")  // locked node face / disabled button
+    static let lockedEdge      = Color(hex: "D3CDC2")  // locked node edge
 
     // Journey chapters (Duolingo "units") — each chapter owns a colour + edge
-    static let chapterTerracotta     = Color(hex: "C96F4A")
-    static let chapterTerracottaEdge = Color(hex: "A5563A")
-    static let chapterSage           = brandGreen
-    static let chapterSageEdge       = brandGreenDark
-    static let chapterGolden         = brandAmber
-    static let chapterGoldenEdge     = brandAmberDark
-    static let chapterMocha          = Color(hex: "8B6A52")
-    static let chapterMochaEdge      = Color(hex: "6B4F3B")
+    static let chapterPlum       = Color(hex: "8E6BB0")
+    static let chapterPlumEdge   = Color(hex: "6F5190")
+    static let chapterTeal       = brand
+    static let chapterTealEdge   = brandDark
+    static let chapterGolden     = brandAmber
+    static let chapterGoldenEdge = brandAmberDark
+    static let chapterSage       = brandGreen
+    static let chapterSageEdge   = brandGreenDark
 
     // Journey nodes
     static let nodeDone     = brandAmber            // completed step — gold, like a crown
     static let nodeDoneEdge = brandAmberDark
-    static let nodeOpenFace = Color(hex: "FBF3E6")  // not-yet step — cream
-    static let nodeOpenEdge = Color(hex: "D9C9B3")
+    static let nodeOpenFace = Color(hex: "FBF7F0")  // not-yet step — cream
+    static let nodeOpenEdge = Color(hex: "DCD5C8")
 
 }
 
