@@ -117,7 +117,10 @@ enum DareEngine {
             return seed
         }
 
-        var pool = Dare.allCases
+        // keepYourWord needs a commitment, and nothing creates commitments now
+        // that the path is linear — keep the case (persisted latches) but
+        // never deal it.
+        var pool = Dare.allCases.filter { $0 != .keepYourWord }
         var out: [Dare] = []
         while !pool.isEmpty {
             let idx = Int(next() % UInt64(pool.count))

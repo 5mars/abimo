@@ -48,8 +48,11 @@ struct JourneyPathView: View {
                 VStack(spacing: 8) {
                     ForEach(Array(viewModel.chapters.enumerated()), id: \.element.id) { chapterIndex, chapter in
                         chapterSection(chapter, index: chapterIndex)
+                            // Global space on purpose: the sticky overlay is not a
+                            // descendant of the ScrollView, so a named space would
+                            // resolve differently on each side.
                             .onGeometryChange(for: CGFloat.self) { proxy in
-                                proxy.frame(in: .named("journey")).minY
+                                proxy.frame(in: .global).minY
                             } action: { top in
                                 chapterTops[chapter.id] = top
                             }
@@ -88,7 +91,6 @@ struct JourneyPathView: View {
                 }
             }
         }
-        .coordinateSpace(.named("journey"))
         .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { pathWidth = $0 }
         .onScrollPhaseChange { _, phase in
             if phase != .idle, bubbleActionId != nil { bubbleActionId = nil }
@@ -97,7 +99,7 @@ struct JourneyPathView: View {
             // Sticky chapter header: fades in once the inline one has left.
             ZStack(alignment: .top) {
                 Color.clear.frame(height: 1)
-                    .onGeometryChange(for: CGFloat.self) { $0.frame(in: .named("journey")).minY } action: { overlayTop = $0 }
+                    .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).minY } action: { overlayTop = $0 }
                 if let sticky = stickyChapter {
                     ChapterHeaderView(chapter: sticky.chapter, index: sticky.index, style: .sticky)
                         .padding(.horizontal, sideMargin)

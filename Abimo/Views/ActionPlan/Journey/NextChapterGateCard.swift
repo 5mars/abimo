@@ -53,7 +53,7 @@ struct NextChapterGateCard: View {
             case .generating:
                 HStack(spacing: 10) {
                     ProgressView().tint(.brand)
-                    Text("Writing chapter \(nextChapter)…")
+                    Text("Writing the next chapter…")
                         .font(.system(size: 14, weight: .semibold, design: .rounded))
                         .foregroundColor(.textSec)
                 }
@@ -79,8 +79,10 @@ struct NextChapterGateCard: View {
         .accessibilityElement(children: .combine)
     }
 
+    /// No number here: the path's inline headers count quadrant chapters, and
+    /// a numbered "chapter 2" under a visible "chapter 3" reads as a bug.
     private var eyebrow: String {
-        state == .locked ? "CHAPTER \(nextChapter) · LOCKED" : "CHAPTER \(nextChapter) · UNLOCKED"
+        state == .locked ? "NEXT CHAPTER · LOCKED" : "NEXT CHAPTER · UNLOCKED"
     }
 
     private var detail: String {
