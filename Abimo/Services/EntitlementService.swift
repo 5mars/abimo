@@ -130,7 +130,9 @@ final class EntitlementService: ObservableObject {
             UserDefaults.standard.set(Date(), forKey: Self.lastSyncKey)
         } catch {
             // Best-effort: the next launch retries. Never surface to the user.
+            #if DEBUG
             print("verify-entitlement sync failed: \(error.localizedDescription)")
+            #endif
         }
     }
 
