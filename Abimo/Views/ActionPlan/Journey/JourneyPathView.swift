@@ -27,19 +27,32 @@ struct JourneyPathView: View {
     @State private var chapterTops: [String: CGFloat] = [:]
     @State private var overlayTop: CGFloat = 0
     @State private var pathWidth: CGFloat = 0
+    @State private var viewportHeight: CGFloat = 0
 
     private let layout = JourneyLayout()
     private let sideMargin: CGFloat = 16
 
-    private var stickyChapter: (chapter: JourneyChapter, index: Int)? {
+    /// The chapter whose inline header has reached (or passed) the top, and
+    /// how far the following header has pushed it up.
+    private var stickyChapter: (chapter: JourneyChapter, index: Int, offset: CGFloat)? {
         let chapters = viewModel.chapters
         let id = JourneyStickyModel.currentChapterId(
             order: chapters.map(\.id),
             tops: chapterTops,
-            threshold: overlayTop - (ChapterHeaderView.inlineHeight - 8)
+            threshold: overlayTop + 0.5
         )
         guard let id, let index = chapters.firstIndex(where: { $0.id == id }) else { return nil }
-        return (chapters[index], index)
+        let nextTop = index + 1 < chapters.count ? chapterTops[chapters[index + 1].id] : nil
+        let offset = JourneyStickyModel.pushOffset(nextTop: nextTop, overlayTop: overlayTop, headerHeight: ChapterHeaderView.inlineHeight)
+        return (chapters[index], index, offset)
+    }
+
+    /// Enough room under the last section for its header to reach the top,
+    /// so the sticky handoff never rests half-pushed at the end of the scroll.
+    private var bottomPadding: CGFloat {
+        guard let last = viewModel.chapters.last else { return 140 }
+        let tail = layout.sectionHeight(count: last.actions.count) + 12 + 190
+        return max(140, viewportHeight - tail)
     }
 
     var body: some View {
@@ -75,8 +88,7 @@ struct JourneyPathView: View {
                         }
                     }
                 }
-                .padding(.top, 8)
-                .padding(.bottom, 140)
+                .padding(.bottom, bottomPadding)
                 .overlayPreferenceValue(NodeAnchorKey.self) { anchors in
                     bubbleOverlay(anchors)
                 }
@@ -91,24 +103,31 @@ struct JourneyPathView: View {
                 }
             }
         }
-        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { pathWidth = $0 }
+        .onGeometryChange(for: CGSize.self) { $0.size } action: { size in
+            pathWidth = size.width
+            viewportHeight = size.height
+        }
         .onScrollPhaseChange { _, phase in
             if phase != .idle, bubbleActionId != nil { bubbleActionId = nil }
         }
         .overlay(alignment: .top) {
-            // Sticky chapter header: fades in once the inline one has left.
+            // Sticky chapter header: takes over the moment the inline header
+            // reaches the top (they coincide, so nothing jumps), then the next
+            // chapter's header pushes it out. Opaque backing hides whatever
+            // scrolls underneath.
             ZStack(alignment: .top) {
                 Color.clear.frame(height: 1)
                     .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).minY } action: { overlayTop = $0 }
                 if let sticky = stickyChapter {
                     ChapterHeaderView(chapter: sticky.chapter, index: sticky.index, style: .sticky)
                         .padding(.horizontal, sideMargin)
-                        .padding(.top, 4)
-                        .id(sticky.chapter.id)
-                        .transition(.opacity)
+                        .offset(y: sticky.offset)
+                        .frame(maxWidth: .infinity)
+                        .background(Color.journeyBg)
+                        .frame(height: ChapterHeaderView.inlineHeight, alignment: .top)
+                        .clipped()
                 }
             }
-            .animation(AnimationPolicy.reduceMotion ? nil : .easeInOut(duration: 0.2), value: stickyChapter?.chapter.id)
         }
         .background(
             ZStack {
@@ -177,7 +196,28 @@ struct JourneyPathView: View {
             pathArea(chapter, width: sectionWidth)
                 .frame(width: sectionWidth, height: layout.sectionHeight(count: chapter.actions.count), alignment: .topLeading)
         }
+        .background(alignment: .topLeading) {
+            // One long road: a dotted link from the previous chapter's last
+            // node, under this header, to this chapter's first node.
+            if index > 0 {
+                interChapterConnector(from: viewModel.chapters[index - 1], to: chapter)
+            }
+        }
         .padding(.horizontal, sideMargin)
+    }
+
+    private func interChapterConnector(from previous: JourneyChapter, to chapter: JourneyChapter) -> some View {
+        let width = sectionWidth
+        let lastPrev = layout.center(previous.actions.count - 1, width: width)
+        // The previous node sits (bottomInset + section spacing) above this
+        // section's top, half a node above its own area's bottom edge.
+        let from = CGPoint(x: lastPrev.x, y: -(8 + layout.bottomInset + layout.nodeSize / 2 + DuoTokens.Edge.node))
+        let first = layout.center(0, width: width)
+        let to = CGPoint(x: first.x, y: ChapterHeaderView.inlineHeight + layout.topInset + first.y)
+        return JourneySegmentShape(from: from, to: to)
+            .stroke(Color.textSec.opacity(0.4), style: JourneyInterChapterStyle.stroke)
+            .frame(width: width, height: 1, alignment: .topLeading)
+            .allowsHitTesting(false)
     }
 
     @ViewBuilder
