@@ -18,7 +18,6 @@ struct StepDetailSheet: View {
     /// The same kawaii icon the node wears on the path.
     var iconName: String = NodeIconCatalog.icons(for: .steps)[0]
     let xpPreview: Int
-    let onPickAsNext: () -> Void
     let onComplete: (_ outcome: String, _ note: String?) -> Void
     let onUndo: () -> Void
 
@@ -164,26 +163,8 @@ struct StepDetailSheet: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .duoInset(padding: 14)
 
-        case .next, .open:
+        case .next, .locked:
             VStack(spacing: 10) {
-                if state == .open {
-                    Button {
-                        onPickAsNext()
-                        dismiss()
-                    } label: {
-                        HStack(spacing: 7) {
-                            Image(systemName: "arrow.up.to.line")
-                                .font(.system(size: 13, weight: .bold))
-                            Text("Do this one next")
-                                .font(.system(size: 15, weight: .bold))
-                        }
-                        .foregroundColor(.brand)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 44)
-                    }
-                    .buttonStyle(Duo3DSecondaryButtonStyle())
-                }
-
                 Button {
                     onComplete("did_it", nil)
                     dismiss()

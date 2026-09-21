@@ -10,7 +10,7 @@ final class NodeBubbleModelTests: XCTestCase {
 
     func testActionsPerState() {
         XCTAssertEqual(NodeBubbleModel.actions(for: .next), [.start])
-        XCTAssertEqual(NodeBubbleModel.actions(for: .open), [.start, .pickAsNext])
+        XCTAssertEqual(NodeBubbleModel.actions(for: .locked), [], "locked steps can't be started or promoted")
         XCTAssertEqual(NodeBubbleModel.actions(for: .done), [.undo, .details])
     }
 

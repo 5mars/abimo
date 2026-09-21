@@ -68,23 +68,6 @@ struct ActionPlanDetailView: View {
         .navigationSubtitle(progressSubtitle)
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(Color.journeyBg, for: .navigationBar)
-        .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button {
-                    viewModel.presentPicker(.browse)
-                } label: {
-                    Label("All steps", systemImage: "list.bullet")
-                        .font(.system(size: 14, weight: .semibold))
-                }
-                .tint(.brand)
-            }
-        }
-        .sheet(isPresented: $viewModel.showActionPicker) {
-            ActionPickerSheet(viewModel: viewModel, mode: viewModel.pickerMode)
-                .presentationDetents([.large])
-                .presentationDragIndicator(.visible)
-                .presentationBackground(Color.appBg)
-        }
         .sheet(isPresented: $showIntro, onDismiss: { introSeen = true }) {
             JourneyIntroSheet(onDismiss: { showIntro = false })
                 .presentationDetents([.medium])

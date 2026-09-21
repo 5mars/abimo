@@ -10,8 +10,7 @@
 import SwiftUI
 
 enum NodeBubbleAction: Equatable {
-    case start        // open the step sheet
-    case pickAsNext   // make this the next step (open nodes only)
+    case start        // open the step sheet (the lit node only)
     case undo         // un-complete (done nodes only)
     case details      // open the sheet read-only-ish (done nodes)
 }
@@ -23,9 +22,9 @@ enum NodeBubbleModel {
 
     static func actions(for state: NodeState) -> [NodeBubbleAction] {
         switch state {
-        case .next: return [.start]
-        case .open: return [.start, .pickAsNext]
-        case .done: return [.undo, .details]
+        case .next:   return [.start]
+        case .locked: return []            // the bubble just says what's coming
+        case .done:   return [.undo, .details]
         }
     }
 

@@ -3,10 +3,11 @@
 //  Abimo
 //
 //  The plan as a Duolingo path: chapters open with a colored header, then
-//  big round nodes on a centred sine. Exactly one node is lit (START); tap
-//  any node for a bubble with its title and what you can do; Start opens
-//  StepDetailSheet; completion runs after the sheet dismisses. A sticky
-//  copy of the current chapter's header takes over as you scroll.
+//  big round nodes on a centred sine. The path is linear — exactly one node
+//  is lit (START), everything after it is locked; tap any node for a bubble
+//  with its title; Start opens StepDetailSheet; completion runs after the
+//  sheet dismisses. A sticky copy of the current chapter's header takes
+//  over as you scroll, and the path ends on the next-chapter gate.
 //
 
 import SwiftUI
@@ -18,9 +19,11 @@ struct JourneyPathView: View {
 
     @State private var selectedAction: MicroAction?
     @State private var pendingCompletion: (id: UUID, outcome: String, note: String?)?
-    @State private var pendingPick: UUID?
     @State private var pendingUndo: UUID?
     @State private var bubbleActionId: UUID?
+    @State private var paywallContext: PaywallView.Context?
+    @State private var gateError: String?
+    @ObservedObject private var entitlements = EntitlementService.shared
     @State private var chapterTops: [String: CGFloat] = [:]
     @State private var overlayTop: CGFloat = 0
     @State private var pathWidth: CGFloat = 0
@@ -50,6 +53,23 @@ struct JourneyPathView: View {
                             } action: { top in
                                 chapterTops[chapter.id] = top
                             }
+                    }
+                    if viewModel.partCount < ActionPlanViewModel.maxChapters, !viewModel.microActions.isEmpty {
+                        NextChapterGateCard(
+                            state: viewModel.isExtending ? .generating : (viewModel.nextRecommendedAction == nil ? .ready : .locked),
+                            nextChapter: viewModel.partCount + 1,
+                            isPlus: entitlements.isPremium,
+                            onUnlock: unlockNextChapter
+                        )
+                        .padding(.horizontal, sideMargin)
+                        .padding(.top, 12)
+                        if let gateError {
+                            Text(gateError)
+                                .font(.system(size: 12))
+                                .foregroundColor(.danger)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal, sideMargin)
+                        }
                     }
                 }
                 .padding(.top, 8)
@@ -95,6 +115,9 @@ struct JourneyPathView: View {
             }
             .ignoresSafeArea()
         )
+        .sheet(item: $paywallContext) { context in
+            PaywallView(context: context)
+        }
         .sheet(item: $selectedAction, onDismiss: runPending) { action in
             StepDetailSheet(
                 action: action,
@@ -102,7 +125,6 @@ struct JourneyPathView: View {
                 chapter: viewModel.chapters.first { $0.actions.contains { $0.id == action.id } },
                 iconName: NodeIconCatalog.icon(for: action, in: viewModel.chapters),
                 xpPreview: viewModel.nextStepXP,
-                onPickAsNext: { pendingPick = action.id },
                 onComplete: { outcome, note in pendingCompletion = (action.id, outcome, note) },
                 onUndo: { pendingUndo = action.id }
             )
@@ -119,13 +141,27 @@ struct JourneyPathView: View {
             pendingCompletion = nil
             Task { await viewModel.completeAction(id: p.id, outcome: p.outcome, note: p.note) }
         }
-        if let id = pendingPick {
-            pendingPick = nil
-            viewModel.pickAction(id: id)
-        }
         if let id = pendingUndo {
             pendingUndo = nil
             Task { await viewModel.toggleMicroAction(id: id, isCompleted: false) }
+        }
+    }
+
+    // MARK: - Next chapter gate
+
+    private func unlockNextChapter() {
+        gateError = nil
+        guard entitlements.isPremium else {
+            AnalyticsService.shared.log(.gateHit(gate: "next_chapter", source: "path"))
+            paywallContext = .nextChapter
+            return
+        }
+        Task {
+            do {
+                try await viewModel.requestNextChapter()
+            } catch {
+                gateError = "The next chapter didn't saddle up. Try again in a moment."
+            }
         }
     }
 
@@ -230,10 +266,6 @@ struct JourneyPathView: View {
         case .start, .details:
             bubbleActionId = nil
             selectedAction = action
-        case .pickAsNext:
-            // Immediate: the node turns `next` under the open bubble, which
-            // re-renders as "Start" — the feedback is the point.
-            viewModel.pickAction(id: action.id)
         case .undo:
             bubbleActionId = nil
             Task { await viewModel.toggleMicroAction(id: action.id, isCompleted: false) }

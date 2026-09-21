@@ -32,6 +32,10 @@ struct NodeBubbleView: View {
                     Text(doneLine)
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundColor(.textSec)
+                } else if state == .locked {
+                    Label("Finish the lit step first · \(action.timeEstimateMinutes) min", systemImage: "lock.fill")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(.textSec)
                 } else {
                     Text("\(action.timeEstimateMinutes) min · \(ActionDeepLink.typeLabel(for: action))")
                         .font(.system(size: 12, weight: .semibold))
@@ -46,9 +50,12 @@ struct NodeBubbleView: View {
                 Spacer(minLength: 0)
             }
 
-            HStack(spacing: 10) {
-                ForEach(NodeBubbleModel.actions(for: state), id: \.self) { item in
-                    button(for: item)
+            let actions = NodeBubbleModel.actions(for: state)
+            if !actions.isEmpty {
+                HStack(spacing: 10) {
+                    ForEach(actions, id: \.self) { item in
+                        button(for: item)
+                    }
                 }
             }
         }
@@ -75,8 +82,6 @@ struct NodeBubbleView: View {
                     .frame(height: 38)
             }
             .buttonStyle(Duo3DButtonStyle(fill: chapterKind.color, edge: chapterKind.edgeColor, cornerRadius: 12, edgeHeight: 3))
-        case .pickAsNext:
-            textButton("Do this one next") { onAction(.pickAsNext) }
         case .undo:
             textButton("Undo") { onAction(.undo) }
         case .details:

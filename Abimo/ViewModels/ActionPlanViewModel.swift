@@ -30,12 +30,10 @@ enum CelebrationState: Equatable {
 /// Replaces the old `showMomentumPicker` boolean to eliminate sheet presentation race conditions.
 enum PostCompletionSheet: Identifiable, Equatable {
     case congrats(actionId: UUID)
-    case actionPicker
 
     var id: String {
         switch self {
         case .congrats(let id): return "congrats-\(id)"
-        case .actionPicker: return "actionPicker"
         }
     }
 }
@@ -49,9 +47,7 @@ class ActionPlanViewModel: ObservableObject {
     @Published var isGenerating = false
     @Published var isLoading = false
     @Published var errorMessage: String?
-    @Published var userOrderedIds: [UUID] = []
     @Published var postCompletionSheet: PostCompletionSheet? = nil
-    @Published var showActionPicker = false
     @Published var completingActionId: UUID?
     @Published var justCompletedActionId: UUID? = nil
     @Published var celebrationState: CelebrationState = .idle
@@ -81,29 +77,37 @@ class ActionPlanViewModel: ObservableObject {
             .reduce(0) { $0 + $1.timeEstimateMinutes }
     }
 
-    /// Returns microActions sorted by user-driven ordering. When no user order is set,
-    /// falls back to the original microActions array order.
+    /// The plan's own order: chapter part, then the priority the coach gave
+    /// each step. Nothing user-driven — the path is linear by design.
     var orderedActions: [MicroAction] {
-        guard !userOrderedIds.isEmpty else { return microActions }
-        let rank = userOrderedIds.enumerated().reduce(into: [UUID: Int]()) {
-            $0[$1.element] = $1.offset
+        microActions.sorted {
+            if $0.chapterNumber != $1.chapterNumber { return $0.chapterNumber < $1.chapterNumber }
+            return $0.priority < $1.priority
         }
-        return microActions.sorted {
-            let ra = rank[$0.id] ?? (Int.max - $0.priority)
-            let rb = rank[$1.id] ?? (Int.max - $1.priority)
-            return ra < rb
-        }
-    }
-
-    var nextRecommendedAction: MicroAction? {
-        orderedActions.first(where: { !$0.isCompleted })
     }
 
     /// Chapters are a pure projection of orderedActions (see JourneyChapterBuilder).
     var chapters: [JourneyChapter] { JourneyChapterBuilder.build(from: orderedActions) }
 
+    /// Every step in the order it appears on the path — chapter by chapter,
+    /// top to bottom. THIS is the order the journey advances in.
+    var pathActions: [MicroAction] { chapters.flatMap(\.actions) }
+
+    /// The one lit node: the first unfinished step along the path.
+    var nextRecommendedAction: MicroAction? {
+        Self.nextStep(in: pathActions)
+    }
+
+    /// Pure so it can be tested: first unfinished step, in path order.
+    static func nextStep(in path: [MicroAction]) -> MicroAction? {
+        path.first(where: { !$0.isCompleted })
+    }
+
     /// How many plan parts exist (1 = original plan only; 2+ after "Next chapter").
     var partCount: Int { microActions.map(\.chapterNumber).max() ?? 1 }
+
+    /// Mirrors extend-action-plan's MAX_CHAPTER — the gate card hides after this.
+    static let maxChapters = 6
 
     // MARK: - Next chapter (Plus)
 
@@ -147,15 +151,6 @@ class ActionPlanViewModel: ObservableObject {
         xpToday = XPEngine.xpToday(completionDates: completions)
     }
 
-    /// Which picker the sheet shows; `showActionPicker` stays the presentation
-    /// flag (tests pin it). Always present through here so the two agree.
-    @Published var pickerMode: PickerMode = .browse
-
-    func presentPicker(_ mode: PickerMode) {
-        pickerMode = mode
-        showActionPicker = true
-    }
-
     /// One CTA rule for every door into the journey.
     static func journeyCTA(completed: Int, committed: Bool) -> String {
         completed == 0 && !committed ? "Start your plan" : "Continue your plan"
@@ -181,7 +176,6 @@ class ActionPlanViewModel: ObservableObject {
             )
             actionPlan = plan
             microActions = actions
-            presentPicker(.firstVisit)
         } catch {
             errorMessage = "Failed to generate action plan: \(error.localizedDescription)"
         }
@@ -204,7 +198,6 @@ class ActionPlanViewModel: ObservableObject {
             }
 
             computeNudges()
-            mergeUserOrder(planId: plan.id)
             await refreshMomentum()
         } catch {
             errorMessage = error.localizedDescription
@@ -524,79 +517,10 @@ class ActionPlanViewModel: ObservableObject {
         }
     }
 
-    // MARK: - Action Ordering
-
-    func pickAction(id: UUID) {
-        var ids = orderedActions.map(\.id)
-        ids.removeAll { $0 == id }
-        let completedIds = Set(microActions.filter(\.isCompleted).map(\.id))
-        let nextIncompleteIdx = ids.firstIndex(where: { !completedIds.contains($0) }) ?? ids.endIndex
-        ids.insert(id, at: nextIncompleteIdx)
-        userOrderedIds = ids
-        saveOrderToUserDefaults()
-        showActionPicker = false
-        HapticEngine.selection()
-        Task { await silentCommit(actionId: id) }
-
-        // Schedule nudge if action not completed within 24h
-        if let action = orderedActions.first(where: { $0.id == id }) {
-            NotificationScheduler.shared.scheduleActionNudge(
-                actionId: id,
-                actionText: action.text,
-                planId: actionPlan?.id,
-                analysisId: actionPlan?.analysisId
-            )
-        }
-    }
-
-    /// Deprecated: In-sheet content swap replaces dismiss+re-present pattern.
-    /// PostCompletionSheetContent.advance() handles the transition locally.
-    func advanceToActionPicker() { }
-
     func dismissPostCompletionSheet() {
         postCompletionSheet = nil
     }
 
-    private func silentCommit(actionId: UUID) async {
-        guard let action = microActions.first(where: { $0.id == actionId }) else { return }
-        if let existing = activeCommitment {
-            try? await supabase.updateCommitmentStatus(id: existing.id, status: "skipped")
-        }
-        await commitToAction(action, scheduledFor: nil)
-    }
-
-    // MARK: - Order Persistence
-
-    private let defaults = UserDefaults.standard
-
-    private func userDefaultsKey(for planId: UUID) -> String {
-        "actionOrder_\(planId.uuidString)"
-    }
-
-    private func loadOrderFromUserDefaults(planId: UUID) -> [UUID]? {
-        guard let data = defaults.data(forKey: userDefaultsKey(for: planId)),
-              let ids = try? JSONDecoder().decode([UUID].self, from: data) else { return nil }
-        return ids
-    }
-
-    func saveOrderToUserDefaults() {
-        guard let planId = actionPlan?.id else { return }
-        guard let data = try? JSONEncoder().encode(userOrderedIds) else { return }
-        defaults.set(data, forKey: userDefaultsKey(for: planId))
-    }
-
-    func mergeUserOrder(planId: UUID) {
-        let fetchedIds = Set(microActions.map(\.id))
-        if var stored = loadOrderFromUserDefaults(planId: planId) {
-            stored = stored.filter { fetchedIds.contains($0) }
-            let storedSet = Set(stored)
-            let newIds = microActions
-                .filter { !storedSet.contains($0.id) }
-                .sorted { $0.priority < $1.priority }
-                .map(\.id)
-            userOrderedIds = stored + newIds
-        }
-    }
 
     // MARK: - Nudge Computation (local)
 
