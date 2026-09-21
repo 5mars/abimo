@@ -31,6 +31,7 @@ struct JourneyPathView: View {
 
     private let layout = JourneyLayout()
     private let sideMargin: CGFloat = 16
+    private let sectionSpacing: CGFloat = 8
 
     /// The chapter whose inline header has reached (or passed) the top, and
     /// how far the following header has pushed it up.
@@ -43,7 +44,10 @@ struct JourneyPathView: View {
         )
         guard let id, let index = chapters.firstIndex(where: { $0.id == id }) else { return nil }
         let nextTop = index + 1 < chapters.count ? chapterTops[chapters[index + 1].id] : nil
-        let offset = JourneyStickyModel.pushOffset(nextTop: nextTop, overlayTop: overlayTop, headerHeight: ChapterHeaderView.inlineHeight)
+        let offset = JourneyStickyModel.pushOffset(
+            nextTop: nextTop, overlayTop: overlayTop,
+            headerHeight: ChapterHeaderView.inlineHeight, spacing: sectionSpacing
+        )
         return (chapters[index], index, offset)
     }
 
@@ -58,7 +62,7 @@ struct JourneyPathView: View {
     var body: some View {
         ScrollView(showsIndicators: false) {
             ScrollViewReader { proxy in
-                VStack(spacing: 8) {
+                VStack(spacing: sectionSpacing) {
                     ForEach(Array(viewModel.chapters.enumerated()), id: \.element.id) { chapterIndex, chapter in
                         chapterSection(chapter, index: chapterIndex)
                             // Global space on purpose: the sticky overlay is not a
@@ -211,7 +215,7 @@ struct JourneyPathView: View {
         let lastPrev = layout.center(previous.actions.count - 1, width: width)
         // The previous node sits (bottomInset + section spacing) above this
         // section's top, half a node above its own area's bottom edge.
-        let from = CGPoint(x: lastPrev.x, y: -(8 + layout.bottomInset + layout.nodeSize / 2 + DuoTokens.Edge.node))
+        let from = CGPoint(x: lastPrev.x, y: -(sectionSpacing + layout.bottomInset + layout.nodeSize / 2 + DuoTokens.Edge.node))
         let first = layout.center(0, width: width)
         let to = CGPoint(x: first.x, y: ChapterHeaderView.inlineHeight + layout.topInset + first.y)
         return JourneySegmentShape(from: from, to: to)

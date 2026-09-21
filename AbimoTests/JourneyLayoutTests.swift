@@ -61,4 +61,12 @@ final class JourneyLayoutTests: XCTestCase {
         XCTAssertEqual(JourneyStickyModel.pushOffset(nextTop: 133, overlayTop: 100, headerHeight: h), -33, "half-way in: pushed half out")
         XCTAssertEqual(JourneyStickyModel.pushOffset(nextTop: 100, overlayTop: 100, headerHeight: h), -66, "coincident: fully out — the next chapter takes over")
     }
+
+    func testPushKeepsTheSectionGapBetweenBanners() {
+        // With an 8pt gap, the push starts 8pt earlier and the sticky is a full
+        // gap further out when the next banner arrives — the two never touch.
+        XCTAssertEqual(JourneyStickyModel.pushOffset(nextTop: 174, overlayTop: 100, headerHeight: 66, spacing: 8), 0)
+        XCTAssertEqual(JourneyStickyModel.pushOffset(nextTop: 166, overlayTop: 100, headerHeight: 66, spacing: 8), -8)
+        XCTAssertEqual(JourneyStickyModel.pushOffset(nextTop: 100, overlayTop: 100, headerHeight: 66, spacing: 8), -74)
+    }
 }

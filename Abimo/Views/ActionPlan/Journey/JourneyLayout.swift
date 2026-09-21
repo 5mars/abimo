@@ -72,9 +72,11 @@ enum JourneyStickyModel {
     /// header (Duolingo-style): 0 while the next header is still below the
     /// sticky, then it slides the sticky out as it arrives, until the two
     /// coincide and the next chapter takes over.
-    static func pushOffset(nextTop: CGFloat?, overlayTop: CGFloat, headerHeight: CGFloat) -> CGFloat {
+    /// `spacing` is the gap between inline sections — kept during the push so
+    /// the two banners never touch (they don't anywhere else on the path).
+    static func pushOffset(nextTop: CGFloat?, overlayTop: CGFloat, headerHeight: CGFloat, spacing: CGFloat = 0) -> CGFloat {
         guard let nextTop else { return 0 }
-        return min(0, nextTop - (overlayTop + headerHeight))
+        return min(0, nextTop - (overlayTop + headerHeight + spacing))
     }
 }
 
