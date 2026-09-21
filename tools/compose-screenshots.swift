@@ -44,25 +44,23 @@ for c in captions {
     guard let raw = NSImage(contentsOf: rawDir.appendingPathComponent(c.file)), let rawCG = raw.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
         print("skip \(c.file): cannot load"); continue
     }
-    let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: Int(W), pixelsHigh: Int(H), bitsPerSample: 8, samplesPerPixel: 4,
-                               hasAlpha: true, isPlanar: false, colorSpaceName: .calibratedRGB, bytesPerRow: 0, bitsPerPixel: 0)!
-    rep.size = NSSize(width: W, height: H)
-    NSGraphicsContext.saveGraphicsState()
-    let gc = NSGraphicsContext(bitmapImageRep: rep)!
-    NSGraphicsContext.current = gc
-    let ctx = gc.cgContext
+    // One opaque sRGB context (no alpha — the App Store rejects alpha channels).
+    let cs = CGColorSpace(name: CGColorSpace.sRGB)!
+    let ctx = CGContext(data: nil, width: Int(W), height: Int(H), bitsPerComponent: 8, bytesPerRow: 0,
+                        space: cs, bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue)!
     ctx.interpolationQuality = .high
+    NSGraphicsContext.saveGraphicsState()
+    NSGraphicsContext.current = NSGraphicsContext(cgContext: ctx, flipped: false)
 
     // Paper + teal cap
-    paper.setFill(); ctx.fill(CGRect(x: 0, y: 0, width: W, height: H))
-    teal.setFill(); ctx.fill(CGRect(x: 0, y: H - 28, width: W, height: 28))
+    ctx.setFillColor(paper.cgColor); ctx.fill(CGRect(x: 0, y: 0, width: W, height: H))
+    ctx.setFillColor(teal.cgColor); ctx.fill(CGRect(x: 0, y: H - 28, width: W, height: 28))
 
-    // Caption block (top 19%)
-    let hasSub = (c.subtitle?.isEmpty == false)
+    // Caption block (top ~19%)
     let titleTop = H - 150
     draw(c.title, font: rounded(104, .heavy), color: ink,
          in: CGRect(x: 80, y: titleTop - 260, width: W - 160, height: 260), lineHeight: 116)
-    if let s = c.subtitle, hasSub {
+    if let s = c.subtitle, !s.isEmpty {
         draw(s, font: rounded(50, .medium), color: muted,
              in: CGRect(x: 100, y: titleTop - 260 - 150, width: W - 200, height: 140), lineHeight: 62)
     }
@@ -74,7 +72,7 @@ for c in captions {
     let path = CGPath(roundedRect: frame, cornerWidth: 96, cornerHeight: 96, transform: nil)
     ctx.saveGState()
     ctx.setShadow(offset: CGSize(width: 0, height: -18), blur: 60, color: CGColor(srgbRed: 0.12, green: 0.17, blue: 0.18, alpha: 0.22))
-    ink.withAlphaComponent(0.9).setFill(); ctx.addPath(path); ctx.fillPath()
+    ctx.setFillColor(ink.withAlphaComponent(0.9).cgColor); ctx.addPath(path); ctx.fillPath()
     ctx.restoreGState()
     ctx.saveGState()
     let inset = frame.insetBy(dx: 18, dy: 18)
@@ -83,17 +81,11 @@ for c in captions {
     let imgH = CGFloat(rawCG.height) * scale
     ctx.draw(rawCG, in: CGRect(x: inset.minX, y: inset.maxY - imgH, width: inset.width, height: imgH))
     ctx.restoreGState()
+    NSGraphicsContext.restoreGraphicsState()
 
-    NSGraphicsContext.restoreGraphicsState()
-    // Flatten to opaque RGB (App Store rejects alpha channels)
-    let opaque = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: Int(W), pixelsHigh: Int(H), bitsPerSample: 8, samplesPerPixel: 3,
-                                  hasAlpha: false, isPlanar: false, colorSpaceName: .calibratedRGB, bytesPerRow: 0, bitsPerPixel: 0)!
-    NSGraphicsContext.saveGraphicsState()
-    NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: opaque)
-    rep.draw(in: CGRect(x: 0, y: 0, width: W, height: H))
-    NSGraphicsContext.restoreGraphicsState()
-    let png = opaque.representation(using: .png, properties: [:])!
     let out = outDir.appendingPathComponent(c.file)
-    try png.write(to: out)
+    let dest = CGImageDestinationCreateWithURL(out as CFURL, UTType.png.identifier as CFString, 1, nil)!
+    CGImageDestinationAddImage(dest, ctx.makeImage()!, nil)
+    CGImageDestinationFinalize(dest)
     print("wrote \(out.lastPathComponent) \(Int(W))×\(Int(H))")
 }
