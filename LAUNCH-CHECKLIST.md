@@ -1,170 +1,186 @@
 # Abimo — TestFlight & App Store Launch Checklist
 
-Everything code-side is done and committed. The steps below are the manual ones
-only you can do (they need your Apple/Google/OpenAI accounts). Work top to bottom —
-each section is ordered so nothing blocks a later step.
+Updated 2026-09-21. Code-side work for 1.0 is committed on `gsd-testing`
+(iOS 18 floor, teal icon, privacy manifest, deletion fix, store tooling and
+metadata under `docs/store/`). Everything below is the manual path, in the
+order that avoids blocking a later step. ☐ = still to do · ☑ = done.
+
+Decisions locked for 1.0: Individual Apple account (legal name shows as
+Seller — accepted), based in Quebec; **no EU distribution** (keeps your
+address/phone off the store page); domain **abimo.app** with role e-mails;
+GitHub repo private; English only.
 
 ---
 
-## 1. One-time account setup (~20 min)
+## 0. Day one — accounts and money (~1 h, approvals take days, so first)
 
-### 1a. OpenAI spend cap — do this first
-1. Go to https://platform.openai.com/settings/organization/limits
-2. Set a **monthly budget (hard limit)**: suggested **$50** at launch scale.
-3. Set an **email alert** at $25.
+### 0a. Apple: Agreements, Tax, and Banking
+App Store Connect → Business (or Agreements, Tax, and Banking).
+- ☐ **Paid Apps Agreement** — accept as Account Holder. Subscriptions stay
+  "Missing Metadata / not submittable" until this is *Active*.
+- ☐ **Tax** — the prompt is country-specific. For Canada it asks GST/HST
+  (and **QST** for Quebec) registration. If you're not registered (small
+  supplier, < $30k over four quarters) choose that option. Apple is merchant
+  of record for sales taxes and remits them; your Canadian remittances are
+  reduced by GST/QST *on Apple's commission* only. Ask an accountant once;
+  the income is self-employment income on your T1 unless you incorporate.
+- ☐ **Banking** — a Canadian account in your name (institution, transit,
+  account). Payouts arrive ~33 days after the end of Apple's fiscal month
+  once the small minimum is met; balances roll over. Track under Payments
+  and Financial Reports.
+- ☐ **Small Business Program** — enroll right after the agreement is active
+  (15 % commission instead of 30 %; new developers qualify automatically).
 
-This is the final backstop behind the per-user rate limits already deployed.
-Even if everything else failed, your bill can never exceed this number.
+### 0b. Identity exposure (what will and won't be public)
+- Your **legal name** as *Seller* — unavoidable on an Individual account.
+  To change later: incorporate → D-U-N-S → convert to Organization.
+- ☐ **Trader status** (Business → Compliance): declare. With no EU
+  distribution Apple's help says you are *not* acting as a trader on the App
+  Store, so no address/phone is published. Then in *Pricing and
+  Availability* **deselect the 27 EU countries** (§2e).
+- ☐ **GitHub** `5mars/abimo` → Settings → Danger Zone → make **private**.
+  `5mars/abimo-legal` stays public (it is the website).
+- ☐ **Firebase API key** — Google Cloud Console → APIs & Services →
+  Credentials → the iOS key → Application restrictions → iOS apps →
+  `com.mars.Abimo`.
+- Heads-up (not blocking): Quebec's language law expects software sold in
+  Quebec to be available in French unless no French version exists.
+  English-only 1.0 is common; put French on the 1.x list.
 
-### 1b. Firebase project (~10 min)
-1. Go to https://console.firebase.google.com → **Create project** → name it `Abimo`
-   (Google Analytics: leave enabled, default settings).
-2. In the project: **Add app → iOS**. Bundle ID: `com.mars.Abimo`. Nickname: Abimo.
-3. **Download `GoogleService-Info.plist`.**
-4. In Xcode, drag the file into the `Abimo/` folder (the yellow group with the
-   source files). Check **"Copy items if needed"** and target **Abimo**.
-5. In the Firebase console, also enable **Crashlytics** (Build → Crashlytics → Get started).
+### 0c. Domain, e-mail, website
+- ☐ Register **abimo.app** (Cloudflare Registrar, ~US$15/yr, WHOIS privacy on).
+- ☐ Cloudflare → Email Routing: `support@`, `privacy@`, `review@` → your inbox.
+- ☐ Cloudflare DNS (DNS-only / grey cloud): `A` 185.199.108.153 ·
+  185.199.109.153 · 185.199.110.153 · 185.199.111.153, `AAAA`
+  2606:50c0:8000::153 · 8001::153 · 8002::153 · 8003::153,
+  `CNAME www → 5mars.github.io`.
+- ☐ Merge **5mars/abimo-legal PR #1** (landing + support + refreshed
+  privacy/terms + CNAME). Then repo Settings → Pages → Custom domain shows
+  `abimo.app`; tick **Enforce HTTPS** once the certificate is issued
+  (~10 min). Old `5mars.github.io/abimo-legal/…` links redirect.
+- ☐ Tell Claude the domain resolves → the in-app feedback e-mail and
+  privacy/terms links switch to `support@abimo.app` / `abimo.app/...`
+  (`SettingsView.swift`, `PaywallView.swift`) and get committed.
 
-That's it — the code already calls `FirebaseApp.configure()` and skips gracefully
-when the file is missing, so nothing else changes.
-
-**Verify:** in Xcode, edit the Abimo scheme → Run → Arguments → add
-`-FIRDebugEnabled`. Run the app, open Firebase console → Analytics → **DebugView**,
-and click around (record an idea, open the paywall). Events should stream in live.
-Remove the argument afterwards — without it, debug builds send nothing (by design).
-
-Events you'll see: `login`, `sign_up`, `screen_view` (per tab), `idea_created`,
-`pipeline_stage_completed`, `pipeline_completed`, `pipeline_failed`, `analysis_viewed`,
-`gate_hit`, `paywall_shown` (with `context`), `purchase_initiated`,
-`purchase_succeeded`, `purchase_failed`, `purchase_restored`, `trial_started`.
-
-### 1c. Funnels to build later in Firebase (once real data flows)
-In Analytics → **Explore → Funnel exploration**:
-1. **Activation:** `login` → `idea_created` → `pipeline_completed` → `analysis_viewed`
-2. **Monetization:** `gate_hit` → `paywall_shown` → `purchase_initiated` → `purchase_succeeded`
-   (add breakdown by the `context` parameter to see which gate converts)
-3. **Reliability:** `idea_created` → `pipeline_completed`, plus a free-form
-   exploration of `pipeline_failed` broken down by `stage`
-
----
-
-## 2. App Store Connect setup (~45 min)
-
-Prereq: your Apple Developer Program membership is active (team `VMFBV25WD2`).
-
-### 2a. Create the app record
-1. https://appstoreconnect.apple.com → My Apps → **+ → New App**
-2. Platform iOS · Name **Abimo** · Primary language English ·
-   Bundle ID `com.mars.Abimo` · SKU e.g. `abimo-ios`.
-
-### 2b. Create the subscriptions (must match the code exactly)
-Monetization → Subscriptions → **Create subscription group** named `Abimo Plus`, then:
-
-| Product ID | Duration | Price | Intro offer |
-|---|---|---|---|
-| `com.mars.Abimo.plus.monthly` | 1 month | $4.99 | — |
-| `com.mars.Abimo.plus.yearly` | 1 year | $34.99 | 3-day free trial |
-
-- Each needs a localized display name + description (e.g. "Abimo Plus Monthly" /
-  "Unlimited ideas and full tasting reports").
-- Each needs a **review screenshot** — a screenshot of the paywall is fine.
-- Product IDs are case-sensitive and permanent. Copy-paste them.
-
-### 2c. App Privacy section
-Privacy Policy URL: `https://5mars.github.io/abimo-legal/privacy/`
-
-Data collection questionnaire — declare, all **linked to identity**, none used for tracking:
-- **Contact info → Email address** (app functionality)
-- **User content → Audio data** (app functionality)
-- **Identifiers → User ID** (app functionality + analytics)
-- **Usage data → Product interaction** (analytics)
-- **Diagnostics → Crash data + Performance data** (app functionality / analytics)
-
-Answer **No** to "do you use data for tracking" — the app has no IDFA/ads.
-
-### 2d. Age rating + category
-- Category: **Productivity** (secondary: Business).
-- Age rating questionnaire: everything "No" → 4+.
+### 0d. Other consoles
+- ☐ **OpenAI** → Settings → Limits: hard monthly budget **$50**, alert **$25**.
+- ☐ **Firebase** (project `abimo-5bfbd` exists, plist is in the app):
+  confirm *Google Analytics is enabled* for the project (Project settings →
+  Integrations — the plist says `IS_ANALYTICS_ENABLED = false`); enable
+  **Crashlytics**; verify events in Analytics → DebugView by running the app
+  once with the `-FIRDebugEnabled` argument (already in the scheme, disabled).
 
 ---
 
-### 2e. App icon redraw (palette change, Sept 2026)
-The app moved to a teal-on-cream palette (the horse's brown is the accent,
-not the brand). The only red left anywhere is the raster app icon
-(`Abimo/Assets.xcassets/AppIcon.appiconset/AppIcon-light.png`, `-dark.png`,
-`-tinted.png`, 1024×1024). Redraw it on teal `#2A9D8F` / cream `#FFFBF5`
-(the horse on a teal circle works) and drop the three PNGs back in with the
-same filenames. Until then the launch screen (teal) and the icon (coral) disagree.
+## 1. Server — deploy before TestFlight (~10 min)
+The held "tier-cap" deploy only protected existing Plus users (there are none
+yet), and `extend-action-plan` (Next chapter) is not deployed at all.
 
-### 2f. Project location
-The repo now lives at `~/Developer/abimo` — NOT under `~/Desktop`. iCloud's
-Desktop sync was creating `Foo 2.swift` duplicates that Xcode compiled as
-redeclarations. Open `~/Developer/abimo/Abimo.xcodeproj` from now on.
-
----
-
-## 3. Archive & upload (~15 min)
-
-1. In Xcode select the **Abimo** scheme, destination **Any iOS Device (arm64)**.
-2. **Product → Archive** (uses Release config — the debug premium override is
-   compiled out automatically).
-3. Organizer window → **Distribute App → App Store Connect → Upload** (defaults fine).
-4. Wait ~15–30 min for processing; you'll get an email when the build is ready.
-   The privacy manifest and dSYM upload are already wired in.
-
-If the upload complains about the app icon: the dark/tinted variants are currently
-copies of the light icon — acceptable, but real variants look better on iOS 18+
-themed home screens (asset catalog: `AppIcon.appiconset`).
+```bash
+deno test supabase/functions/_shared/
+deno check supabase/functions/_shared/*.ts supabase/functions/*/index.ts
+supabase functions deploy analyze-swot research-market generate-action-plan transcribe-audio verify-entitlement extend-action-plan
+```
+- ☐ Dashboard → Database → Extensions → enable **pg_cron**, then run the
+  `cron.schedule('expire-lapsed-plus', …)` block from
+  `supabase/migrations/20260916130000_profiles_plus.sql` in the SQL editor.
+- ☐ Edge Functions → Secrets: `OPENAI_API_KEY`, `AI_LIMIT_EXEMPT_USER_IDS`
+  present; **`ALLOW_STOREKIT_TEST_ENV` absent**.
 
 ---
 
-## 4. TestFlight (~10 min + review wait)
+## 2. App Store Connect (~45 min) — `docs/store/metadata.md` has every string
 
-1. App Store Connect → your app → **TestFlight** tab.
-2. The uploaded build appears; answer the export-compliance question
-   (uses standard encryption only → **Yes, exempt** — HTTPS only).
-3. **Internal testing:** create a group, add your own Apple ID → instant install
-   via the TestFlight app. Test on your real phone:
-   - record → transcribe → analysis → action plan end-to-end
-   - hit the 3-idea cap → paywall from each gate
-   - **sandbox purchase**: Settings → App Store → Sandbox Account (create a
-     sandbox tester in App Store Connect → Users and Access → Sandbox), buy
-     monthly and yearly, test Restore Purchases, test account deletion
-   - background the app mid-pipeline → notification arrives
-4. **External testing** (optional, for friends/strangers): create an external
-   group, add emails or enable a public link. First external build requires a
-   lightweight **Beta App Review** (~1 day).
+- ☐ **2a. New App**: iOS · *Abimo* · English (U.S.) · `com.mars.Abimo` · SKU `abimo-ios`.
+- ☐ **2b. Subscriptions** → group **Abimo Plus**:
 
----
+  | Product ID | Duration | Price | Intro offer |
+  |---|---|---|---|
+  | `com.mars.Abimo.plus.monthly` | 1 month | $4.99 | **Free, 1 week** |
+  | `com.mars.Abimo.plus.yearly` | 1 year | $34.99 | **Free, 1 week** |
 
-## 5. App Store submission
-
-1. **Screenshots**: required for 6.9" (iPhone 17 Pro Max) and 6.5" displays.
-   Take them in the simulator (Cmd+S). 4–6 screens: kitchen with ideas, recording,
-   the tasting report/score, action plan, paywall.
-2. **Metadata**: description, keywords (e.g. startup ideas, voice notes, idea
-   validation, side project, business coach), support URL
-   (`https://5mars.github.io/abimo-legal/`), marketing URL optional.
-3. **App Review Information — critical because the app is login-gated:**
-   - Create a demo account in the app (e.g. `review@cinqmars.ca` + password),
-     confirm its email, and put the credentials in the review notes.
-   - Note for the reviewer: "AI analysis takes ~60–90 s per idea. Free tier
-     allows 3 ideas; the Abimo Plus subscription unlocks unlimited ideas and
-     full analysis detail."
-4. Attach the build, select the subscriptions for this version, **Submit for Review**.
-   First review typically takes 1–3 days. Common first-app rejections are already
-   handled: working privacy URL ✓, restore purchases ✓, account deletion ✓,
-   demo account ✓, subscription disclosure text ✓.
+  Display names/descriptions from the metadata file; review screenshot =
+  the paywall PNG in `docs/store/screenshots/`. IDs are case-sensitive and
+  permanent — copy-paste.
+- ☐ **2c. App Privacy**: policy URL `https://abimo.app/privacy/`; declare
+  Email · Audio · Other User Content · User ID · **Device ID** · Product
+  Interaction · Crash · Performance, exactly as the table in the metadata
+  file; tracking = **No**.
+- ☐ **2d. Age rating**: complete Apple's questionnaire honestly (expect 4+).
+  Category Productivity / Business.
+- ☐ **2e. Pricing & Availability**: Free. Availability → deselect Austria,
+  Belgium, Bulgaria, Croatia, Cyprus, Czechia, Denmark, Estonia, Finland,
+  France, Germany, Greece, Hungary, Ireland, Italy, Latvia, Lithuania,
+  Luxembourg, Malta, Netherlands, Poland, Portugal, Romania, Slovakia,
+  Slovenia, Spain, Sweden.
+- ☐ **2f. Sandbox tester**: Users and Access → Sandbox → add a test Apple ID
+  (any e-mail you control; it never needs to be a real Apple account).
+- ☐ **2g. Demo account** for App Review: sign up `review@abimo.app` in the
+  app, confirm the e-mail, record **two** ideas and let them finish (one
+  free stall stays open for the reviewer). Put the password in the review
+  notes only — never in git.
 
 ---
 
+## 3. Store assets (Claude drives, you approve) — `scripts/store-assets.sh`
+- ☐ Sign the simulator in as the demo account; capture six raw screens
+  (`shot 01-record` … `06-plus`), `compose` → `docs/store/screenshots/`
+  (1320×2868, one 6.9" set is all Apple needs; it scales the rest).
+- ☐ Record one 20–25 s walkthrough (`rec start`, navigate, `rec stop`),
+  `preview in.mov out.mp4` → 886×1920 H.264 + silent AAC → `docs/store/previews/`.
+  Up to 3 previews; they autoplay muted. (There is no interactive media on
+  the App Store.)
+- ☐ App icon: approve the teal horse on the simulator home screen
+  (alternative head-shot crop in `docs/store/icon-alt/`). Regenerate with
+  `swift tools/render-app-icon.swift Abimo/Assets.xcassets/MascotNeutral.imageset/neutral_3x.png <out>`.
+
+---
+
+## 4. Merge, archive, upload (~20 min)
+- ☐ Open/merge PR `gsd-testing → main`. **Archive from `main`.**
+- ☐ Xcode → scheme *Abimo* → destination *Any iOS Device (arm64)* →
+  Product → **Archive** → Organizer → *Distribute App* → *App Store Connect*
+  → Upload. No export-compliance prompt (declared in the build); Crashlytics
+  dSYMs upload from the run-script. Version 1.0, build 2.
+- ☐ Wait for the "build processed" e-mail (15–30 min).
+
+## 5. TestFlight device pass (~1 h)
+- ☐ TestFlight tab → Internal Testing → group with your Apple ID → install
+  from the TestFlight app on your iPhone.
+- ☐ Sign up fresh → walk-in tour → record → transcribe → taste → chapter 1
+  → complete steps → wrap-up.
+- ☐ 4th idea → Stable's full → paywall. 4th tasting of the day → daily cap.
+- ☐ Settings → App Store → Sandbox Account = your tester. Buy monthly, then
+  yearly (7-day trial shown). Within a minute `profiles.is_premium = true`
+  in the dashboard. Next chapter appends chapter 2. Re-taste keeps the row
+  id and shows the delta. Restore Purchases. Manage Subscription opens
+  Apple's sheet.
+- ☐ Background the app mid-pipeline → notification arrives → tap deep-links.
+- ☐ Delete Account → gone from `auth.users` and the `voice-recordings` bucket.
+- ☐ Firebase DebugView shows events; Crashlytics shows the build's dSYM.
+- ☐ Optional: External Testing group for friends (first build needs a ~1 day
+  Beta App Review).
+
+## 6. Submit
+- ☐ App Store tab → 1.0 → attach the build, add screenshots + previews,
+  paste metadata, **select both subscriptions** for this version, App Review
+  Information (demo login + notes from `docs/store/metadata.md`), release
+  = **Manually**.
+- ☐ Submit for Review. First reviews take 1–3 days. If rejected, paste the
+  note to Claude — every common first-app cause (privacy URL, restore,
+  account deletion, demo login, subscription disclosure, export compliance)
+  is already covered.
+- ☐ Approved → Release this version. Watch `score_audits`, Crashlytics and
+  the OpenAI spend the first week.
+
+---
 ## Deployed server-side protection (reference)
 
 Already live on Supabase project `ymbfqlrarlnqtzatgfah` (verified with curl):
 
 | Protection | Value |
 |---|---|
-| JWT verification | all 4 edge functions, gateway + in-function |
+| JWT verification | all 6 edge functions, gateway + in-function |
 | Daily per-user budgets | transcribe 10 · research 10 · SWOT 20 · plan 20 |
 | voice_notes insert backstop | 10/user/day (DB trigger) |
 | transcribe-audio URL lock | only this project's voice-recordings bucket, ≤20 MB |
