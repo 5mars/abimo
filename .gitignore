@@ -116,3 +116,11 @@ supabase/.temp/
 # macOS / iCloud Desktop-sync duplicate copies ("Foo 2.swift")
 * 2.*
 !Abimo/Assets.xcassets/AppIcon.appiconset/*
+
+# Apple signing / API keys — never commit
+*.p8
+*.p12
+*.cer
+*.certSigningRequest
+*.mobileprovision
+*.provisionprofile
