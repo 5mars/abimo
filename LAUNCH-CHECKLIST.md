@@ -155,7 +155,7 @@ supabase functions deploy analyze-swot research-market generate-action-plan tran
 - ☐ Wait for the "build processed" e-mail (15–30 min).
 
 ### 4a. Supabase auth — do before anyone signs up (incl. the review account)
-- ☐ **URL Configuration** (Authentication → URL Configuration): Site URL
+- ☑ **URL Configuration** done 2026-09-22 (Site URL abimo.ca; redirects abimo.ca/confirmed/ + noteai://auth-callback). Was: Site URL
   `https://abimo.ca`; Redirect URLs: add `https://abimo.ca/confirmed/` and
   `noteai://auth-callback`. Without the allow-list Supabase ignores the
   app's redirect and lands on the default `localhost:3000` — the dark page.
@@ -164,9 +164,9 @@ supabase functions deploy analyze-swot research-market generate-action-plan tran
   from a supabase address. Resend on `abimo.ca` (steps in
   `docs/ops/DOMAIN-EMAIL-HOSTING.md` §6). Not the cause of the dark page, but
   a launch blocker: sign-up mail stops after the first few users.
-- ☐ Check `review@abimo.ca` in Authentication → Users: if "Confirmed" is
-  empty, use the row's *Confirm user* action (the link was consumed by the
-  verify step even though the page after it was blank).
+- ☐ `review@abimo.ca`: the built-in mailer's cap (2 e-mails/hour) blocked the
+  resend. Confirm by hand in the SQL editor instead:
+  `update auth.users set email_confirmed_at = now() where email = 'review@abimo.ca' and email_confirmed_at is null;`
 
 ## 5. TestFlight device pass (~1 h)
 - ☐ TestFlight tab → Internal Testing → group with your Apple ID → install
