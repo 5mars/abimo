@@ -126,13 +126,16 @@ supabase functions deploy analyze-swot research-market generate-action-plan tran
 ---
 
 ## 3. Store assets (Claude drives, you approve) — `scripts/store-assets.sh`
-- ☐ Sign the simulator in as the demo account; capture six raw screens
-  (`shot 01-record` … `06-plus`), `compose` → `docs/store/screenshots/`
-  (1320×2868, one 6.9" set is all Apple needs; it scales the rest).
-- ☐ Record one 20–25 s walkthrough (`rec start`, navigate, `rec stop`),
-  `preview in.mov out.mp4` → 886×1920 H.264 + silent AAC → `docs/store/previews/`.
-  Up to 3 previews; they autoplay muted. (There is no interactive media on
-  the App Store.)
+- ☑ 2026-09-22: five framed screenshots in `docs/store/screenshots/`
+  (record · taste · evidence · chapter 1 journey · chapter 2) and a 24.5 s
+  preview `docs/store/previews/abimo-preview-6.9.mp4` (886×1920, H.264 High
+  L4.0, silent AAC — passes ffprobe). Captured on Jeremy's account.
+- ☐ Shot 6, the paywall, needs the StoreKit test config so prices render:
+  run the app from **Xcode (Cmd+R, Abimo scheme, iPhone 17 Pro Max)** — the
+  scheme attaches `AbimoPlus.storekit`; `simctl launch` cannot. Then Profile →
+  Go Plus, `scripts/store-assets.sh shot 06-plus`, `compose`.
+- ☐ Apple wants a **poster frame** for the preview: pick one in App Store
+  Connect after upload (the gauge at ~7 s reads best).
 - ☐ App icon: approve the teal horse on the simulator home screen
   (alternative head-shot crop in `docs/store/icon-alt/`). Regenerate with
   `swift tools/render-app-icon.swift Abimo/Assets.xcassets/MascotNeutral.imageset/neutral_3x.png <out>`.
