@@ -54,14 +54,17 @@ struct ActionPlanDetailView: View {
 
             // Plan completion overlay
             if viewModel.celebrationState == .planComplete {
+                // The overlay paints its own full-bleed background; the content
+                // itself must respect the safe area, and the nav bar goes away so
+                // "What did we learn?" isn't hidden under the inline title.
                 PlanCompletionView(viewModel: viewModel, onDismiss: {
                     viewModel.celebrationState = .idle
                 })
                 .transition(.move(edge: .bottom).combined(with: .opacity))
                 .zIndex(2)
-                .ignoresSafeArea()
             }
         }
+        .toolbar(viewModel.celebrationState == .planComplete ? .hidden : .visible, for: .navigationBar)
         .animation(.easeInOut(duration: 0.3), value: viewModel.celebrationState)
         .animation(.easeInOut(duration: 0.25), value: viewModel.errorMessage)
         .navigationTitle(viewModel.actionPlan?.title ?? "")

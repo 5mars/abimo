@@ -30,9 +30,14 @@ struct PlanWrapUpView: View {
     private let aiService = AIAnalysisService()
 
     private var actions: [MicroAction] { viewModel.microActions }
-    private var didIt: Int { actions.filter { $0.completionOutcome != "didnt_work" }.count }
-    private var didntWork: Int { actions.filter { $0.completionOutcome == "didnt_work" }.count }
-    private var notes: [String] { actions.compactMap(\.completionNote).filter { !$0.isEmpty } }
+    /// Before → after: the re-taste just performed wins; otherwise the stored history.
+    private var scoreChange: (old: Int, new: Int)? {
+        if let retasteResult { return retasteResult }
+        if let analysis, let previous = analysis.previousScore, let current = analysis.viabilityScore, previous != current {
+            return (previous, current)
+        }
+        return nil
+    }
     private var daysToComplete: Int {
         guard let first = viewModel.actionPlan?.createdAt,
               let last = actions.compactMap(\.completedAt).max() else { return 0 }
@@ -46,36 +51,14 @@ struct PlanWrapUpView: View {
                     .font(.system(size: 12, weight: .black, design: .rounded))
                     .foregroundColor(.textSec)
 
-                // Recap
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack(spacing: 18) {
-                        stat("\(didIt)", "did it", .brandGreen)
-                        stat("\(didntWork)", "didn't work", .brandAmber)
-                        stat("\(viewModel.completedMinutes)", "minutes", .brandBlue)
-                        stat("\(daysToComplete)", daysToComplete == 1 ? "day" : "days", .brand)
-                    }
-                    if !notes.isEmpty {
-                        Divider().overlay(Color.cardEdge)
-                        Text("KITCHEN NOTES")
-                            .font(.system(size: 11, weight: .black, design: .rounded))
-                            .foregroundColor(.textSec)
-                        ForEach(notes.prefix(5), id: \.self) { note in
-                            HStack(alignment: .top, spacing: 8) {
-                                Image(systemName: "quote.opening")
-                                    .font(.system(size: 10, weight: .bold))
-                                    .foregroundColor(.textSec)
-                                    .padding(.top, 3)
-                                Text(note)
-                                    .font(.system(size: 13))
-                                    .italic()
-                                    .foregroundColor(.textPri)
-                                    .fixedSize(horizontal: false, vertical: true)
-                            }
-                        }
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .duoPanel()
+                // Recap dashboard — numbers + the founder's own notes
+                WrapUpDashboard(
+                    actions: actions,
+                    completedMinutes: viewModel.completedMinutes,
+                    daysToComplete: daysToComplete,
+                    streak: viewModel.streak,
+                    scoreChange: scoreChange
+                )
 
                 // Doors
                 VStack(spacing: 10) {
@@ -156,18 +139,6 @@ struct PlanWrapUpView: View {
     }
 
     // MARK: - Bits
-
-    private func stat(_ value: String, _ label: String, _ tint: Color) -> some View {
-        VStack(spacing: 2) {
-            Text(value)
-                .font(.system(size: 22, weight: .bold, design: .rounded))
-                .foregroundColor(tint)
-            Text(label)
-                .font(.duoCaption)
-                .foregroundColor(.textSec)
-        }
-        .frame(maxWidth: .infinity)
-    }
 
     private func door(_ title: String, _ detail: String, icon: String, plus: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
