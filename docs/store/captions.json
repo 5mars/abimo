@@ -1,8 +1,8 @@
 [
-  { "file": "01-record.png",   "title": "Say it out loud.",        "subtitle": "No forms, no templates. Just talk." },
-  { "file": "02-taste.png",    "title": "Get it tasted.",          "subtitle": "One honest critic. One score out of 100." },
-  { "file": "03-evidence.png", "title": "See the receipt.",        "subtitle": "Reasons and live market research behind every point." },
-  { "file": "04-journey.png",  "title": "Cook chapter one.",       "subtitle": "Small steps sized for a real week." },
-  { "file": "05-stable.png",   "title": "Three ideas, free.",      "subtitle": "Retire one and the stall opens up." },
-  { "file": "06-plus.png",     "title": "Then the second chapter.", "subtitle": "Next chapters, re-tastes, full evidence. 7 days free." }
+  { "file": "01-record.png",   "title": "Say it out loud.",         "subtitle": "No forms, no templates. Just talk." },
+  { "file": "02-taste.png",    "title": "Get it tasted.",           "subtitle": "One honest critic. One score out of 100." },
+  { "file": "03-evidence.png", "title": "See the receipt.",         "subtitle": "Reasons and live market research behind every point." },
+  { "file": "04-journey.png",  "title": "Cook chapter one.",        "subtitle": "Small steps sized for a real week." },
+  { "file": "05-chapter2.png", "title": "Then build for real.",     "subtitle": "Chapters 2 to 5: concrete steps sized to your skills and time." },
+  { "file": "06-plus.png",     "title": "Plus is the second chapter.", "subtitle": "Next chapters, re-tastes, full evidence. 7 days free." }
 ]

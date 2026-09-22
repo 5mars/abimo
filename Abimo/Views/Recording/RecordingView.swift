@@ -17,6 +17,7 @@ struct RecordingView: View {
     private let walkIn = WalkInDirector.shared
     @State private var showPipeline = false
     @State private var showPaywall = false
+    @State private var tooShort = false
     @State private var capLine = MascotVoice.moment(for: .ideaCapReached).line
     @State private var promptIndex = Int.random(in: 0..<RecordingPrompts.pool.count)
 
@@ -131,6 +132,9 @@ struct RecordingView: View {
             .transition(.opacity.combined(with: .scale(scale: 0.9)))
         } else if saveFailed {
             statusLine("That one slipped off the counter. Try again?")
+        } else if tooShort {
+            statusLine("Blink and I missed it. Give me a sentence or two.")
+                .transition(.opacity.combined(with: .scale(scale: 0.95)))
         } else if capBlocked {
             statusLine(capLine)
                 .transition(.opacity.combined(with: .scale(scale: 0.95)))
@@ -149,12 +153,16 @@ struct RecordingView: View {
             Text("What's galloping around in there?")
                 .font(.duoScreenTitle)
                 .foregroundColor(.textPri)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, 24)
 
             Text("Pitch your idea out loud.\nThe critic turns it into a plan.")
                 .font(.system(size: 15))
                 .foregroundColor(.textSec)
                 .multilineTextAlignment(.center)
                 .lineSpacing(4)
+                .fixedSize(horizontal: false, vertical: true)
 
             promptChip
                 .padding(.top, 2)
@@ -215,6 +223,7 @@ struct RecordingView: View {
                 } else if capBlocked {
                     showPaywall = true
                 } else if !saveFailed {
+                    tooShort = false
                     Task { await viewModel.startRecording() }
                 }
             } label: {
@@ -314,7 +323,19 @@ struct RecordingView: View {
 
     /// Stop → full pipeline (save, transcribe, analyze, plan) with a staged
     /// progress cover. Zero taps between stopping and seeing results.
+    /// Under two seconds there's nothing to transcribe — a double-tap, or the
+    /// permission prompt eating the first tap. Drop it and say so; no upload,
+    /// no AI credit, no junk idea in the Stable.
+    private static let minRecordingSeconds: TimeInterval = 2
+
     private func stopAndSave() {
+        if viewModel.recordingDuration < Self.minRecordingSeconds {
+            viewModel.cancelRecording()
+            AnimationPolicy.animate(.spring(response: 0.3, dampingFraction: 0.8)) { tooShort = true }
+            HapticEngine.impact(style: .rigid)
+            return
+        }
+        tooShort = false
         viewModel.stopRecording()
         showPipeline = true
         walkIn.recordingSubmitted()
