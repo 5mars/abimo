@@ -44,7 +44,9 @@ enum PostCompletionSheet: Identifiable, Equatable {
 @MainActor
 class ActionPlanViewModel: ObservableObject {
     @Published var actionPlan: ActionPlan?
-    @Published var microActions: [MicroAction] = []
+    @Published var microActions: [MicroAction] = [] {
+        didSet { if let plan = actionPlan { PlanCache.shared.store(plan: plan, actions: microActions) } }
+    }
     @Published var activeCommitment: Commitment?
     @Published var nudges: [NudgeMessage] = []
     @Published var isGenerating = false
@@ -208,6 +210,12 @@ class ActionPlanViewModel: ObservableObject {
     // MARK: - Load Existing Plan
 
     func loadActionPlan(analysisId: UUID) async {
+        // Last known copy first — the journey draws immediately; the network
+        // only corrects it. A spinner is for the very first look at a plan.
+        if actionPlan == nil, let cached = PlanCache.shared.entry(analysisId: analysisId) {
+            actionPlan = cached.plan
+            microActions = cached.actions
+        }
         let isFirstLoad = actionPlan == nil
         if isFirstLoad { isLoading = true }
         defer { if isFirstLoad { isLoading = false } }

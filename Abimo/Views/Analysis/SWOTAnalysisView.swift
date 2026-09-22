@@ -36,12 +36,15 @@ struct SWOTAnalysisView: View {
 
     /// True when this idea already has an action plan — the CTA then opens
     /// it instead of promising to "get" one that exists.
-    private let hasPlan: Bool
+    /// The plan that already exists for this analysis, if any — the CTA
+    /// then opens it (in the Actions tab) instead of cooking a new one.
+    private let existingPlan: ActionPlan?
+    private var hasPlan: Bool { existingPlan != nil }
 
-    init(transcription: Transcription, preloadedAnalysis: SWOTAnalysis? = nil, noteTitle: String = "", hasPlan: Bool = false) {
+    init(transcription: Transcription, preloadedAnalysis: SWOTAnalysis? = nil, noteTitle: String = "", existingPlan: ActionPlan? = nil) {
         self.transcription = transcription
         self.noteTitle = noteTitle
-        self.hasPlan = hasPlan
+        self.existingPlan = existingPlan
         if let existing = preloadedAnalysis {
             _viewModel = StateObject(wrappedValue: AnalysisViewModel(preloadedAnalysis: existing))
         } else {
@@ -236,6 +239,11 @@ struct SWOTAnalysisView: View {
     /// Shared "turn this into action" behavior — used by the bottom CTA and
     /// the quadrant sheets' action button.
     private func startActionPlan(_ analysis: SWOTAnalysis) {
+        if let existingPlan {
+            coordinator.openPlan(existingPlan)
+            dismiss()
+            return
+        }
         coordinator.startPlanGeneration(
             analysis: analysis,
             transcriptionText: transcription.text,

@@ -8,6 +8,8 @@
 // skill, time, budget and goal.
 
 export const MAX_CHAPTER = 5;
+/** Fewest steps a Plus chapter may have; the function re-asks once below this. */
+export const MIN_CHAPTER_STEPS = 6;
 
 export const TECH_SKILLS = ["none", "no_code", "can_code"] as const;
 export const HOURS = ["few", "evenings", "full_time"] as const;
@@ -135,7 +137,7 @@ ${describeBrief(brief)}
 
 BUILD RULES:
 - Every step names the exact tool, platform, place or number. "Post on social media" is banned; "Post 3 before/after reels on the @[handle] TikTok, one per day" is right.
-- 5-8 steps, ordered so they can be done top to bottom. Each takes 15 to 240 minutes (use 15, 30, 45, 60, 90, 120, 180 or 240).
+- 6-10 steps — never fewer than 6 — ordered so they can be done top to bottom. Each takes 15 to 240 minutes (use 15, 30, 45, 60, 90, 120, 180 or 240).
 - Never repeat a step from earlier chapters, even reworded. A "DIDN'T WORK" outcome means change the approach, not retry it. Quote the founder's own notes back where it makes a step more credible.
 - Spending is allowed only within the stated budget, and only when a free path would be clearly slower.
 - Coding only if the founder can code; otherwise AI/no-code builders or a manual version.
@@ -188,7 +190,7 @@ REAL SMALL COMPARABLES: ${i.comparables}
 EVERYTHING DONE IN EARLIER CHAPTERS (do not repeat any of these):
 ${i.history}
 
-Generate chapter ${i.chapter} — "${rung?.title ?? ""}": 5-8 concrete steps with copy-paste templates, sized to this founder.`;
+Generate chapter ${i.chapter} — "${rung?.title ?? ""}": 6-10 concrete steps with copy-paste templates, sized to this founder.`;
 }
 
 /** Same outer shape as chapter one so the app reuses ActionPlanResponse. */
@@ -205,7 +207,7 @@ export const CHAPTER_SCHEMA = {
           text: { type: "string" },
           done_criteria: { type: "string" },
           time_estimate_minutes: { type: "integer", enum: [15, 30, 45, 60, 90, 120, 180, 240] },
-          priority: { type: "integer", minimum: 1, maximum: 8 },
+          priority: { type: "integer", minimum: 1, maximum: 10 },
           quadrant: { type: "string", enum: ["strength", "weakness", "opportunity", "threat"] },
           template: { type: "string" },
           action_type: { type: "string", enum: ["message", "search", "email", "post", "link", "generic"] },

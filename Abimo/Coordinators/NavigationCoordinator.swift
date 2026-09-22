@@ -92,6 +92,14 @@ final class NavigationCoordinator: ObservableObject {
         pendingNote = note
     }
 
+    /// Plans live in the Actions tab. Every "open your plan" button — the
+    /// Pitch card, the taste sheet, a notification — lands there, so the tab
+    /// bar always agrees with what's on screen.
+    func openPlan(_ plan: ActionPlan) {
+        selectedTab = .actions
+        pendingPlan = PendingPlanRoute(planId: plan.id, analysisId: plan.analysisId)
+    }
+
     /// Fire-and-forget plan generation that survives sheet dismissal.
     /// On failure the context is kept so the Actions tab can offer a retry
     /// instead of silently never showing the plan.

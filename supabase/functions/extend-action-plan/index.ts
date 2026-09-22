@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { authenticate, consumeCredit, jsonError, requirePlus, CORS_HEADERS } from "../_shared/gate.ts";
 import {
-  buildSystemPrompt, buildUserMessage, CHAPTER_SCHEMA, LADDER, nextChapterFor, parseBrief,
+  buildSystemPrompt, buildUserMessage, CHAPTER_SCHEMA, LADDER, MIN_CHAPTER_STEPS, nextChapterFor, parseBrief,
 } from "../_shared/chapters.ts";
 
 // "Plus is the second chapter": appends the next chapter (2-5) to a finished
@@ -102,29 +102,38 @@ serve(async (req) => {
       history,
     });
 
-    const openaiRes = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: { "Authorization": `Bearer ${OPENAI_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "gpt-4o-mini", // step lists don't need the scored model; 16× cheaper,
-        temperature: 0.4,
-        max_tokens: 3000,
-        response_format: { type: "json_schema", json_schema: { name: "plan_chapter", schema: CHAPTER_SCHEMA, strict: true } },
-        messages: [
-          { role: "system", content: buildSystemPrompt(nextChapter, brief) },
-          { role: "user", content: userMessage },
-        ],
-      }),
-    });
+    const askOpenAI = async (extraNudge: string) => {
+      const res = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${OPENAI_API_KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "gpt-4o-mini", // step lists don't need the scored model; 16× cheaper
+          temperature: 0.4,
+          max_tokens: 3500,
+          response_format: { type: "json_schema", json_schema: { name: "plan_chapter", schema: CHAPTER_SCHEMA, strict: true } },
+          messages: [
+            { role: "system", content: buildSystemPrompt(nextChapter, brief) },
+            { role: "user", content: userMessage + extraNudge },
+          ],
+        }),
+      });
+      if (!res.ok) {
+        console.error(`OpenAI error ${res.status}:`, await res.text());
+        return { error: jsonError("OpenAI request failed", 502) };
+      }
+      const content = (await res.json()).choices?.[0]?.message?.content;
+      if (!content) return { error: jsonError("Empty response from OpenAI", 502) };
+      return { result: JSON.parse(content) as { title?: string; summary?: string; actions?: unknown[] } };
+    };
 
-    if (!openaiRes.ok) {
-      console.error(`OpenAI error ${openaiRes.status}:`, await openaiRes.text());
-      return jsonError("OpenAI request failed", 502);
+    let attempt = await askOpenAI("");
+    if (attempt.error) return attempt.error;
+    let result = attempt.result!;
+    if ((result.actions?.length ?? 0) < MIN_CHAPTER_STEPS) {
+      console.warn(`extend-action-plan: only ${result.actions?.length ?? 0} steps, retrying`);
+      const retry = await askOpenAI(`\n\nYour previous answer had only ${result.actions?.length ?? 0} steps. This chapter MUST have between 6 and 10 steps. Add distinct, non-overlapping steps until it does.`);
+      if (!retry.error && (retry.result!.actions?.length ?? 0) > (result.actions?.length ?? 0)) result = retry.result!;
     }
-    const content = (await openaiRes.json()).choices?.[0]?.message?.content;
-    if (!content) return jsonError("Empty response from OpenAI", 502);
-
-    const result = JSON.parse(content);
 
     // The brief and the model's chapter name land on one row (RLS: the caller's
     // own). Best-effort — a storage hiccup must not cost the founder the chapter.
