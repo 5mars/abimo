@@ -33,6 +33,7 @@ enum AnalyticsEvent {
     case nextChapterRequested(chapter: Int)
     case nextChapterGenerated(chapter: Int, actions: Int)
     case chapterBriefSubmitted(chapter: Int, techSkill: String)
+    case micPermission(granted: Bool)
     case nextChapterFailed(chapter: Int, code: String)
     case retasteRequested(previousScore: Int)
     case retasteCompleted(previousScore: Int, newScore: Int)
@@ -78,6 +79,7 @@ enum AnalyticsEvent {
         case .nextChapterRequested:   return "next_chapter_requested"
         case .nextChapterGenerated:   return "next_chapter_generated"
         case .chapterBriefSubmitted:  return "chapter_brief_submitted"
+        case .micPermission:          return "mic_permission"
         case .nextChapterFailed:      return "next_chapter_failed"
         case .retasteRequested:       return "retaste_requested"
         case .retasteCompleted:       return "retaste_completed"
@@ -133,6 +135,8 @@ enum AnalyticsEvent {
             return ["chapter": chapter, "actions": actions]
         case .chapterBriefSubmitted(let chapter, let techSkill):
             return ["chapter": chapter, "tech_skill": techSkill]
+        case .micPermission(let granted):
+            return ["granted": granted ? 1 : 0]
         case .nextChapterFailed(let chapter, let code):
             return ["chapter": chapter, "code": code]
         case .retasteRequested(let previous):
