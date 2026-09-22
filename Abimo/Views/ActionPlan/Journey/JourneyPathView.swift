@@ -80,7 +80,11 @@ struct JourneyPathView: View {
                                 chapterTops[chapter.id] = top
                             }
                     }
-                    if viewModel.partCount < ActionPlanViewModel.maxChapters, !viewModel.microActions.isEmpty {
+                    if viewModel.isFinalChapterDone {
+                        finalChapterRow
+                            .padding(.horizontal, sideMargin)
+                            .padding(.top, 12)
+                    } else if viewModel.partCount < ActionPlanViewModel.maxChapters, !viewModel.microActions.isEmpty {
                         NextChapterGateCard(
                             state: viewModel.isExtending ? .generating : (viewModel.nextRecommendedAction == nil ? .ready : .locked),
                             nextChapter: viewModel.partCount + 1,
@@ -200,9 +204,34 @@ struct JourneyPathView: View {
             do {
                 try await viewModel.requestNextChapter()
             } catch {
-                gateError = "The next chapter didn't saddle up. Try again in a moment."
+                gateError = ChapterError.from(error).message
             }
         }
+    }
+
+    /// After chapter five there is nothing left to unlock — say so instead of
+    /// letting the card silently vanish.
+    private var finalChapterRow: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "flag.checkered")
+                .font(.system(size: 15, weight: .bold))
+                .foregroundColor(.brand)
+                .frame(width: 30, height: 30)
+                .background(Circle().fill(Color.brand.opacity(0.12)))
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Five chapters, cooked.")
+                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                    .foregroundColor(.textPri)
+                Text("That's the whole ladder. Re-taste the idea to see the number move — or ship it.")
+                    .font(.system(size: 12))
+                    .foregroundColor(.textSec)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 0)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .duoPanel(fill: .insetBg)
+        .accessibilityElement(children: .combine)
     }
 
     // MARK: - Chapter section
@@ -213,6 +242,22 @@ struct JourneyPathView: View {
         VStack(spacing: 0) {
             ChapterHeaderView(chapter: chapter, index: index)
             pathArea(chapter, width: sectionWidth)
+                .background {
+                    // Plus chapters stand on different ground: a soft band in the
+                    // rung's colour behind the path, so "chapter 3" feels like a
+                    // new place, not more of chapter 1.
+                    if let rung = chapter.rung {
+                        RoundedRectangle(cornerRadius: DuoTokens.Radius.card, style: .continuous)
+                            .fill(rung.band)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: DuoTokens.Radius.card, style: .continuous)
+                                    .strokeBorder(rung.face.opacity(0.18), lineWidth: 1.5)
+                            )
+                            .padding(.top, layout.topInset - 12)
+                            .padding(.bottom, -4)
+                            .allowsHitTesting(false)
+                    }
+                }
                 .frame(width: sectionWidth, height: layout.sectionHeight(count: chapter.actions.count), alignment: .topLeading)
         }
         .background(alignment: .topLeading) {
@@ -258,6 +303,7 @@ struct JourneyPathView: View {
                     action: action,
                     state: nodeState(for: action, nextId: nextId),
                     chapterKind: chapter.kind,
+                    accent: chapter.rung.map { ($0.face, $0.edge) },
                     iconName: NodeIconCatalog.icon(
                         for: chapter.kind,
                         indexInChapter: index,
@@ -331,6 +377,7 @@ struct JourneyPathView: View {
                         action: action,
                         state: state,
                         chapterKind: chapter.kind,
+                        accent: chapter.rung.map { ($0.face, $0.edge) },
                         xpPreview: viewModel.nextStepXP,
                         tailX: node.midX - frame.minX,
                         onAction: { handleBubble($0, action: action) }

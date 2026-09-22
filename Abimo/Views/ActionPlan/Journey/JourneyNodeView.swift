@@ -32,6 +32,10 @@ struct JourneyNodeView: View {
     let action: MicroAction
     let state: NodeState
     let chapterKind: JourneyChapterKind
+    /// Plus chapters paint their rung's colour instead of the quadrant's.
+    var accent: (face: Color, edge: Color)? = nil
+    private var faceColor: Color { accent?.face ?? chapterKind.color }
+    private var edgeTint: Color { accent?.edge ?? chapterKind.edgeColor }
     let iconName: String
     let onTap: () -> Void
     let justCompletedActionId: UUID?
@@ -64,7 +68,7 @@ struct JourneyNodeView: View {
         .buttonStyle(Duo3DCircleButtonStyle(fill: animatedFillColor, edge: animatedEdgeColor))
         .background {
             if state == .next {
-                PulseRing(color: chapterKind.color)
+                PulseRing(color: faceColor)
                     .frame(width: nodeSize, height: nodeSize)
             }
         }
@@ -127,8 +131,8 @@ struct JourneyNodeView: View {
                 // it keys on state, not on array position.
                 if !AnimationPolicy.reduceMotion { unlockPulseTrigger += 1 }
                 AnimationPolicy.animate(.easeInOut(duration: 0.3).delay(AnimationPolicy.reduceMotion ? 0 : 0.3)) {
-                    animatedFillColor = chapterKind.color
-                    animatedEdgeColor = chapterKind.edgeColor
+                    animatedFillColor = faceColor
+                    animatedEdgeColor = edgeTint
                 }
             } else if oldValue != newValue {
                 AnimationPolicy.animate(.easeInOut(duration: 0.3)) {
@@ -144,7 +148,7 @@ struct JourneyNodeView: View {
     private var fillColor: Color {
         switch state {
         case .locked: return .nodeOpenFace
-        case .next: return chapterKind.color
+        case .next: return faceColor
         case .done: return .nodeDone
         }
     }
@@ -152,7 +156,7 @@ struct JourneyNodeView: View {
     private var edgeColor: Color {
         switch state {
         case .locked: return .nodeOpenEdge
-        case .next: return chapterKind.edgeColor
+        case .next: return edgeTint
         case .done: return .nodeDoneEdge
         }
     }
@@ -168,11 +172,11 @@ struct JourneyNodeView: View {
     private var startPill: some View {
         Text("START")
             .font(.system(size: 12, weight: .black, design: .rounded))
-            .foregroundColor(chapterKind.color)
+            .foregroundColor(faceColor)
             .padding(.horizontal, 12)
             .padding(.vertical, 5)
             .background(Capsule().fill(Color.white))
-            .overlay(Capsule().strokeBorder(chapterKind.color, lineWidth: 2))
+            .overlay(Capsule().strokeBorder(faceColor, lineWidth: 2))
             .fixedSize()
             .allowsHitTesting(false)
             .accessibilityHidden(true)

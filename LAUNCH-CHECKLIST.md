@@ -69,6 +69,14 @@ App Store Connect → Business (or Agreements, Tax, and Banking).
 ---
 
 ## 1. Server — deploy before TestFlight (~10 min)
+☐ **2026-09-22 chapters 2-5 ladder** — new migration + one function changed. Run:
+```bash
+deno test supabase/functions/_shared/
+supabase db push                              # chapter_briefs + micro_actions.chapter 1..5
+supabase functions deploy extend-action-plan
+```
+Until this runs, "Next chapter" in the new build fails with "brief required" on the old function.
+
 ☑ **All six functions deployed 2026-09-22** (tier caps, gpt-4o-mini plan/next
 chapter, gpt-4o-mini-transcribe, Plus 6/6/12/12, `extend-action-plan` live).
 Re-run the block below after any further change under `supabase/functions/`.

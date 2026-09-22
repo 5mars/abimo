@@ -327,19 +327,22 @@ class AIAnalysisService: ObservableObject {
         let summary: String
         let chapter: Int
         let actions: [ActionPlanResponseItem]
+        let ladderTitle: String?
+        enum CodingKeys: String, CodingKey { case title, summary, chapter, actions, ladderTitle = "ladder_title" }
     }
 
     /// Appends the next chapter to a finished plan. The server reads the
     /// transcript, analysis and completed steps itself — only the plan id
     /// travels. Returns the new actions (already persisted).
-    func extendActionPlan(_ plan: ActionPlan, existing: [MicroAction]) async throws -> (chapter: Int, actions: [MicroAction]) {
+    func extendActionPlan(_ plan: ActionPlan, existing: [MicroAction], brief: ChapterBrief) async throws -> (chapter: Int, actions: [MicroAction]) {
         struct Body: Encodable {
             let actionPlanId: UUID
-            enum CodingKeys: String, CodingKey { case actionPlanId = "action_plan_id" }
+            let brief: ChapterBrief
+            enum CodingKeys: String, CodingKey { case actionPlanId = "action_plan_id", brief }
         }
         let response: ChapterResponse = try await supabase.client.functions.invoke(
             "extend-action-plan",
-            options: FunctionInvokeOptions(body: Body(actionPlanId: plan.id))
+            options: FunctionInvokeOptions(body: Body(actionPlanId: plan.id, brief: brief))
         )
 
         let now = Date()

@@ -76,11 +76,21 @@ struct ActionPlanDetailView: View {
                 .presentationDetents([.medium])
                 .presentationDragIndicator(.visible)
         }
-        .sheet(item: $viewModel.postCompletionSheet) { _ in
-            PostCompletionSheetContent(
-                viewModel: viewModel,
-                completingActionId: viewModel.completingActionId
-            )
+        .sheet(item: $viewModel.postCompletionSheet) { sheet in
+            switch sheet {
+            case .congrats:
+                PostCompletionSheetContent(
+                    viewModel: viewModel,
+                    completingActionId: viewModel.completingActionId
+                )
+            case .chapterBrief(let chapter):
+                ChapterBriefSheet(viewModel: viewModel, chapter: chapter) {
+                    viewModel.postCompletionSheet = nil
+                }
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+                .presentationBackground(Color.journeyBg)
+            }
         }
         .task {
             SoundEngine.prepare()

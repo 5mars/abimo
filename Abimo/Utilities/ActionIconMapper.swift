@@ -30,5 +30,6 @@ enum ActionIconMapper {
         "search":  IconPair(emoji: "\u{1F50D}", symbol: "magnifyingglass"),
         "message": IconPair(emoji: "\u{1F4AC}", symbol: "message"),
         "post":    IconPair(emoji: "\u{1F4E2}", symbol: "megaphone"),
+        "link":    IconPair(emoji: "\u{1F517}", symbol: "link"),
     ]
 }

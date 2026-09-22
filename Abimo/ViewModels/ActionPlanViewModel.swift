@@ -30,10 +30,13 @@ enum CelebrationState: Equatable {
 /// Replaces the old `showMomentumPicker` boolean to eliminate sheet presentation race conditions.
 enum PostCompletionSheet: Identifiable, Equatable {
     case congrats(actionId: UUID)
+    /// The four-question brief the critic needs before writing chapter `chapter`.
+    case chapterBrief(chapter: Int)
 
     var id: String {
         switch self {
         case .congrats(let id): return "congrats-\(id)"
+        case .chapterBrief(let chapter): return "brief-\(chapter)"
         }
     }
 }
@@ -106,28 +109,49 @@ class ActionPlanViewModel: ObservableObject {
     /// How many plan parts exist (1 = original plan only; 2+ after "Next chapter").
     var partCount: Int { microActions.map(\.chapterNumber).max() ?? 1 }
 
-    /// Mirrors extend-action-plan's MAX_CHAPTER — the gate card hides after this.
-    static let maxChapters = 6
+    /// Mirrors _shared/chapters.ts MAX_CHAPTER — the gate card changes after this.
+    static var maxChapters: Int { ChapterLadder.maxChapters }
+    var isFinalChapterDone: Bool { ChapterLadder.isFinal(partCount) && nextRecommendedAction == nil && !microActions.isEmpty }
 
     // MARK: - Next chapter (Plus)
 
     @Published var isExtending = false
+    /// Prefill for the brief sheet — the last answers this founder gave.
+    @Published var lastBrief: ChapterBrief = .default
 
-    /// Appends the next chapter to this plan (server-side Plus check; the
-    /// paywall runs before this is called). New steps land as `open`, the
-    /// first one becomes `next`, and the celebration overlay clears so the
-    /// journey is usable again.
+    /// Step one of "Next chapter": ask the founder the four questions. The
+    /// paywall runs before this is called; the server re-checks Plus anyway.
     func requestNextChapter() async throws {
+        guard actionPlan != nil, !isExtending, partCount < Self.maxChapters else { return }
+        let chapter = partCount + 1
+        AnalyticsService.shared.log(.nextChapterRequested(chapter: chapter))
+        if let stored = try? await supabase.fetchLatestChapterBrief() { lastBrief = stored.brief }
+        // Hop off any sheet already up (the wrap-up runs full-screen, so this is
+        // usually a no-op) and present the brief.
+        postCompletionSheet = .chapterBrief(chapter: chapter)
+    }
+
+    /// Step two: the brief is in — write the chapter. New steps land as
+    /// `open`, the first becomes `next`, and the celebration overlay clears so
+    /// the journey is usable again.
+    func submitBrief(_ brief: ChapterBrief) async throws {
         guard let plan = actionPlan, !isExtending else { return }
         isExtending = true
         defer { isExtending = false }
-        AnalyticsService.shared.log(.nextChapterRequested(chapter: partCount + 1))
-        let (chapter, added) = try await aiService.extendActionPlan(plan, existing: microActions)
-        microActions.append(contentsOf: added)
-        celebrationState = .idle
-        lastRewards = nil
-        AnalyticsService.shared.log(.nextChapterGenerated(chapter: chapter, actions: added.count))
-        HapticEngine.success()
+        let chapter = partCount + 1
+        lastBrief = brief
+        AnalyticsService.shared.log(.chapterBriefSubmitted(chapter: chapter, techSkill: brief.techSkill.rawValue))
+        do {
+            let (written, added) = try await aiService.extendActionPlan(plan, existing: microActions, brief: brief)
+            microActions.append(contentsOf: added)
+            celebrationState = .idle
+            lastRewards = nil
+            AnalyticsService.shared.log(.nextChapterGenerated(chapter: written, actions: added.count))
+            HapticEngine.success()
+        } catch {
+            AnalyticsService.shared.log(.nextChapterFailed(chapter: chapter, code: "\(ChapterError.from(error))"))
+            throw error
+        }
     }
 
     /// Minutes still on the plate — the "45 min left" in the journey header.

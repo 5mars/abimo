@@ -366,6 +366,18 @@ class SupabaseService {
             .execute()
     }
 
+    /// The most recent brief this user gave, any plan — prefills the next sheet.
+    func fetchLatestChapterBrief() async throws -> StoredChapterBrief? {
+        let rows: [StoredChapterBrief] = try await client
+            .from("chapter_briefs")
+            .select("chapter, tech_skill, hours_per_week, budget, goal, notes, title, summary")
+            .order("created_at", ascending: false)
+            .limit(1)
+            .execute()
+            .value
+        return rows.first
+    }
+
     func fetchMicroActions(actionPlanId: UUID) async throws -> [MicroAction] {
         let response: [MicroAction] = try await client
             .from("micro_actions")

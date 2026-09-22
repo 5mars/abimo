@@ -55,7 +55,7 @@ struct StepDetailSheet: View {
                 }
 
                 HStack(spacing: 6) {
-                    chip("\(action.timeEstimateMinutes) min")
+                    chip(MinutesFormat.short(action.timeEstimateMinutes))
                     chip(ActionDeepLink.typeLabel(for: action))
                     if state != .done {
                         chip("+\(xpPreview) XP", tint: .brandAmberDark, fill: Color.brandAmber.opacity(0.18))

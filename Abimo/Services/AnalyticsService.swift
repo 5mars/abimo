@@ -32,6 +32,8 @@ enum AnalyticsEvent {
     case planCompleted(actions: Int, daysToComplete: Int)
     case nextChapterRequested(chapter: Int)
     case nextChapterGenerated(chapter: Int, actions: Int)
+    case chapterBriefSubmitted(chapter: Int, techSkill: String)
+    case nextChapterFailed(chapter: Int, code: String)
     case retasteRequested(previousScore: Int)
     case retasteCompleted(previousScore: Int, newScore: Int)
     case streakExtended(days: Int, via: String)
@@ -75,6 +77,8 @@ enum AnalyticsEvent {
         case .planCompleted:          return "plan_completed"
         case .nextChapterRequested:   return "next_chapter_requested"
         case .nextChapterGenerated:   return "next_chapter_generated"
+        case .chapterBriefSubmitted:  return "chapter_brief_submitted"
+        case .nextChapterFailed:      return "next_chapter_failed"
         case .retasteRequested:       return "retaste_requested"
         case .retasteCompleted:       return "retaste_completed"
         case .streakExtended:         return "streak_extended"
@@ -127,6 +131,10 @@ enum AnalyticsEvent {
             return ["chapter": chapter]
         case .nextChapterGenerated(let chapter, let actions):
             return ["chapter": chapter, "actions": actions]
+        case .chapterBriefSubmitted(let chapter, let techSkill):
+            return ["chapter": chapter, "tech_skill": techSkill]
+        case .nextChapterFailed(let chapter, let code):
+            return ["chapter": chapter, "code": code]
         case .retasteRequested(let previous):
             return ["previous_score": previous]
         case .retasteCompleted(let previous, let new):

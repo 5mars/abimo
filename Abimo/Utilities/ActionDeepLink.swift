@@ -31,8 +31,8 @@ enum ActionDeepLink {
             guard let bodyEncoded = body.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
                   let subjectEncoded = subject.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else { return nil }
             return URL(string: "mailto:?subject=\(subjectEncoded)&body=\(bodyEncoded)")
-        case "post":
-            if let scheme = action.deepLinkData?.urlScheme { return URL(string: scheme) }
+        case "post", "link":
+            if let scheme = action.deepLinkData?.urlScheme, !scheme.isEmpty { return URL(string: scheme) }
             return nil
         default:
             return nil
@@ -45,6 +45,7 @@ enum ActionDeepLink {
         case "search":  return "safari.fill"
         case "email":   return "envelope.fill"
         case "post":    return "square.and.arrow.up.fill"
+        case "link":    return "safari.fill"
         default:        return "arrow.up.right"
         }
     }
@@ -56,6 +57,7 @@ enum ActionDeepLink {
         case "search":  return "Search now"
         case "email":   return "Send email"
         case "post":    return "Post now"
+        case "link":    return "Open it"
         default:        return "Do it now"
         }
     }
@@ -67,6 +69,7 @@ enum ActionDeepLink {
         case "search":  return "Research"
         case "email":   return "Email"
         case "post":    return "Post"
+        case "link":    return "Open"
         default:        return "Task"
         }
     }

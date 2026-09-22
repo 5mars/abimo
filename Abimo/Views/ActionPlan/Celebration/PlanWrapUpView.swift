@@ -29,6 +29,15 @@ struct PlanWrapUpView: View {
 
     private let aiService = AIAnalysisService()
 
+    private var nextRung: ChapterLadder.Rung? { ChapterLadder.rung(viewModel.partCount + 1) }
+    private var nextDoorTitle: String {
+        if let nextRung { return "Chapter \(nextRung.number) · \(nextRung.title)" }
+        return "Final chapter done"
+    }
+    private var nextDoorDetail: String {
+        nextRung?.subtitle ?? "Five chapters, cooked. Re-taste the idea — or ship it."
+    }
+
     private var actions: [MicroAction] { viewModel.microActions }
     /// Before → after: the re-taste just performed wins; otherwise the stored history.
     private var scoreChange: (old: Int, new: Int)? {
@@ -65,8 +74,7 @@ struct PlanWrapUpView: View {
                     if viewModel.isExtending {
                         busyRow("Writing chapter \(viewModel.partCount + 1)…")
                     } else {
-                        door("Next chapter", "5-7 more steps, built from what you learned",
-                             icon: "book.pages.fill", plus: true) {
+                        door(nextDoorTitle, nextDoorDetail, icon: nextRung?.icon ?? "book.pages.fill", plus: true) {
                             if entitlements.isPremium {
                                 Task { await extendPlan() }
                             } else {
@@ -226,14 +234,15 @@ struct PlanWrapUpView: View {
 
     // MARK: - Doors (Plus)
 
+    /// Opens the brief sheet; the chapter itself is written from there, and
+    /// the view model clears the celebration once the steps land.
     private func extendPlan() async {
         doorError = nil
-        do {
-            try await viewModel.requestNextChapter()
-            onDismiss()   // back to the journey, first new step already marked NEXT
-        } catch {
-            doorError = Self.friendly(error, fallback: "The next chapter didn't saddle up. Try again in a moment.")
+        guard viewModel.partCount < ActionPlanViewModel.maxChapters else {
+            doorError = ChapterError.finalChapter.message
+            return
         }
+        try? await viewModel.requestNextChapter()
     }
 
     private func retaste() async {
