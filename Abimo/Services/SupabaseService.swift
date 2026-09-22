@@ -29,10 +29,15 @@ class SupabaseService {
     // MARK: - Authentication
 
     func signUp(email: String, password: String) async throws -> User {
+        // After the e-mail link is verified, Supabase redirects here. A web page
+        // rather than the app's URL scheme: the link is usually opened on
+        // whatever device the mail is read on, and a custom scheme on a Mac is
+        // a blank tab. The page offers an "Open Abimo" button (noteai://…).
+        // Must be allow-listed in Supabase → Authentication → URL Configuration.
         let response = try await client.auth.signUp(
             email: email,
             password: password,
-            redirectTo: URL(string: "noteai://auth-callback")
+            redirectTo: URL(string: "https://abimo.ca/confirmed/")
         )
 
         return User(
