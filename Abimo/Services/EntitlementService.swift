@@ -28,9 +28,12 @@ final class EntitlementService: ObservableObject {
 
     #if DEBUG
     /// TESTING OVERRIDE — treats debug builds as Abimo Plus without a
-    /// purchase. Flip to false to exercise the free tier and paywalls.
-    /// Compiled out of release builds entirely.
+    /// purchase. Either flip the constant or launch with `-ForcePremium`
+    /// (used for App Store screenshots). Compiled out of release builds entirely.
     static let debugForcePremium = false
+    static var forcePremiumFromLaunch: Bool {
+        ProcessInfo.processInfo.arguments.contains("-ForcePremium")
+    }
     #endif
 
     @Published private(set) var isPremium = false
@@ -66,7 +69,7 @@ final class EntitlementService: ObservableObject {
 
     func refreshEntitlement() async {
         #if DEBUG
-        if Self.debugForcePremium {
+        if Self.debugForcePremium || Self.forcePremiumFromLaunch {
             isPremium = true
             return
         }
@@ -106,6 +109,12 @@ final class EntitlementService: ObservableObject {
     private static let lastSyncKey = "entitlement_last_server_sync"
 
     func syncServer(force: Bool = false) async {
+        #if DEBUG
+        // A forced-Plus debug session has no real transaction; posting `null`
+        // would downgrade the server-side profile that a screenshot session
+        // may have flipped by hand. Leave the server alone.
+        if Self.debugForcePremium || Self.forcePremiumFromLaunch { return }
+        #endif
         let last = UserDefaults.standard.object(forKey: Self.lastSyncKey) as? Date ?? .distantPast
         guard force || Date().timeIntervalSince(last) > 24 * 60 * 60 else { return }
 
