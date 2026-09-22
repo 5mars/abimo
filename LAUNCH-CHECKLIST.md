@@ -75,7 +75,12 @@ deno test supabase/functions/_shared/
 supabase db push                              # chapter_briefs + micro_actions.chapter 1..5
 supabase functions deploy extend-action-plan
 ```
-☑ **All six functions deployed 2026-09-22** (tier caps, gpt-4o-mini plan/next
+☐ **Redeploy `generate-action-plan` + `extend-action-plan`** (2026-09-22 evening: 8–12 / 6–10 steps with a retry when short):
+```bash
+supabase functions deploy generate-action-plan extend-action-plan
+```
+
+☑ **All six functions deployed 2026-09-22** (morning) (tier caps, gpt-4o-mini plan/next
 chapter, gpt-4o-mini-transcribe, Plus 6/6/12/12, `extend-action-plan` live).
 Re-run the block below after any further change under `supabase/functions/`.
 
@@ -145,6 +150,7 @@ supabase functions deploy analyze-swot research-market generate-action-plan tran
 
 ## 4. Merge, archive, upload (~20 min)
 - ☑ PR #24 merged 2026-09-22; `main` is the release branch.
+- ☐ **Re-archive after PR #25 merges** (navigation + cache fixes) — the 17:31 archive predates them.
 - ☑ **Archived 2026-09-22 17:31** from `main`: Xcode → Window → Organizer →
   Archives → *Abimo 1.0 (2)*. Verified in the archive: privacy manifest
   bundled, MinimumOSVersion 18.0, encryption-exempt flag set, no `.storekit`
