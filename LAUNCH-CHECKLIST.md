@@ -73,8 +73,9 @@ App Store Connect → Business (or Agreements, Tax, and Banking).
 ---
 
 ## 1. Server — deploy before TestFlight (~10 min)
-The held "tier-cap" deploy only protected existing Plus users (there are none
-yet), and `extend-action-plan` (Next chapter) is not deployed at all.
+☑ **All six functions deployed 2026-09-22** (tier caps, gpt-4o-mini plan/next
+chapter, gpt-4o-mini-transcribe, Plus 6/6/12/12, `extend-action-plan` live).
+Re-run the block below after any further change under `supabase/functions/`.
 
 ```bash
 deno test supabase/functions/_shared/
@@ -246,7 +247,7 @@ re-taste, full evidence, unlimited ideas, caps 6/6/12/12.
    the migration by hand in the SQL editor. Until then a lapsed subscriber
    keeps Plus server-side until their app next syncs (the client downgrades
    them regardless — StoreKit is the UI's source of truth).
-2. ⏳ HELD — deploy the other five functions
+2. ⏳ ☑ DONE 2026-09-22 — deployed the other five functions (with the cost-control changes)
    (`analyze-swot research-market generate-action-plan transcribe-audio
    extend-action-plan`). This also carries the calibration round-1 scoring fix.
    From this point free users are capped at 3/3/6/6 and Plus users are capped
