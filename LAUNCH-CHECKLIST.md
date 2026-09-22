@@ -150,7 +150,7 @@ supabase functions deploy analyze-swot research-market generate-action-plan tran
 
 ## 4. Merge, archive, upload (~20 min)
 - ☑ PR #24 merged 2026-09-22; `main` is the release branch.
-- ☐ **Re-archive after PR #25 merges** (navigation + cache fixes) — the 17:31 archive predates them.
+- ☑ PR #25 merged 2026-09-22 evening (Actions-tab navigation, plan cache, 8–12 steps, mic permission step, confirmed/ redirect); re-archived from `main` right after — use the **latest** archive in Organizer.
 - ☑ **Archived 2026-09-22 17:31** from `main`: Xcode → Window → Organizer →
   Archives → *Abimo 1.0 (2)*. Verified in the archive: privacy manifest
   bundled, MinimumOSVersion 18.0, encryption-exempt flag set, no `.storekit`
