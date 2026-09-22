@@ -29,10 +29,15 @@ class SupabaseService {
     // MARK: - Authentication
 
     func signUp(email: String, password: String) async throws -> User {
+        // After the e-mail link is verified, Supabase redirects here. A web page
+        // rather than the app's URL scheme: the link is usually opened on
+        // whatever device the mail is read on, and a custom scheme on a Mac is
+        // a blank tab. The page offers an "Open Abimo" button (noteai://…).
+        // Must be allow-listed in Supabase → Authentication → URL Configuration.
         let response = try await client.auth.signUp(
             email: email,
             password: password,
-            redirectTo: URL(string: "noteai://auth-callback")
+            redirectTo: URL(string: "https://abimo.ca/confirmed/")
         )
 
         return User(
@@ -364,6 +369,18 @@ class SupabaseService {
             .from("micro_actions")
             .insert(actions)
             .execute()
+    }
+
+    /// The most recent brief this user gave, any plan — prefills the next sheet.
+    func fetchLatestChapterBrief() async throws -> StoredChapterBrief? {
+        let rows: [StoredChapterBrief] = try await client
+            .from("chapter_briefs")
+            .select("chapter, tech_skill, hours_per_week, budget, goal, notes, title, summary")
+            .order("created_at", ascending: false)
+            .limit(1)
+            .execute()
+            .value
+        return rows.first
     }
 
     func fetchMicroActions(actionPlanId: UUID) async throws -> [MicroAction] {

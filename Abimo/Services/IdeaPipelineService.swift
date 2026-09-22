@@ -155,6 +155,13 @@ final class IdeaPipelineService: ObservableObject {
                 } else {
                     let signedURL = try await supabase.getSignedAudioURL(filePath: note.audioFileURL, expiresIn: 3600)
                     let text = try await transcriptionService.transcribeWithWhisper(storageURL: signedURL)
+                    // Silence or a cough comes back as a word or two; the critic
+                    // would 400 on it. Stop here with a human sentence instead.
+                    let words = text.split(whereSeparator: { $0.isWhitespace || $0.isNewline }).count
+                    if words < 3 {
+                        fail(.transcribing, "I couldn't make out an idea in that one. Record it again — a sentence or two is plenty.")
+                        return
+                    }
                     let new = Transcription(
                         id: UUID(),
                         noteId: note.id,

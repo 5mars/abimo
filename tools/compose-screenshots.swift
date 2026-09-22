@@ -57,12 +57,13 @@ for c in captions {
     ctx.setFillColor(teal.cgColor); ctx.fill(CGRect(x: 0, y: H - 28, width: W, height: 28))
 
     // Caption block (top ~19%)
-    let titleTop = H - 150
+    // Titles are one line by contract; the subtitle sits right under it.
+    let titleTop = H - 140
     draw(c.title, font: rounded(104, .heavy), color: ink,
-         in: CGRect(x: 80, y: titleTop - 260, width: W - 160, height: 260), lineHeight: 116)
+         in: CGRect(x: 80, y: titleTop - 130, width: W - 160, height: 130), lineHeight: 116)
     if let s = c.subtitle, !s.isEmpty {
         draw(s, font: rounded(50, .medium), color: muted,
-             in: CGRect(x: 100, y: titleTop - 260 - 150, width: W - 200, height: 140), lineHeight: 62)
+             in: CGRect(x: 100, y: titleTop - 130 - 24 - 140, width: W - 200, height: 140), lineHeight: 62)
     }
 
     // Device frame: rounded rect with the capture inside, bleeding off the bottom

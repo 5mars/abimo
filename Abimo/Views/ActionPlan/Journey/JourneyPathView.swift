@@ -28,6 +28,14 @@ struct JourneyPathView: View {
     @State private var overlayTop: CGFloat = 0
     @State private var pathWidth: CGFloat = 0
     @State private var viewportHeight: CGFloat = 0
+    /// The open bubble's frame in global space (same space as `overlayTop`),
+    /// so the path can scroll it fully into view.
+    @State private var bubbleGlobalFrame: CGRect?
+    /// The tapped node's top edge in the same global space.
+    @State private var bubbleNodeGlobalTop: CGFloat?
+    /// True while the path is scrolling on the bubble's behalf — that scroll
+    /// must not dismiss the very bubble it is revealing.
+    @State private var autoScrolling = false
 
     private let layout = JourneyLayout()
     private let sideMargin: CGFloat = 16
@@ -74,7 +82,11 @@ struct JourneyPathView: View {
                                 chapterTops[chapter.id] = top
                             }
                     }
-                    if viewModel.partCount < ActionPlanViewModel.maxChapters, !viewModel.microActions.isEmpty {
+                    if viewModel.isFinalChapterDone {
+                        finalChapterRow
+                            .padding(.horizontal, sideMargin)
+                            .padding(.top, 12)
+                    } else if viewModel.partCount < ActionPlanViewModel.maxChapters, !viewModel.microActions.isEmpty {
                         NextChapterGateCard(
                             state: viewModel.isExtending ? .generating : (viewModel.nextRecommendedAction == nil ? .ready : .locked),
                             nextChapter: viewModel.partCount + 1,
@@ -96,6 +108,15 @@ struct JourneyPathView: View {
                 .overlayPreferenceValue(NodeAnchorKey.self) { anchors in
                     bubbleOverlay(anchors)
                 }
+                .onChange(of: bubbleActionId) { _, id in
+                    // Always start from a blank measurement: onGeometryChange only fires
+                    // when the *height* changes, so a same-height bubble on another node
+                    // would otherwise reuse the previous node's frame and scroll wildly.
+                    bubbleGlobalFrame = nil
+                    bubbleNodeGlobalTop = nil
+                    guard let id else { return }
+                    Task { await revealBubble(for: id, proxy: proxy) }
+                }
                 .task {
                     // Defer scroll to after first layout pass
                     try? await Task.sleep(nanoseconds: 80_000_000)
@@ -112,6 +133,11 @@ struct JourneyPathView: View {
             viewportHeight = size.height
         }
         .onScrollPhaseChange { _, phase in
+            // A programmatic reveal scroll is ours; only the user's scroll dismisses.
+            if autoScrolling {
+                if phase == .idle { autoScrolling = false }
+                return
+            }
             if phase != .idle, bubbleActionId != nil { bubbleActionId = nil }
         }
         .overlay(alignment: .top) {
@@ -185,9 +211,34 @@ struct JourneyPathView: View {
             do {
                 try await viewModel.requestNextChapter()
             } catch {
-                gateError = "The next chapter didn't saddle up. Try again in a moment."
+                gateError = ChapterError.from(error).message
             }
         }
+    }
+
+    /// After chapter five there is nothing left to unlock — say so instead of
+    /// letting the card silently vanish.
+    private var finalChapterRow: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "flag.checkered")
+                .font(.system(size: 15, weight: .bold))
+                .foregroundColor(.brand)
+                .frame(width: 30, height: 30)
+                .background(Circle().fill(Color.brand.opacity(0.12)))
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Five chapters, cooked.")
+                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                    .foregroundColor(.textPri)
+                Text("That's the whole ladder. Re-taste the idea to see the number move — or ship it.")
+                    .font(.system(size: 12))
+                    .foregroundColor(.textSec)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 0)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .duoPanel(fill: .insetBg)
+        .accessibilityElement(children: .combine)
     }
 
     // MARK: - Chapter section
@@ -198,6 +249,22 @@ struct JourneyPathView: View {
         VStack(spacing: 0) {
             ChapterHeaderView(chapter: chapter, index: index)
             pathArea(chapter, width: sectionWidth)
+                .background {
+                    // Plus chapters stand on different ground: a soft band in the
+                    // rung's colour behind the path, so "chapter 3" feels like a
+                    // new place, not more of chapter 1.
+                    if let rung = chapter.rung {
+                        RoundedRectangle(cornerRadius: DuoTokens.Radius.card, style: .continuous)
+                            .fill(rung.band)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: DuoTokens.Radius.card, style: .continuous)
+                                    .strokeBorder(rung.face.opacity(0.18), lineWidth: 1.5)
+                            )
+                            .padding(.top, layout.topInset - 12)
+                            .padding(.bottom, -4)
+                            .allowsHitTesting(false)
+                    }
+                }
                 .frame(width: sectionWidth, height: layout.sectionHeight(count: chapter.actions.count), alignment: .topLeading)
         }
         .background(alignment: .topLeading) {
@@ -243,6 +310,7 @@ struct JourneyPathView: View {
                     action: action,
                     state: nodeState(for: action, nextId: nextId),
                     chapterKind: chapter.kind,
+                    accent: chapter.rung.map { ($0.face, $0.edge) },
                     iconName: NodeIconCatalog.icon(
                         for: chapter.kind,
                         indexInChapter: index,
@@ -268,6 +336,37 @@ struct JourneyPathView: View {
         }
     }
 
+    /// Scrolls just enough that the bubble (and, when possible, its node)
+    /// sits inside the visible window — under the sticky header, above the
+    /// bottom edge. Waits one layout pass so the bubble has a measured frame.
+    private func revealBubble(for id: UUID, proxy: ScrollViewProxy) async {
+        // Wait for this bubble's own measurement (a few frames at most).
+        var bubble: CGRect?
+        var nodeTop: CGFloat?
+        for _ in 0..<8 {
+            try? await Task.sleep(nanoseconds: 40_000_000)
+            guard bubbleActionId == id else { return }
+            if let b = bubbleGlobalFrame, let n = bubbleNodeGlobalTop { bubble = b; nodeTop = n; break }
+        }
+        guard let bubble, let nodeTop, viewportHeight > 0 else { return }
+        let obstructed = overlayTop + (stickyChapter != nil ? ChapterHeaderView.inlineHeight : 0)
+        guard let targetTop = NodeBubbleModel.autoScrollNodeTop(
+            nodeTop: nodeTop,
+            bubbleBottom: bubble.maxY,
+            visibleTop: overlayTop,
+            visibleBottom: overlayTop + viewportHeight,
+            obstructedTop: obstructed
+        ) else { return }
+        let y = NodeBubbleModel.scrollAnchorY(nodeTop: targetTop, nodeSize: layout.nodeSize, viewportHeight: viewportHeight)
+        autoScrolling = true
+        AnimationPolicy.animate(.easeInOut(duration: 0.35)) {
+            proxy.scrollTo(id, anchor: UnitPoint(x: 0.5, y: y))
+        }
+        // If nothing actually moved, no phase change arrives — don't leave the guard armed.
+        try? await Task.sleep(nanoseconds: 700_000_000)
+        autoScrolling = false
+    }
+
     // MARK: - Bubble
 
     @ViewBuilder
@@ -280,6 +379,9 @@ struct JourneyPathView: View {
                 let node = geo[anchor]
                 let frame = NodeBubbleModel.frame(nodeRect: node, containerWidth: geo.size.width, height: 0)
                 let state = nodeState(for: action, nextId: viewModel.nextRecommendedAction?.id)
+                // The overlay spans the whole scroll content; its global origin
+                // turns content-space rects into the space `overlayTop` lives in.
+                let overlayOrigin = geo.frame(in: .global).origin
 
                 ZStack(alignment: .topLeading) {
                     // Outside tap closes the bubble (and eats the tap, like Duolingo).
@@ -291,12 +393,24 @@ struct JourneyPathView: View {
                         action: action,
                         state: state,
                         chapterKind: chapter.kind,
+                        accent: chapter.rung.map { ($0.face, $0.edge) },
                         xpPreview: viewModel.nextStepXP,
                         tailX: node.midX - frame.minX,
                         onAction: { handleBubble($0, action: action) }
                     )
                     .frame(width: frame.width)
                     .offset(x: frame.minX, y: frame.minY)
+                    .id(id) // a fresh view per node, so the geometry callback fires on every open
+                    // `.offset` is a transform — a frame read here would ignore it,
+                    // so the global rect is rebuilt from the anchor instead. Only the
+                    // bubble's height is measured.
+                    .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height in
+                        bubbleGlobalFrame = CGRect(
+                            x: frame.minX + overlayOrigin.x, y: frame.minY + overlayOrigin.y,
+                            width: frame.width, height: height
+                        )
+                        bubbleNodeGlobalTop = node.minY + overlayOrigin.y
+                    }
                     .transition(
                         AnimationPolicy.reduceMotion
                             ? .opacity

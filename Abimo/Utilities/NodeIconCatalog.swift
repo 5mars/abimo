@@ -22,6 +22,10 @@ enum NodeIconCatalog {
         case .playYourEdge: return ["IconStar", "IconLightbulb", "IconSun", "IconFeather", "IconPalette"]
         case .watchRisks:   return ["IconRaincloud", "IconSnowflake", "IconMoon", "IconCactus", "IconMushroom"]
         case .steps:        return ["IconBook", "IconPencil", "IconClock", "IconLeaf", "IconAcorn"]
+        // A Plus chapter never sits next to the quadrant-less "Your steps"
+        // fallback (that one only ever renders alone), so the two can share
+        // a set — every drawn icon is already spoken for by the four quadrants.
+        case .build:        return icons(for: .steps)
         }
     }
 

@@ -52,7 +52,7 @@ Three ideas, each with a full tasting, the score breakdown, and chapter one of i
 
 ABIMO PLUS — THE SECOND CHAPTER
 Plus is what happens after you do the work:
-• Next chapters — finish chapter one and Abimo builds the next 5–7 steps from what you learned
+• Next chapters — four more, on a ladder: prove people care, build the smallest real version, first real users, money and the call. Concrete steps sized to your skills, time and budget
 • Re-taste — the critic re-scores with your results as evidence; watch the number move
 • Full evidence — every tasting note, market stat, and the receipt behind the score
 • Unlimited stalls and double the daily tastings

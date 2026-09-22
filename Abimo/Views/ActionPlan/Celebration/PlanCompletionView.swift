@@ -62,7 +62,7 @@ struct PlanCompletionView: View {
                 // Trophy moment — animated cup when motion is allowed,
                 // the emoji stays as the reduce-motion fallback.
                 if AnimationPolicy.reduceMotion {
-                    Text("\u{1F3C6} All \(viewModel.completedCount) actions done in \(viewModel.completedMinutes) min \u{1F525}")
+                    Text("\u{1F3C6} All \(viewModel.completedCount) actions done in \(MinutesFormat.short(viewModel.completedMinutes)) \u{1F525}")
                         .font(.system(size: 18, weight: .bold, design: .rounded))
                         .foregroundColor(.textPri)
                         .multilineTextAlignment(.center)
@@ -73,7 +73,7 @@ struct PlanCompletionView: View {
                         .frame(width: 110, height: 110)
                         .allowsHitTesting(false)
 
-                    Text("All \(viewModel.completedCount) actions done in \(viewModel.completedMinutes) min \u{1F525}")
+                    Text("All \(viewModel.completedCount) actions done in \(MinutesFormat.short(viewModel.completedMinutes)) \u{1F525}")
                         .font(.system(size: 18, weight: .bold, design: .rounded))
                         .foregroundColor(.textPri)
                         .multilineTextAlignment(.center)

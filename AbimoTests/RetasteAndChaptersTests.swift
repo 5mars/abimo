@@ -9,6 +9,7 @@
 
 import XCTest
 @testable import Abimo
+import Supabase
 
 final class RetasteAndChaptersTests: XCTestCase {
 
@@ -105,10 +106,65 @@ final class RetasteAndChaptersTests: XCTestCase {
         ]
         let chapters = JourneyChapterBuilder.build(from: actions)
 
-        XCTAssertEqual(chapters.map(\.part), [1, 1, 2, 2])
+        // A Plus chapter is one beat on the ladder, never split by quadrant.
+        XCTAssertEqual(chapters.map(\.part), [1, 1, 2])
+        XCTAssertEqual(chapters.last?.kind, .build)
+        XCTAssertEqual(chapters.last?.title, "Prove people care")
+        XCTAssertEqual(chapters.last?.actions.count, 2)
         XCTAssertEqual(Set(chapters.map(\.id)).count, chapters.count, "ids must stay unique across parts")
         XCTAssertTrue(chapters[0].isComplete && chapters[1].isComplete)
         XCTAssertFalse(chapters[2].isComplete)
+    }
+
+    func testPlusChaptersTakeTheirRungsColours() {
+        let two = JourneyChapterBuilder.build(from: [action("weakness", chapter: 2)])[0]
+        XCTAssertEqual(two.rung?.number, 2)
+        XCTAssertEqual(two.faceColor, ChapterLadder.rung(2)?.face)
+        let five = JourneyChapterBuilder.build(from: [action("threat", chapter: 5)])[0]
+        XCTAssertEqual(five.title, "Money and the call")
+        XCTAssertNil(JourneyChapterBuilder.build(from: [action("threat")])[0].rung, "the free chapter keeps quadrant colours")
+    }
+
+    // MARK: - Ladder + brief
+
+    func testLadderHasExactlyFourPlusRungs() {
+        XCTAssertEqual(ChapterLadder.maxChapters, 5)
+        XCTAssertNil(ChapterLadder.rung(1))
+        XCTAssertEqual((2...5).compactMap(ChapterLadder.rung).map(\.number), [2, 3, 4, 5])
+        XCTAssertNil(ChapterLadder.rung(6))
+        XCTAssertTrue(ChapterLadder.isFinal(5))
+        XCTAssertFalse(ChapterLadder.isFinal(4))
+    }
+
+    func testBriefEncodesInTheServersVocabulary() throws {
+        let brief = ChapterBrief(techSkill: .noCode, hoursPerWeek: .fullTime, budget: .under500, goal: .quitJob, notes: "hi")
+        let json = try JSONSerialization.jsonObject(with: JSONEncoder().encode(brief)) as? [String: Any]
+        XCTAssertEqual(json?["tech_skill"] as? String, "no_code")
+        XCTAssertEqual(json?["hours_per_week"] as? String, "full_time")
+        XCTAssertEqual(json?["budget"] as? String, "under_500")
+        XCTAssertEqual(json?["goal"] as? String, "quit_job")
+        XCTAssertEqual(json?["notes"] as? String, "hi")
+    }
+
+    func testStoredBriefPrefillsWithoutCarryingNotes() throws {
+        let data = Data(#"{"chapter":3,"tech_skill":"can_code","hours_per_week":"few","budget":"more","goal":"sell_it","notes":"old note","title":"x","summary":"y"}"#.utf8)
+        let stored = try JSONDecoder().decode(StoredChapterBrief.self, from: data)
+        XCTAssertEqual(stored.brief.techSkill, .canCode)
+        XCTAssertNil(stored.brief.notes, "notes are per chapter")
+    }
+
+    func testChapterErrorReadsTheServersCode() {
+        func err(_ status: Int, _ code: String?) -> Error {
+            let body = code.map { #"{"error":"x","code":"\#($0)"}"# } ?? #"{"error":"x"}"#
+            return FunctionsError.httpError(code: status, data: Data(body.utf8))
+        }
+        XCTAssertEqual(ChapterError.from(err(409, "chapter_open")), .chapterOpen)
+        XCTAssertEqual(ChapterError.from(err(409, "final_chapter")), .finalChapter)
+        XCTAssertEqual(ChapterError.from(err(403, "plus_required")), .plusRequired)
+        XCTAssertEqual(ChapterError.from(err(429, "rate_limited")), .rateLimited)
+        XCTAssertEqual(ChapterError.from(err(400, "brief_required")), .briefRequired)
+        XCTAssertEqual(ChapterError.from(err(500, nil)), .other)
+        XCTAssertEqual(ChapterError.from(URLError(.timedOut)), .other)
     }
 
     func testSinglePartPlanIsUnchanged() {

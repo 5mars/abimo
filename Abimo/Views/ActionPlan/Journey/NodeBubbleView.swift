@@ -14,6 +14,9 @@ struct NodeBubbleView: View {
     let action: MicroAction
     let state: NodeState
     let chapterKind: JourneyChapterKind
+    var accent: (face: Color, edge: Color)? = nil
+    private var faceColor: Color { accent?.face ?? chapterKind.color }
+    private var edgeTint: Color { accent?.edge ?? chapterKind.edgeColor }
     let xpPreview: Int
     /// Where the tail points, in the bubble's own x coordinates.
     let tailX: CGFloat
@@ -33,11 +36,11 @@ struct NodeBubbleView: View {
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundColor(.textSec)
                 } else if state == .locked {
-                    Label("Finish the lit step first · \(action.timeEstimateMinutes) min", systemImage: "lock.fill")
+                    Label("Finish the lit step first · \(MinutesFormat.short(action.timeEstimateMinutes))", systemImage: "lock.fill")
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundColor(.textSec)
                 } else {
-                    Text("\(action.timeEstimateMinutes) min · \(ActionDeepLink.typeLabel(for: action))")
+                    Text("\(MinutesFormat.short(action.timeEstimateMinutes)) · \(ActionDeepLink.typeLabel(for: action))")
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundColor(.textSec)
                     Text("+\(xpPreview) XP")
@@ -81,7 +84,7 @@ struct NodeBubbleView: View {
                     .frame(maxWidth: .infinity)
                     .frame(height: 38)
             }
-            .buttonStyle(Duo3DButtonStyle(fill: chapterKind.color, edge: chapterKind.edgeColor, cornerRadius: 12, edgeHeight: 3))
+            .buttonStyle(Duo3DButtonStyle(fill: faceColor, edge: edgeTint, cornerRadius: 12, edgeHeight: 3))
         case .undo:
             textButton("Undo") { onAction(.undo) }
         case .details:
@@ -93,7 +96,7 @@ struct NodeBubbleView: View {
         Button(action: action) {
             Text(title)
                 .font(.system(size: 13, weight: .bold, design: .rounded))
-                .foregroundColor(chapterKind.color)
+                .foregroundColor(faceColor)
                 .frame(maxWidth: .infinity)
                 .frame(height: 38)
         }

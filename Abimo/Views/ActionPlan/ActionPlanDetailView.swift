@@ -16,7 +16,7 @@ struct ActionPlanDetailView: View {
     /// The plan-level progress the old header card used to show.
     private var progressSubtitle: String {
         guard viewModel.totalCount > 0 else { return "" }
-        return "\(viewModel.completedCount) of \(viewModel.totalCount) · \(viewModel.remainingMinutes) min left"
+        return "\(viewModel.completedCount) of \(viewModel.totalCount) · \(MinutesFormat.short(viewModel.remainingMinutes)) left"
     }
 
     var body: some View {
@@ -54,14 +54,17 @@ struct ActionPlanDetailView: View {
 
             // Plan completion overlay
             if viewModel.celebrationState == .planComplete {
+                // The overlay paints its own full-bleed background; the content
+                // itself must respect the safe area, and the nav bar goes away so
+                // "What did we learn?" isn't hidden under the inline title.
                 PlanCompletionView(viewModel: viewModel, onDismiss: {
                     viewModel.celebrationState = .idle
                 })
                 .transition(.move(edge: .bottom).combined(with: .opacity))
                 .zIndex(2)
-                .ignoresSafeArea()
             }
         }
+        .toolbar(viewModel.celebrationState == .planComplete ? .hidden : .visible, for: .navigationBar)
         .animation(.easeInOut(duration: 0.3), value: viewModel.celebrationState)
         .animation(.easeInOut(duration: 0.25), value: viewModel.errorMessage)
         .navigationTitle(viewModel.actionPlan?.title ?? "")
@@ -73,11 +76,21 @@ struct ActionPlanDetailView: View {
                 .presentationDetents([.medium])
                 .presentationDragIndicator(.visible)
         }
-        .sheet(item: $viewModel.postCompletionSheet) { _ in
-            PostCompletionSheetContent(
-                viewModel: viewModel,
-                completingActionId: viewModel.completingActionId
-            )
+        .sheet(item: $viewModel.postCompletionSheet) { sheet in
+            switch sheet {
+            case .congrats:
+                PostCompletionSheetContent(
+                    viewModel: viewModel,
+                    completingActionId: viewModel.completingActionId
+                )
+            case .chapterBrief(let chapter):
+                ChapterBriefSheet(viewModel: viewModel, chapter: chapter) {
+                    viewModel.postCompletionSheet = nil
+                }
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+                .presentationBackground(Color.journeyBg)
+            }
         }
         .task {
             SoundEngine.prepare()

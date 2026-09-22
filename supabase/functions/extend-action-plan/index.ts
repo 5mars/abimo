@@ -1,73 +1,18 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { authenticate, consumeCredit, jsonError, requirePlus, CORS_HEADERS } from "../_shared/gate.ts";
+import {
+  buildSystemPrompt, buildUserMessage, CHAPTER_SCHEMA, LADDER, nextChapterFor, parseBrief,
+} from "../_shared/chapters.ts";
 
-// "Plus is the second chapter": appends 5-7 new micro-actions to a finished
-// plan, built from what the founder actually did. Plus-only. The client
-// sends only ids — the transcript, analysis and the completed steps are read
-// here through the caller's own RLS-scoped client, so nothing can be forged.
+// "Plus is the second chapter": appends the next chapter (2-5) to a finished
+// plan. Chapter one is the free taste (micro-actions); chapters two to five
+// are concrete build steps on a fixed ladder, sized to the founder's skill,
+// time, budget and goal — the `brief` the app asks for before each chapter.
+// Plus-only. The client sends ids and the brief; the transcript, analysis and
+// completed steps are read here through the caller's own RLS-scoped client.
 
 const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY")!;
 const DAILY_LIMIT = { free: 0, plus: 12 };
-const MAX_CHAPTER = 6;
-
-// Same shape generate-action-plan returns, so the app reuses ActionPlanResponse.
-const CHAPTER_SCHEMA = {
-  type: "object",
-  properties: {
-    title: { type: "string" },     // this chapter's 2-4 word name
-    summary: { type: "string" },   // what THIS chapter will find out
-    actions: {
-      type: "array",
-      items: {
-        type: "object",
-        properties: {
-          text: { type: "string" },
-          done_criteria: { type: "string" },
-          time_estimate_minutes: { type: "integer", minimum: 5, maximum: 30 },
-          priority: { type: "integer", minimum: 1, maximum: 7 },
-          quadrant: { type: "string", enum: ["strength", "weakness", "opportunity", "threat"] },
-          template: { type: "string" },
-          action_type: { type: "string", enum: ["message", "search", "email", "post", "generic"] },
-          deep_link_data: {
-            type: "object",
-            properties: {
-              url_scheme: { type: "string" },
-              body: { type: "string" },
-              subject: { type: "string" },
-              query: { type: "string" },
-            },
-            required: ["url_scheme", "body", "subject", "query"],
-            additionalProperties: false,
-          },
-        },
-        required: ["text", "done_criteria", "time_estimate_minutes", "priority", "quadrant", "template", "action_type", "deep_link_data"],
-        additionalProperties: false,
-      },
-    },
-  },
-  required: ["title", "summary", "actions"],
-  additionalProperties: false,
-};
-
-const SYSTEM_PROMPT = `You are a startup action coach writing the NEXT CHAPTER of a founder's plan. They finished the previous chapter; you have their outcomes and notes.
-
-FIELD RULES (identical to chapter one):
-"text" — ONE sentence, max 10 words, starts with a verb. It is a label beside a node on a path.
-"done_criteria" — ONE short binary check ("3 replies received").
-"template" — a COPY-PASTE READY block referencing the founder's specific idea. Only [brackets] for what you truly can't know.
-"action_type" — message | search | email | post | generic.
-"deep_link_data" — all four fields present; "" when not applicable (message → body; search → query; email → body+subject; post → body+url_scheme; generic → all "").
-"time_estimate_minutes" — 5, 10, 15, 20 or 30. "priority" — 1 = do first. "quadrant" — the SWOT area served.
-"title" — 2-4 word chapter name. "summary" — one sentence: what THIS chapter will find out.
-
-CHAPTER RULES:
-- Never repeat a step from earlier chapters, even reworded. Build on what was learned: a "didn't work" outcome means change approach, not retry.
-- Escalate by chapter number:
-  Chapter 2 — talk to REAL strangers, not friends: 3+ conversations, posts in communities where the buyers are, a landing page or one-question survey.
-  Chapter 3 — ask for money or commitment: pre-orders, a paid pilot, a waitlist with a price shown, a deposit.
-  Chapter 4+ — ship something tiny and real: a manual/concierge version, a Gumroad/Etsy listing, a one-page offer, a first delivery.
-- Quote the founder's own notes back in templates where it makes the ask more credible ("A few people told me X — is that true for you?").
-- Exactly 5-7 actions, 5-30 minutes each, zero cost, no coding.`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -83,10 +28,12 @@ serve(async (req) => {
   if (g instanceof Response) return g;
 
   try {
-    const { action_plan_id } = await req.json();
+    const { action_plan_id, brief: rawBrief } = await req.json();
     if (typeof action_plan_id !== "string" || !/^[0-9a-f-]{36}$/i.test(action_plan_id)) {
       return jsonError("action_plan_id required", 400);
     }
+    const brief = parseBrief(rawBrief);
+    if (!brief) return jsonError("brief required: tech_skill, hours_per_week, budget, goal", 400, "brief_required");
 
     const { data: plan, error: planErr } = await g.supabase
       .from("action_plans")
@@ -102,14 +49,15 @@ serve(async (req) => {
       .order("chapter", { ascending: true })
       .order("priority", { ascending: true });
     const done = actions ?? [];
-    if (done.length === 0) return jsonError("Plan has no steps", 400);
-    if (done.some((a) => !a.is_completed)) {
-      return jsonError("Finish the current chapter first", 409, "chapter_open");
+    const next = nextChapterFor(done);
+    if (!next.ok) {
+      switch (next.code) {
+        case "empty": return jsonError("Plan has no steps", 400);
+        case "chapter_open": return jsonError("Finish the current chapter first", 409, "chapter_open");
+        case "final_chapter": return jsonError("This plan has reached its final chapter. Time to re-taste — or ship.", 409, "final_chapter");
+      }
     }
-    const nextChapter = Math.max(1, ...done.map((a) => Number(a.chapter ?? 1))) + 1;
-    if (nextChapter > MAX_CHAPTER) {
-      return jsonError("This plan has reached its final chapter. Time to re-taste — or ship.", 409, "final_chapter");
-    }
+    const nextChapter = next.chapter;
 
     const { data: analysis } = await g.supabase
       .from("swot_analyses")
@@ -137,26 +85,22 @@ serve(async (req) => {
     const comparables = ((analysis.market_insights as { comparables?: Array<{ name: string; what: string; pricing: string }> } | null)?.comparables ?? [])
       .map((c) => `${c.name} — ${c.what}, ${c.pricing}`).join(" | ").slice(0, 2000) || "None found.";
 
-    const userMessage = `WRITE CHAPTER ${nextChapter}.
-
-VOICE NOTE:
-${String(transcription?.text ?? "").slice(0, 8000)}
-
-PLAN SO FAR: "${plan.title}" — ${plan.summary}
-SUMMARY: ${String(analysis.summary ?? "None.").slice(0, 2000)}
-STRENGTHS: ${points(analysis.strength_items)}
-WEAKNESSES: ${points(analysis.weakness_items)}
-OPPORTUNITIES: ${points(analysis.opportunity_items)}
-THREATS: ${points(analysis.threat_items)}
-VIABILITY: ${analysis.viability_score ?? 50}/100
-DIMENSION SCORES (0-10): ${dims}
-WEAKEST LINK: ${analysis.score_rationale ?? "Not available."}
-REAL SMALL COMPARABLES: ${comparables}
-
-EVERYTHING DONE IN EARLIER CHAPTERS (do not repeat any of these):
-${history}
-
-Generate chapter ${nextChapter}: 5-7 new micro-actions with copy-paste templates.`;
+    const userMessage = buildUserMessage({
+      chapter: nextChapter,
+      transcript: String(transcription?.text ?? ""),
+      planTitle: plan.title,
+      planSummary: plan.summary,
+      analysisSummary: String(analysis.summary ?? "None."),
+      strengths: points(analysis.strength_items),
+      weaknesses: points(analysis.weakness_items),
+      opportunities: points(analysis.opportunity_items),
+      threats: points(analysis.threat_items),
+      viability: Number(analysis.viability_score ?? 50),
+      dims,
+      weakestLink: String(analysis.score_rationale ?? "Not available."),
+      comparables,
+      history,
+    });
 
     const openaiRes = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -164,10 +108,10 @@ Generate chapter ${nextChapter}: 5-7 new micro-actions with copy-paste templates
       body: JSON.stringify({
         model: "gpt-4o-mini", // step lists don't need the scored model; 16× cheaper,
         temperature: 0.4,
-        max_tokens: 2500,
+        max_tokens: 3000,
         response_format: { type: "json_schema", json_schema: { name: "plan_chapter", schema: CHAPTER_SCHEMA, strict: true } },
         messages: [
-          { role: "system", content: SYSTEM_PROMPT },
+          { role: "system", content: buildSystemPrompt(nextChapter, brief) },
           { role: "user", content: userMessage },
         ],
       }),
@@ -181,7 +125,24 @@ Generate chapter ${nextChapter}: 5-7 new micro-actions with copy-paste templates
     if (!content) return jsonError("Empty response from OpenAI", 502);
 
     const result = JSON.parse(content);
-    return new Response(JSON.stringify({ ...result, chapter: nextChapter }), {
+
+    // The brief and the model's chapter name land on one row (RLS: the caller's
+    // own). Best-effort — a storage hiccup must not cost the founder the chapter.
+    const { error: briefErr } = await g.supabase.from("chapter_briefs").upsert({
+      user_id: g.user.id,
+      action_plan_id: plan.id,
+      chapter: nextChapter,
+      tech_skill: brief.tech_skill,
+      hours_per_week: brief.hours_per_week,
+      budget: brief.budget,
+      goal: brief.goal,
+      notes: brief.notes ?? null,
+      title: String(result.title ?? LADDER[nextChapter as 2 | 3 | 4 | 5].title).slice(0, 80),
+      summary: String(result.summary ?? "").slice(0, 400),
+    }, { onConflict: "action_plan_id,chapter" });
+    if (briefErr) console.error("chapter_briefs upsert failed:", briefErr.message);
+
+    return new Response(JSON.stringify({ ...result, chapter: nextChapter, ladder_title: LADDER[nextChapter as 2 | 3 | 4 | 5].title }), {
       headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
     });
   } catch (err) {

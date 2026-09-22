@@ -16,6 +16,7 @@ enum JourneyChapterKind: String, CaseIterable {
     case playYourEdge  // strength
     case watchRisks    // threat
     case steps         // fallback: no usable quadrant data
+    case build         // a Plus chapter (2-5): one section, named by the ladder
 
     var title: String {
         switch self {
@@ -24,6 +25,7 @@ enum JourneyChapterKind: String, CaseIterable {
         case .playYourEdge: return "Play your edge"
         case .watchRisks:   return "Watch the risks"
         case .steps:        return "Your steps"
+        case .build:        return "Next chapter"
         }
     }
 
@@ -34,6 +36,7 @@ enum JourneyChapterKind: String, CaseIterable {
         case .playYourEdge: return .chapterGolden
         case .watchRisks:   return .chapterSage
         case .steps:        return .chapterTeal
+        case .build:        return .chapterPlum
         }
     }
 
@@ -44,6 +47,7 @@ enum JourneyChapterKind: String, CaseIterable {
         case .playYourEdge: return .chapterGoldenEdge
         case .watchRisks:   return .chapterSageEdge
         case .steps:        return .chapterTealEdge
+        case .build:        return .chapterPlumEdge
         }
     }
 
@@ -54,6 +58,7 @@ enum JourneyChapterKind: String, CaseIterable {
         case .playYourEdge: return "bolt.fill"
         case .watchRisks:   return "eye.fill"
         case .steps:        return "list.bullet"
+        case .build:        return "hammer.fill"
         }
     }
 
@@ -78,13 +83,23 @@ struct JourneyChapter: Identifiable, Equatable {
     var part: Int = 1
 
     var id: String { "\(part)-\(kind.rawValue)" }
+    /// The ladder rung for Plus chapters; nil for the free chapter.
+    var rung: ChapterLadder.Rung? { part >= 2 ? ChapterLadder.rung(part) : nil }
+    /// Banner colours: the rung's for chapters 2+, the quadrant's for chapter 1.
+    var faceColor: Color { rung?.face ?? kind.color }
+    var edgeColor: Color { rung?.edge ?? kind.edgeColor }
+    var icon: String { rung?.icon ?? kind.icon }
     var completedCount: Int { actions.filter(\.isCompleted).count }
     var totalMinutes: Int { actions.reduce(0) { $0 + $1.timeEstimateMinutes } }
     var isComplete: Bool { !actions.isEmpty && actions.allSatisfy(\.isCompleted) }
 
+    /// Completion is part of equality on purpose: SwiftUI diffs the header
+    /// view by this, and a chapter whose steps just got checked off must
+    /// re-render its ring and eyebrow.
     static func == (lhs: JourneyChapter, rhs: JourneyChapter) -> Bool {
         lhs.kind == rhs.kind && lhs.title == rhs.title && lhs.part == rhs.part
             && lhs.actions.map(\.id) == rhs.actions.map(\.id)
+            && lhs.actions.map(\.isCompleted) == rhs.actions.map(\.isCompleted)
     }
 }
 
@@ -103,8 +118,14 @@ enum JourneyChapterBuilder {
     static func build(from actions: [MicroAction]) -> [JourneyChapter] {
         guard !actions.isEmpty else { return [] }
         let parts = Set(actions.map(\.chapterNumber)).sorted()
-        return parts.flatMap { part in
-            buildPart(from: actions.filter { $0.chapterNumber == part }).map {
+        return parts.flatMap { part -> [JourneyChapter] in
+            let own = actions.filter { $0.chapterNumber == part }
+            // Plus chapters are one beat on the ladder, not four SWOT beats.
+            if part >= 2 {
+                let title = ChapterLadder.rung(part)?.title ?? JourneyChapterKind.build.title
+                return [JourneyChapter(kind: .build, title: title, actions: own, part: part)]
+            }
+            return buildPart(from: own).map {
                 JourneyChapter(kind: $0.kind, title: $0.title, actions: $0.actions, part: part)
             }
         }

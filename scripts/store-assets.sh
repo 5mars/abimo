@@ -38,7 +38,7 @@ case "${1:-}" in
   rec)
     mkdir -p "$RAW"; U=$(udid)
     case "$2" in
-      start) xcrun simctl io "$U" recordVideo --codec h264 --force "$RAW/$3.mov" & echo $! > /tmp/abimo-rec.pid; echo "recording → $RAW/$3.mov (pid $(cat /tmp/abimo-rec.pid))";;
+      start) nohup xcrun simctl io "$U" recordVideo --codec h264 --force "$RAW/$3.mov" >/tmp/abimo-rec.log 2>&1 & echo $! > /tmp/abimo-rec.pid; echo "recording → $RAW/$3.mov (pid $(cat /tmp/abimo-rec.pid))";;
       stop)  kill -INT "$(cat /tmp/abimo-rec.pid)" && sleep 2 && rm -f /tmp/abimo-rec.pid && echo "stopped";;
     esac;;
   compose)

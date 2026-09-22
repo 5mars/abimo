@@ -37,7 +37,7 @@ struct ChapterHeaderView: View {
                     .font(.system(size: 11, weight: .black, design: .rounded))
                     .foregroundColor(.white.opacity(0.75))
                 HStack(spacing: 6) {
-                    Image(systemName: chapter.kind.icon)
+                    Image(systemName: chapter.icon)
                         .font(.system(size: 14, weight: .bold))
                     Text(chapter.title)
                         .font(.system(size: 18, weight: .bold, design: .rounded))
@@ -73,8 +73,8 @@ struct ChapterHeaderView: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 11)
         .frame(height: Self.inlineHeight - DuoTokens.Edge.card)
-        .background(shape.fill(chapter.kind.color))
-        .background(shape.fill(chapter.kind.edgeColor).offset(y: DuoTokens.Edge.card))
+        .background(shape.fill(chapter.faceColor))
+        .background(shape.fill(chapter.edgeColor).offset(y: DuoTokens.Edge.card))
         .padding(.bottom, DuoTokens.Edge.card)
         // Closing a chapter gets its own beat: the ring fills and the
         // device gives one sharp tap — once, from the inline copy only.
@@ -85,8 +85,11 @@ struct ChapterHeaderView: View {
         .accessibilityLabel("Chapter \(index + 1), \(chapter.title), \(chapter.completedCount) of \(chapter.actions.count) done")
     }
 
+    /// Chapter 1 counts its quadrant beats ("CHAPTER 1/2/3"); a Plus chapter
+    /// is one beat and names its rung ("CHAPTER 2 · BUILD").
     private var eyebrow: String {
-        if chapter.isComplete { return "CHAPTER \(index + 1) · DONE" }
-        return "CHAPTER \(index + 1) · \(chapter.completedCount)/\(chapter.actions.count) DONE · \(minutesLeft) MIN LEFT"
+        let label = chapter.rung.map { "CHAPTER \($0.number) · \($0.eyebrowTag)" } ?? "CHAPTER \(index + 1)"
+        if chapter.isComplete { return "\(label) · DONE" }
+        return "\(label) · \(chapter.completedCount)/\(chapter.actions.count) DONE · \(MinutesFormat.eyebrow(minutesLeft)) LEFT"
     }
 }

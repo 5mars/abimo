@@ -48,16 +48,14 @@ App Store Connect → Business (or Agreements, Tax, and Banking).
   English-only 1.0 is common; put French on the 1.x list.
 
 ### 0c. Domain, e-mail, website
-- ☐ Register **abimo.ca** (Cloudflare Registrar, ~US$15/yr, WHOIS privacy on).
-- ☐ **Apple mail**: iCloud+ Custom Email Domain → `abimo.ca` → paste Apple's MX/TXT/CNAME records into Cloudflare → create `support@`, `privacy@`, `review@` (steps in `docs/ops/DOMAIN-EMAIL-HOSTING.md` §3). Do NOT enable Cloudflare Email Routing.
-- ☐ Cloudflare DNS (DNS-only / grey cloud): `A` 185.199.108.153 ·
+- ☑ Registered **abimo.ca** on GoDaddy 2026-09-22; nameservers moved to Cloudflare (brett/zita) the same day.
+- ~~☐ Register **abimo.ca** (Cloudflare Registrar, ~US$15/yr, WHOIS privacy on).~~
+- ☑ **Apple mail** records live 2026-09-22 (iCloud MX ×2, apple-domain TXT, SPF, DKIM CNAME). ☐ Still to confirm: `support@` / `info@` show *verified* in iCloud settings and a test mail lands; add `review@` before App Review (steps in `docs/ops/DOMAIN-EMAIL-HOSTING.md` §3). Do NOT enable Cloudflare Email Routing.
+- ☑ Cloudflare DNS done 2026-09-22 (DNS-only / grey cloud): `A` 185.199.108.153 ·
   185.199.109.153 · 185.199.110.153 · 185.199.111.153, `AAAA`
   2606:50c0:8000::153 · 8001::153 · 8002::153 · 8003::153,
   `CNAME www → 5mars.github.io`.
-- ☑ Merged **5mars/abimo-legal PR #1** 2026-09-22 (landing + support + refreshed
-  privacy/terms + CNAME). Then repo Settings → Pages → Custom domain shows
-  `abimo.ca`; tick **Enforce HTTPS** once the certificate is issued
-  (~10 min). Old `5mars.github.io/abimo-legal/…` links redirect.
+- ☑ **https://abimo.ca is live** (2026-09-22): site PR #1 merged, certificate issued for abimo.ca + www, Enforce HTTPS on, http→https and www→apex redirect, old `5mars.github.io/abimo-legal/…` links redirect.
 - ☑ In-app feedback e-mail → `support@abimo.ca`, privacy links → `https://abimo.ca/privacy/` (2026-09-22). Terms link stays Apple's standard EULA.
 
 ### 0d. Other consoles
@@ -71,6 +69,12 @@ App Store Connect → Business (or Agreements, Tax, and Banking).
 ---
 
 ## 1. Server — deploy before TestFlight (~10 min)
+☑ **2026-09-22 chapters 2-5 ladder** — migration pushed + extend-action-plan deployed (Jeremy, same day). For any later change:
+```bash
+deno test supabase/functions/_shared/
+supabase db push                              # chapter_briefs + micro_actions.chapter 1..5
+supabase functions deploy extend-action-plan
+```
 ☑ **All six functions deployed 2026-09-22** (tier caps, gpt-4o-mini plan/next
 chapter, gpt-4o-mini-transcribe, Plus 6/6/12/12, `extend-action-plan` live).
 Re-run the block below after any further change under `supabase/functions/`.
@@ -122,13 +126,17 @@ supabase functions deploy analyze-swot research-market generate-action-plan tran
 ---
 
 ## 3. Store assets (Claude drives, you approve) — `scripts/store-assets.sh`
-- ☐ Sign the simulator in as the demo account; capture six raw screens
-  (`shot 01-record` … `06-plus`), `compose` → `docs/store/screenshots/`
-  (1320×2868, one 6.9" set is all Apple needs; it scales the rest).
-- ☐ Record one 20–25 s walkthrough (`rec start`, navigate, `rec stop`),
-  `preview in.mov out.mp4` → 886×1920 H.264 + silent AAC → `docs/store/previews/`.
-  Up to 3 previews; they autoplay muted. (There is no interactive media on
-  the App Store.)
+- ☑ 2026-09-22: five framed screenshots in `docs/store/screenshots/`
+  (record · taste · evidence · chapter 1 journey · chapter 2) and a 24.5 s
+  preview `docs/store/previews/abimo-preview-6.9.mp4` (886×1920, H.264 High
+  L4.0, silent AAC — passes ffprobe). Captured on Jeremy's account.
+- ☑ Shot 6 (paywall with live prices) captured 2026-09-22. Prices only render
+  when the app is launched by Xcode's Run action (the scheme attaches
+  `AbimoPlus.storekit`; `simctl launch` and hosted-test `SKTestSession` do
+  not). Scriptable via AppleScript: `tell application "Xcode" to run
+  workspace document` after opening the project.
+- ☐ Apple wants a **poster frame** for the preview: pick one in App Store
+  Connect after upload (the gauge at ~7 s reads best).
 - ☐ App icon: approve the teal horse on the simulator home screen
   (alternative head-shot crop in `docs/store/icon-alt/`). Regenerate with
   `swift tools/render-app-icon.swift Abimo/Assets.xcassets/MascotNeutral.imageset/neutral_3x.png <out>`.

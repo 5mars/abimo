@@ -20,9 +20,15 @@ final class NodeIconCatalogTests: XCTestCase {
         }
     }
 
+    func testBuildChapterBorrowsTheFallbackSet() {
+        XCTAssertEqual(NodeIconCatalog.icons(for: .build), NodeIconCatalog.icons(for: .steps))
+    }
+
     func testNoIconIsSharedBetweenKinds() {
+        // `.build` (a Plus chapter) reuses the `.steps` fallback set by design —
+        // the two never render on the same path — so it sits out of this check.
         var seen: [String: JourneyChapterKind] = [:]
-        for kind in kinds {
+        for kind in kinds where kind != .build {
             for name in NodeIconCatalog.icons(for: kind) {
                 XCTAssertNil(seen[name], "\(name) used by both \(seen[name]!) and \(kind)")
                 seen[name] = kind
