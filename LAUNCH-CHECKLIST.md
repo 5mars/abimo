@@ -130,10 +130,11 @@ supabase functions deploy analyze-swot research-market generate-action-plan tran
   (record · taste · evidence · chapter 1 journey · chapter 2) and a 24.5 s
   preview `docs/store/previews/abimo-preview-6.9.mp4` (886×1920, H.264 High
   L4.0, silent AAC — passes ffprobe). Captured on Jeremy's account.
-- ☐ Shot 6, the paywall, needs the StoreKit test config so prices render:
-  run the app from **Xcode (Cmd+R, Abimo scheme, iPhone 17 Pro Max)** — the
-  scheme attaches `AbimoPlus.storekit`; `simctl launch` cannot. Then Profile →
-  Go Plus, `scripts/store-assets.sh shot 06-plus`, `compose`.
+- ☑ Shot 6 (paywall with live prices) captured 2026-09-22. Prices only render
+  when the app is launched by Xcode's Run action (the scheme attaches
+  `AbimoPlus.storekit`; `simctl launch` and hosted-test `SKTestSession` do
+  not). Scriptable via AppleScript: `tell application "Xcode" to run
+  workspace document` after opening the project.
 - ☐ Apple wants a **poster frame** for the preview: pick one in App Store
   Connect after upload (the gauge at ~7 s reads best).
 - ☐ App icon: approve the teal horse on the simulator home screen
