@@ -16,7 +16,7 @@ struct ActionPlanDetailView: View {
     /// The plan-level progress the old header card used to show.
     private var progressSubtitle: String {
         guard viewModel.totalCount > 0 else { return "" }
-        return "\(viewModel.completedCount) of \(viewModel.totalCount) · \(viewModel.remainingMinutes) min left"
+        return "\(viewModel.completedCount) of \(viewModel.totalCount) · \(MinutesFormat.short(viewModel.remainingMinutes)) left"
     }
 
     var body: some View {
