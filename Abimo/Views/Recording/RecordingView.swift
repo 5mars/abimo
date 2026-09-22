@@ -114,6 +114,12 @@ struct RecordingView: View {
     private var topZone: some View {
         if viewModel.micDenied {
             statusLine("No mic, no magic. Enable the microphone in Settings.")
+        } else if viewModel.micUndetermined {
+            micAskHeader
+                .transition(.opacity.combined(with: .scale(scale: 0.95)))
+        } else if viewModel.micJustGranted {
+            statusLine("Mic's on. Tap the big button when you're ready.")
+                .transition(.opacity.combined(with: .scale(scale: 0.95)))
         } else if viewModel.isRecording {
             VStack(spacing: 20) {
                 Text(formatDuration(viewModel.recordingDuration))
@@ -141,6 +147,30 @@ struct RecordingView: View {
         } else {
             idleHeader
                 .transition(.opacity.combined(with: .scale(scale: 0.95)))
+        }
+    }
+
+    // MARK: - Mic permission ask (first visit only)
+
+    /// One line of context before iOS shows its own dialog. Asking here, on
+    /// purpose, means the first real tap on the mic starts a real recording.
+    private var micAskHeader: some View {
+        VStack(spacing: 14) {
+            Spacer()
+            Image(systemName: "mic.badge.plus")
+                .font(.system(size: 44, weight: .semibold))
+                .foregroundColor(.brand)
+            Text("First, the microphone.")
+                .font(.duoScreenTitle)
+                .foregroundColor(.textPri)
+                .multilineTextAlignment(.center)
+            Text("Abimo listens to your idea, transcribes it, and hands it to the critic.\nNothing is recorded until you tap the button.")
+                .font(.system(size: 15))
+                .foregroundColor(.textSec)
+                .multilineTextAlignment(.center)
+                .lineSpacing(4)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, 24)
         }
     }
 
@@ -220,6 +250,8 @@ struct RecordingView: View {
             Button {
                 if viewModel.isRecording {
                     stopAndSave()
+                } else if viewModel.micUndetermined {
+                    Task { await viewModel.requestMicrophone() }
                 } else if capBlocked {
                     showPaywall = true
                 } else if !saveFailed {
@@ -263,6 +295,7 @@ struct RecordingView: View {
                 && !viewModel.isRecording
                 && !viewModel.isSaving
                 && !viewModel.micDenied
+                && !viewModel.micUndetermined
                 && !saveFailed
                 && !capBlocked
         )
@@ -277,6 +310,11 @@ struct RecordingView: View {
                 viewModel.openSettings()
             }
             .frame(width: 220)
+        } else if viewModel.micUndetermined {
+            GradientButton(title: "Allow the microphone", size: .compact) {
+                Task { await viewModel.requestMicrophone() }
+            }
+            .frame(width: 240)
         } else if saveFailed {
             VStack(spacing: 12) {
                 GradientButton(title: "Try saving again", isLoading: viewModel.isSaving) {

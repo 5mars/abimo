@@ -113,7 +113,7 @@ ORDERING:
 
 When REAL SMALL COMPARABLES are provided, reference them by name in search/message templates (e.g. "PoolTrak alternatives pricing") instead of [competitor] placeholders.
 
-Generate exactly 7-9 actions. Spread across quadrants, ordered so a founder can do them top to bottom.
+Generate 8-12 actions — never fewer than 8. Spread across quadrants, ordered so a founder can do them top to bottom.
 
 STRATEGY BY VIABILITY (scores spread the full range — treat the band as truth):
 0-19: The idea as described doesn't survive. Actions should hunt for a pivot or the real problem underneath.
@@ -178,54 +178,48 @@ DIMENSION SCORES (0-10): ${dims}
 WEAKEST LINK: ${score_rationale || "Not available."}
 REAL SMALL COMPARABLES (from live web research): ${((comparables || []).join(" | ")).slice(0, MAX_SWOT_CONTEXT_CHARS) || "None found."}
 
-Generate 7-9 micro-actions with copy-paste templates.`;
+Generate 8-12 micro-actions with copy-paste templates.`;
 
-    const openaiRes = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${OPENAI_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini", // step lists don't need the scored model; 16× cheaper,
-        temperature: 0.4,
-        max_tokens: 2500,
-        response_format: {
-          type: "json_schema",
-          json_schema: {
-            name: "action_plan",
-            schema: ACTION_PLAN_SCHEMA,
-            strict: true,
-          },
-        },
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: userMessage },
-        ],
-      }),
-    });
+    const MIN_ACTIONS = 8;
+    const askOpenAI = async (extraNudge: string) => {
+      const res = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${OPENAI_API_KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "gpt-4o-mini", // step lists don't need the scored model; 16× cheaper
+          temperature: 0.4,
+          max_tokens: 3000,
+          response_format: { type: "json_schema", json_schema: { name: "action_plan", schema: ACTION_PLAN_SCHEMA, strict: true } },
+          messages: [
+            { role: "system", content: SYSTEM_PROMPT },
+            { role: "user", content: userMessage + extraNudge },
+          ],
+        }),
+      });
+      if (!res.ok) {
+        const errBody = await res.text();
+        console.error(`OpenAI error ${res.status}:`, errBody);
+        return { error: new Response(JSON.stringify({ error: "OpenAI request failed", status: res.status, detail: errBody }),
+          { status: 502, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }) };
+      }
+      const content = (await res.json()).choices?.[0]?.message?.content;
+      if (!content) {
+        return { error: new Response(JSON.stringify({ error: "Empty response from OpenAI" }),
+          { status: 502, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }) };
+      }
+      return { result: JSON.parse(content) as { actions?: unknown[] } };
+    };
 
-    if (!openaiRes.ok) {
-      const errBody = await openaiRes.text();
-      console.error(`OpenAI error ${openaiRes.status}:`, errBody);
-      return new Response(
-        JSON.stringify({ error: "OpenAI request failed", status: openaiRes.status, detail: errBody }),
-        { status: 502, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
-      );
+    // A three-node roadmap reads as cheap. The schema can't enforce a minimum
+    // (strict mode ignores minItems), so check and ask once more if short.
+    let attempt = await askOpenAI("");
+    if (attempt.error) return attempt.error;
+    let result = attempt.result!;
+    if ((result.actions?.length ?? 0) < MIN_ACTIONS) {
+      console.warn(`generate-action-plan: only ${result.actions?.length ?? 0} actions, retrying`);
+      const retry = await askOpenAI(`\n\nYour previous answer had only ${result.actions?.length ?? 0} actions. The plan MUST have between 8 and 12 actions. Add distinct, non-overlapping steps until it does.`);
+      if (!retry.error && (retry.result!.actions?.length ?? 0) > (result.actions?.length ?? 0)) result = retry.result!;
     }
-
-    const openaiData = await openaiRes.json();
-    const content = openaiData.choices?.[0]?.message?.content;
-
-    if (!content) {
-      console.error("No content in OpenAI response:", JSON.stringify(openaiData));
-      return new Response(
-        JSON.stringify({ error: "Empty response from OpenAI" }),
-        { status: 502, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
-      );
-    }
-
-    const result = JSON.parse(content);
 
     return new Response(JSON.stringify(result), {
       headers: { ...CORS_HEADERS, "Content-Type": "application/json" },

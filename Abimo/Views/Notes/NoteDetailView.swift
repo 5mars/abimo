@@ -288,7 +288,7 @@ struct NoteDetailView: View {
             }
         }) {
             if let transcription = transcription {
-                SWOTAnalysisView(transcription: transcription, preloadedAnalysis: swotAnalysis, noteTitle: noteTitle, hasPlan: actionPlan != nil)
+                SWOTAnalysisView(transcription: transcription, preloadedAnalysis: swotAnalysis, noteTitle: noteTitle, existingPlan: actionPlan)
             }
         }
         .task {
@@ -453,8 +453,10 @@ struct NoteDetailView: View {
                     Spacer()
                 }
 
-                NavigationLink {
-                    ActionPlanDetailView(planId: plan.id, analysisId: plan.analysisId)
+                // Plans belong to the Actions tab — switch there and push, so the
+                // tab bar matches the screen instead of nesting the journey under Ideas.
+                Button {
+                    coordinator.openPlan(plan)
                 } label: {
                     HStack(spacing: 8) {
                         Image(systemName: "bolt.fill")
@@ -503,10 +505,16 @@ struct NoteDetailView: View {
     }
 
     private func loadActionPlan(analysisId: UUID) async {
+        // Coming back from the journey: show the count we already know, then refresh.
+        if let cached = PlanCache.shared.entry(analysisId: analysisId) {
+            actionPlan = cached.plan
+            actionPlanProgress = cached.progress
+        }
         if let plan = try? await supabase.fetchActionPlan(analysisId: analysisId) {
             let actions = (try? await supabase.fetchMicroActions(actionPlanId: plan.id)) ?? []
             actionPlan = plan
             actionPlanProgress = (completed: actions.filter(\.isCompleted).count, total: actions.count)
+            PlanCache.shared.store(plan: plan, actions: actions)
         }
     }
 
@@ -529,7 +537,10 @@ struct NoteDetailView: View {
     }
 
     private func loadTranscription() async {
-        isLoadingTranscription = true
+        // `.task` re-runs every time this screen re-appears (e.g. popping back
+        // from the journey). Only the first look gets placeholders; after that
+        // the data on screen stays put while the refresh happens underneath.
+        if transcription == nil { isLoadingTranscription = true }
         errorMessage = nil
         defer { isLoadingTranscription = false }
 
@@ -561,9 +572,9 @@ struct NoteDetailView: View {
     }
 
     private func loadSWOTAnalysis(transcriptionId: UUID) async {
-        isLoadingSWOT = true
+        if swotAnalysis == nil { isLoadingSWOT = true }
         let result = try? await supabase.fetchSWOTAnalysis(transcriptionId: transcriptionId)
-        swotAnalysis = result
+        if result != nil || swotAnalysis == nil { swotAnalysis = result }
         isLoadingSWOT = false
 
         // Sync analysis_id back to voice_notes so the list shows correct status

@@ -72,6 +72,25 @@ class RecordingViewModel: ObservableObject {
         permissionsManager.microphoneDenied
     }
 
+    /// The system prompt hasn't been shown yet — the Record tab asks first,
+    /// with a line of context, and only then hands over the mic.
+    var micUndetermined: Bool {
+        permissionsManager.microphoneUndetermined
+    }
+
+    /// Set right after the user allows the mic, so the screen can say
+    /// "you're set — tap to record" instead of starting on its own.
+    @Published var micJustGranted = false
+
+    /// Asks iOS for the microphone. Never starts a recording: the tap that
+    /// triggers the prompt is spent on the prompt (that's how a silent
+    /// two-second "idea" got recorded once).
+    func requestMicrophone() async {
+        let granted = await permissionsManager.requestMicrophonePermission()
+        micJustGranted = granted
+        AnalyticsService.shared.log(.micPermission(granted: granted))
+    }
+
     func checkAndRequestPermissions() async -> Bool {
         if !permissionsManager.microphoneAuthorized {
             return await permissionsManager.requestMicrophonePermission()
@@ -85,10 +104,13 @@ class RecordingViewModel: ObservableObject {
 
     func startRecording() async {
         errorMessage = nil
+        micJustGranted = false
 
-        // Check permissions
-        guard await checkAndRequestPermissions() else {
-            errorMessage = nil // denied state is rendered as a dedicated card, not an error string
+        // Permission is asked for explicitly (requestMicrophone) before the
+        // mic is live; this is only a guard against a revoked permission.
+        guard permissionsManager.microphoneAuthorized else {
+            permissionsManager.checkPermissions()
+            if permissionsManager.microphoneUndetermined { await requestMicrophone() }
             return
         }
 

@@ -14,6 +14,8 @@ import UIKit
 class PermissionsManager: ObservableObject {
     @Published var microphoneAuthorized = false
     @Published var microphoneDenied = false
+    /// iOS has never shown the mic prompt for this install.
+    var microphoneUndetermined: Bool { !microphoneAuthorized && !microphoneDenied }
 
     init() {
         checkPermissions()

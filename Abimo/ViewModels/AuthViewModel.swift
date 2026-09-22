@@ -130,6 +130,7 @@ class AuthViewModel: ObservableObject {
         defer { isLoading = false }
 
         do {
+            PlanCache.shared.clear()
             try await supabase.signOut()
             currentUser = nil
             isAuthenticated = false
@@ -144,6 +145,7 @@ class AuthViewModel: ObservableObject {
         defer { isLoading = false }
 
         do {
+            PlanCache.shared.clear()
             try await supabase.deleteAccount()
             // User no longer exists on server -- just clear local state
             // Do NOT call signOut() -- it will fail for deleted user

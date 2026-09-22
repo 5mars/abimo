@@ -49,6 +49,7 @@ Deno.test("chapters 2-5 are not chapter-one micro-actions", () => {
   assert(!prompt.includes("identical to chapter one"));
   assert(!prompt.includes("zero cost, no coding"));
   assertStringIncludes(prompt, "15 to 240 minutes");
+  assertStringIncludes(prompt, "6-10 steps");
   const times = (CHAPTER_SCHEMA.properties.actions.items.properties.time_estimate_minutes as { enum: number[] }).enum;
   assertEquals(Math.max(...times), 240);
   assert((CHAPTER_SCHEMA.properties.actions.items.properties.action_type as { enum: string[] }).enum.includes("link"));

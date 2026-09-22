@@ -75,7 +75,12 @@ deno test supabase/functions/_shared/
 supabase db push                              # chapter_briefs + micro_actions.chapter 1..5
 supabase functions deploy extend-action-plan
 ```
-☑ **All six functions deployed 2026-09-22** (tier caps, gpt-4o-mini plan/next
+☑ **Redeployed `generate-action-plan` + `extend-action-plan`** 2026-09-22 evening (8–12 / 6–10 steps with a retry when short). For later changes:
+```bash
+supabase functions deploy generate-action-plan extend-action-plan
+```
+
+☑ **All six functions deployed 2026-09-22** (morning) (tier caps, gpt-4o-mini plan/next
 chapter, gpt-4o-mini-transcribe, Plus 6/6/12/12, `extend-action-plan` live).
 Re-run the block below after any further change under `supabase/functions/`.
 
@@ -144,12 +149,30 @@ supabase functions deploy analyze-swot research-market generate-action-plan tran
 ---
 
 ## 4. Merge, archive, upload (~20 min)
-- ☐ Open/merge PR `gsd-testing → main`. **Archive from `main`.**
-- ☐ Xcode → scheme *Abimo* → destination *Any iOS Device (arm64)* →
-  Product → **Archive** → Organizer → *Distribute App* → *App Store Connect*
-  → Upload. No export-compliance prompt (declared in the build); Crashlytics
-  dSYMs upload from the run-script. Version 1.0, build 2.
+- ☑ PR #24 merged 2026-09-22; `main` is the release branch.
+- ☐ **Re-archive after PR #25 merges** (navigation + cache fixes) — the 17:31 archive predates them.
+- ☑ **Archived 2026-09-22 17:31** from `main`: Xcode → Window → Organizer →
+  Archives → *Abimo 1.0 (2)*. Verified in the archive: privacy manifest
+  bundled, MinimumOSVersion 18.0, encryption-exempt flag set, no `.storekit`
+  in the bundle, zero personal e-mail strings in the binary, dSYMs present.
+- ☐ Once the App Store Connect record exists (§2a): Organizer → *Distribute
+  App* → *App Store Connect* → Upload (Xcode re-signs with the distribution
+  certificate; the archive's development signature is normal).
 - ☐ Wait for the "build processed" e-mail (15–30 min).
+
+### 4a. Supabase auth — do before anyone signs up (incl. the review account)
+- ☑ **URL Configuration** done 2026-09-22 (Site URL abimo.ca; redirects abimo.ca/confirmed/ + noteai://auth-callback). Was: Site URL
+  `https://abimo.ca`; Redirect URLs: add `https://abimo.ca/confirmed/` and
+  `noteai://auth-callback`. Without the allow-list Supabase ignores the
+  app's redirect and lands on the default `localhost:3000` — the dark page.
+- ☐ **Custom SMTP** (Authentication → SMTP Settings): the dashboard banner is
+  right — the built-in mailer allows a handful of e-mails per hour and sends
+  from a supabase address. Resend on `abimo.ca` (steps in
+  `docs/ops/DOMAIN-EMAIL-HOSTING.md` §6). Not the cause of the dark page, but
+  a launch blocker: sign-up mail stops after the first few users.
+- ☐ `review@abimo.ca`: the built-in mailer's cap (2 e-mails/hour) blocked the
+  resend. Confirm by hand in the SQL editor instead:
+  `update auth.users set email_confirmed_at = now() where email = 'review@abimo.ca' and email_confirmed_at is null;`
 
 ## 5. TestFlight device pass (~1 h)
 - ☐ TestFlight tab → Internal Testing → group with your Apple ID → install
