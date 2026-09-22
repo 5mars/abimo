@@ -22,9 +22,9 @@ tastes your idea, a stable that holds three of them for free.
 
 | Field | Value |
 |---|---|
-| Privacy Policy URL | `https://abimo.app/privacy/` (fallback `https://5mars.github.io/abimo-legal/privacy/`) |
-| Support URL | `https://abimo.app/` |
-| Marketing URL | `https://abimo.app/` |
+| Privacy Policy URL | `https://abimo.ca/privacy/` (fallback `https://5mars.github.io/abimo-legal/privacy/`) |
+| Support URL | `https://abimo.ca/` |
+| Marketing URL | `https://abimo.ca/` |
 | License Agreement | Apple standard EULA (leave the custom field empty) |
 
 ## Promotional text (170)
@@ -62,9 +62,9 @@ Plus is $4.99/month or $34.99/year, each with a 7-day free trial. Cancel anytime
 WHAT ABIMO IS NOT
 It's not a chatbot and it's not a business plan generator. It's one honest critic, one score, and one next step — so the idea stops rattling and starts moving.
 
-Abimo needs an account (email) so your ideas follow you between devices. Recordings are transcribed and analysed by AI on our servers; we never sell your data and there are no ads. Full policy at abimo.app/privacy.
+Abimo needs an account (email) so your ideas follow you between devices. Recordings are transcribed and analysed by AI on our servers; we never sell your data and there are no ads. Full policy at abimo.ca/privacy.
 
-Payment is charged to your Apple ID account at confirmation of purchase. Subscriptions renew automatically unless cancelled at least 24 hours before the end of the current period. Manage or cancel in Settings › Apple ID › Subscriptions. Terms: apple.com/legal/internet-services/itunes/dev/stdeula. Privacy: abimo.app/privacy.
+Payment is charged to your Apple ID account at confirmation of purchase. Subscriptions renew automatically unless cancelled at least 24 hours before the end of the current period. Manage or cancel in Settings › Apple ID › Subscriptions. Terms: apple.com/legal/internet-services/itunes/dev/stdeula. Privacy: abimo.ca/privacy.
 ```
 
 ## Keywords (100, comma-separated, no spaces after commas)
@@ -116,10 +116,10 @@ All **collected**, all **not used for tracking**. "Linked to the user's identity
 | Field | Value |
 |---|---|
 | Sign-in required | Yes |
-| Demo username | `review@abimo.app` |
+| Demo username | `review@abimo.ca` |
 | Demo password | *(set when the account is created — keep it out of git)* |
 | Contact first/last name | *(your legal name — Apple only, not public)* |
-| Contact phone / email | your phone · `support@abimo.app` |
+| Contact phone / email | your phone · `support@abimo.ca` |
 
 Notes to the reviewer:
 

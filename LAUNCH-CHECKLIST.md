@@ -7,7 +7,7 @@ order that avoids blocking a later step. ☐ = still to do · ☑ = done.
 
 Decisions locked for 1.0: Individual Apple account (legal name shows as
 Seller — accepted), based in Quebec; **no EU distribution** (keeps your
-address/phone off the store page); domain **abimo.app** with role e-mails;
+address/phone off the store page); domain **abimo.ca** with role e-mails;
 GitHub repo private; English only.
 
 ---
@@ -48,7 +48,7 @@ App Store Connect → Business (or Agreements, Tax, and Banking).
   English-only 1.0 is common; put French on the 1.x list.
 
 ### 0c. Domain, e-mail, website
-- ☐ Register **abimo.app** (Cloudflare Registrar, ~US$15/yr, WHOIS privacy on).
+- ☐ Register **abimo.ca** (Cloudflare Registrar, ~US$15/yr, WHOIS privacy on).
 - ☐ Cloudflare → Email Routing: `support@`, `privacy@`, `review@` → your inbox.
 - ☐ Cloudflare DNS (DNS-only / grey cloud): `A` 185.199.108.153 ·
   185.199.109.153 · 185.199.110.153 · 185.199.111.153, `AAAA`
@@ -56,10 +56,10 @@ App Store Connect → Business (or Agreements, Tax, and Banking).
   `CNAME www → 5mars.github.io`.
 - ☐ Merge **5mars/abimo-legal PR #1** (landing + support + refreshed
   privacy/terms + CNAME). Then repo Settings → Pages → Custom domain shows
-  `abimo.app`; tick **Enforce HTTPS** once the certificate is issued
+  `abimo.ca`; tick **Enforce HTTPS** once the certificate is issued
   (~10 min). Old `5mars.github.io/abimo-legal/…` links redirect.
 - ☐ Tell Claude the domain resolves → the in-app feedback e-mail and
-  privacy/terms links switch to `support@abimo.app` / `abimo.app/...`
+  privacy/terms links switch to `support@abimo.ca` / `abimo.ca/...`
   (`SettingsView.swift`, `PaywallView.swift`) and get committed.
 
 ### 0d. Other consoles
@@ -103,7 +103,7 @@ supabase functions deploy analyze-swot research-market generate-action-plan tran
   Display names/descriptions from the metadata file; review screenshot =
   the paywall PNG in `docs/store/screenshots/`. IDs are case-sensitive and
   permanent — copy-paste.
-- ☐ **2c. App Privacy**: policy URL `https://abimo.app/privacy/`; declare
+- ☐ **2c. App Privacy**: policy URL `https://abimo.ca/privacy/`; declare
   Email · Audio · Other User Content · User ID · **Device ID** · Product
   Interaction · Crash · Performance, exactly as the table in the metadata
   file; tracking = **No**.
@@ -116,7 +116,7 @@ supabase functions deploy analyze-swot research-market generate-action-plan tran
   Slovenia, Spain, Sweden.
 - ☐ **2f. Sandbox tester**: Users and Access → Sandbox → add a test Apple ID
   (any e-mail you control; it never needs to be a real Apple account).
-- ☐ **2g. Demo account** for App Review: sign up `review@abimo.app` in the
+- ☐ **2g. Demo account** for App Review: sign up `review@abimo.ca` in the
   app, confirm the e-mail, record **two** ideas and let them finish (one
   free stall stays open for the reviewer). Put the password in the review
   notes only — never in git.

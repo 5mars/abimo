@@ -59,5 +59,5 @@ chapters, re-taste, full evidence, unlimited ideas, 6/6/12/12 daily caps.
 
 ## Legal
 
-Privacy policy and terms: https://abimo.app/privacy/ · https://abimo.app/terms/
-(source: [5mars/abimo-legal](https://github.com/5mars/abimo-legal)). Support: support@abimo.app.
+Privacy policy and terms: https://abimo.ca/privacy/ · https://abimo.ca/terms/
+(source: [5mars/abimo-legal](https://github.com/5mars/abimo-legal)). Support: support@abimo.ca.
