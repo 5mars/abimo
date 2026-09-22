@@ -124,3 +124,6 @@ supabase/.temp/
 *.certSigningRequest
 *.mobileprovision
 *.provisionprofile
+
+# Raw simulator captures (regenerate with scripts/store-assets.sh)
+docs/store/raw/

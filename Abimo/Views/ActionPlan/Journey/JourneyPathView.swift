@@ -109,7 +109,12 @@ struct JourneyPathView: View {
                     bubbleOverlay(anchors)
                 }
                 .onChange(of: bubbleActionId) { _, id in
-                    guard let id else { bubbleGlobalFrame = nil; bubbleNodeGlobalTop = nil; return }
+                    // Always start from a blank measurement: onGeometryChange only fires
+                    // when the *height* changes, so a same-height bubble on another node
+                    // would otherwise reuse the previous node's frame and scroll wildly.
+                    bubbleGlobalFrame = nil
+                    bubbleNodeGlobalTop = nil
+                    guard let id else { return }
                     Task { await revealBubble(for: id, proxy: proxy) }
                 }
                 .task {
@@ -335,8 +340,15 @@ struct JourneyPathView: View {
     /// sits inside the visible window — under the sticky header, above the
     /// bottom edge. Waits one layout pass so the bubble has a measured frame.
     private func revealBubble(for id: UUID, proxy: ScrollViewProxy) async {
-        try? await Task.sleep(nanoseconds: 60_000_000)
-        guard bubbleActionId == id, let bubble = bubbleGlobalFrame, let nodeTop = bubbleNodeGlobalTop, viewportHeight > 0 else { return }
+        // Wait for this bubble's own measurement (a few frames at most).
+        var bubble: CGRect?
+        var nodeTop: CGFloat?
+        for _ in 0..<8 {
+            try? await Task.sleep(nanoseconds: 40_000_000)
+            guard bubbleActionId == id else { return }
+            if let b = bubbleGlobalFrame, let n = bubbleNodeGlobalTop { bubble = b; nodeTop = n; break }
+        }
+        guard let bubble, let nodeTop, viewportHeight > 0 else { return }
         let obstructed = overlayTop + (stickyChapter != nil ? ChapterHeaderView.inlineHeight : 0)
         guard let targetTop = NodeBubbleModel.autoScrollNodeTop(
             nodeTop: nodeTop,
@@ -388,6 +400,7 @@ struct JourneyPathView: View {
                     )
                     .frame(width: frame.width)
                     .offset(x: frame.minX, y: frame.minY)
+                    .id(id) // a fresh view per node, so the geometry callback fires on every open
                     // `.offset` is a transform — a frame read here would ignore it,
                     // so the global rect is rebuilt from the anchor instead. Only the
                     // bubble's height is measured.
