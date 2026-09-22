@@ -144,12 +144,29 @@ supabase functions deploy analyze-swot research-market generate-action-plan tran
 ---
 
 ## 4. Merge, archive, upload (~20 min)
-- ☐ Open/merge PR `gsd-testing → main`. **Archive from `main`.**
-- ☐ Xcode → scheme *Abimo* → destination *Any iOS Device (arm64)* →
-  Product → **Archive** → Organizer → *Distribute App* → *App Store Connect*
-  → Upload. No export-compliance prompt (declared in the build); Crashlytics
-  dSYMs upload from the run-script. Version 1.0, build 2.
+- ☑ PR #24 merged 2026-09-22; `main` is the release branch.
+- ☑ **Archived 2026-09-22 17:31** from `main`: Xcode → Window → Organizer →
+  Archives → *Abimo 1.0 (2)*. Verified in the archive: privacy manifest
+  bundled, MinimumOSVersion 18.0, encryption-exempt flag set, no `.storekit`
+  in the bundle, zero personal e-mail strings in the binary, dSYMs present.
+- ☐ Once the App Store Connect record exists (§2a): Organizer → *Distribute
+  App* → *App Store Connect* → Upload (Xcode re-signs with the distribution
+  certificate; the archive's development signature is normal).
 - ☐ Wait for the "build processed" e-mail (15–30 min).
+
+### 4a. Supabase auth — do before anyone signs up (incl. the review account)
+- ☐ **URL Configuration** (Authentication → URL Configuration): Site URL
+  `https://abimo.ca`; Redirect URLs: add `https://abimo.ca/confirmed/` and
+  `noteai://auth-callback`. Without the allow-list Supabase ignores the
+  app's redirect and lands on the default `localhost:3000` — the dark page.
+- ☐ **Custom SMTP** (Authentication → SMTP Settings): the dashboard banner is
+  right — the built-in mailer allows a handful of e-mails per hour and sends
+  from a supabase address. Resend on `abimo.ca` (steps in
+  `docs/ops/DOMAIN-EMAIL-HOSTING.md` §6). Not the cause of the dark page, but
+  a launch blocker: sign-up mail stops after the first few users.
+- ☐ Check `review@abimo.ca` in Authentication → Users: if "Confirmed" is
+  empty, use the row's *Confirm user* action (the link was consumed by the
+  verify step even though the page after it was blank).
 
 ## 5. TestFlight device pass (~1 h)
 - ☐ TestFlight tab → Internal Testing → group with your Apple ID → install
