@@ -37,6 +37,43 @@ enum NodeBubbleModel {
         x = max(margin, min(containerWidth - margin - width, x))
         return CGRect(x: x, y: nodeRect.maxY + gap, width: width, height: height)
     }
+
+    /// Breathing room kept between the bubble/node and the edges of the
+    /// visible window when the path auto-scrolls.
+    static let autoScrollPadding: CGFloat = 12
+
+    /// Where the node's top should land, in viewport coordinates (0 = the top
+    /// of the visible window), so its bubble is fully on screen — or nil when
+    /// nothing needs to move. All inputs are in one shared (global) space:
+    /// `visibleTop`/`visibleBottom` bound the scroll viewport, `obstructedTop`
+    /// is the first y not covered by the sticky chapter header (== visibleTop
+    /// when there is none). When the bubble hangs below the fold the bubble
+    /// wins, even if that tucks the node under the header.
+    static func autoScrollNodeTop(
+        nodeTop: CGFloat,
+        bubbleBottom: CGFloat,
+        visibleTop: CGFloat,
+        visibleBottom: CGFloat,
+        obstructedTop: CGFloat,
+        padding: CGFloat = autoScrollPadding
+    ) -> CGFloat? {
+        let bubbleOverflow = bubbleBottom + padding - visibleBottom
+        let topOverflow = obstructedTop + padding - nodeTop
+        if bubbleOverflow <= 0 && topOverflow <= 0 { return nil }
+        if bubbleOverflow > 0 {
+            return (nodeTop - visibleTop) - bubbleOverflow
+        }
+        return (obstructedTop - visibleTop) + padding
+    }
+
+    /// `ScrollViewProxy.scrollTo(_:anchor:)` aligns the target's unit point
+    /// with the viewport's; this solves for the y fraction that puts a node of
+    /// `nodeSize` with its top at `nodeTop` (viewport coordinates).
+    static func scrollAnchorY(nodeTop: CGFloat, nodeSize: CGFloat, viewportHeight: CGFloat) -> CGFloat {
+        let span = viewportHeight - nodeSize
+        guard span > 0 else { return 0.5 }
+        return min(1, max(0, nodeTop / span))
+    }
 }
 
 /// Node bounds, keyed by action id, so the bubble can anchor to the tapped

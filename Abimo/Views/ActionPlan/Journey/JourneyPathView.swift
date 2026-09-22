@@ -28,6 +28,12 @@ struct JourneyPathView: View {
     @State private var overlayTop: CGFloat = 0
     @State private var pathWidth: CGFloat = 0
     @State private var viewportHeight: CGFloat = 0
+    /// The open bubble's frame in global space (same space as `overlayTop`),
+    /// so the path can scroll it fully into view.
+    @State private var bubbleGlobalFrame: CGRect?
+    /// True while the path is scrolling on the bubble's behalf — that scroll
+    /// must not dismiss the very bubble it is revealing.
+    @State private var autoScrolling = false
 
     private let layout = JourneyLayout()
     private let sideMargin: CGFloat = 16
@@ -96,6 +102,10 @@ struct JourneyPathView: View {
                 .overlayPreferenceValue(NodeAnchorKey.self) { anchors in
                     bubbleOverlay(anchors)
                 }
+                .onChange(of: bubbleActionId) { _, id in
+                    guard let id else { bubbleGlobalFrame = nil; return }
+                    Task { await revealBubble(for: id, proxy: proxy) }
+                }
                 .task {
                     // Defer scroll to after first layout pass
                     try? await Task.sleep(nanoseconds: 80_000_000)
@@ -112,6 +122,11 @@ struct JourneyPathView: View {
             viewportHeight = size.height
         }
         .onScrollPhaseChange { _, phase in
+            // A programmatic reveal scroll is ours; only the user's scroll dismisses.
+            if autoScrolling {
+                if phase == .idle { autoScrolling = false }
+                return
+            }
             if phase != .idle, bubbleActionId != nil { bubbleActionId = nil }
         }
         .overlay(alignment: .top) {
@@ -268,6 +283,31 @@ struct JourneyPathView: View {
         }
     }
 
+    /// Scrolls just enough that the bubble (and, when possible, its node)
+    /// sits inside the visible window — under the sticky header, above the
+    /// bottom edge. Waits one layout pass so the bubble has a measured frame.
+    private func revealBubble(for id: UUID, proxy: ScrollViewProxy) async {
+        try? await Task.sleep(nanoseconds: 60_000_000)
+        guard bubbleActionId == id, let bubble = bubbleGlobalFrame, viewportHeight > 0 else { return }
+        let nodeTop = bubble.minY - NodeBubbleModel.gap - layout.nodeSize
+        let obstructed = overlayTop + (stickyChapter != nil ? ChapterHeaderView.inlineHeight : 0)
+        guard let targetTop = NodeBubbleModel.autoScrollNodeTop(
+            nodeTop: nodeTop,
+            bubbleBottom: bubble.maxY,
+            visibleTop: overlayTop,
+            visibleBottom: overlayTop + viewportHeight,
+            obstructedTop: obstructed
+        ) else { return }
+        let y = NodeBubbleModel.scrollAnchorY(nodeTop: targetTop, nodeSize: layout.nodeSize, viewportHeight: viewportHeight)
+        autoScrolling = true
+        AnimationPolicy.animate(.easeInOut(duration: 0.35)) {
+            proxy.scrollTo(id, anchor: UnitPoint(x: 0.5, y: y))
+        }
+        // If nothing actually moved, no phase change arrives — don't leave the guard armed.
+        try? await Task.sleep(nanoseconds: 700_000_000)
+        autoScrolling = false
+    }
+
     // MARK: - Bubble
 
     @ViewBuilder
@@ -297,6 +337,7 @@ struct JourneyPathView: View {
                     )
                     .frame(width: frame.width)
                     .offset(x: frame.minX, y: frame.minY)
+                    .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { bubbleGlobalFrame = $0 }
                     .transition(
                         AnimationPolicy.reduceMotion
                             ? .opacity
