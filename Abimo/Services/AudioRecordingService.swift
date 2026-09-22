@@ -15,6 +15,16 @@ class AudioRecordingService: NSObject, ObservableObject {
     @Published var recordingDuration: TimeInterval = 0
     @Published var audioLevel: Float = 0.0
 
+    /// One idea, said out loud. Five minutes is generous for that and caps the
+    /// only AI call whose cost grows with what the user sends (transcription).
+    static let maxDuration: TimeInterval = 5 * 60
+    /// Fired once, on the main actor, when the ceiling is reached. The owner
+    /// decides what to do (Abimo stops and saves — never discards audio).
+    var onMaxDurationReached: (() -> Void)?
+    private var maxDurationFired = false
+
+    var timeRemaining: TimeInterval { max(0, Self.maxDuration - recordingDuration) }
+
     private var audioRecorder: AVAudioRecorder?
     private var timer: Timer?
     private var levelTimer: Timer?
@@ -52,12 +62,17 @@ class AudioRecordingService: NSObject, ObservableObject {
 
         isRecording = true
         recordingDuration = 0
+        maxDurationFired = false
 
         // Start duration timer
         timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
             guard let self = self else { return }
             Task { @MainActor in
                 self.recordingDuration += 0.1
+                if self.isRecording, !self.maxDurationFired, self.recordingDuration >= Self.maxDuration {
+                    self.maxDurationFired = true
+                    self.onMaxDurationReached?()
+                }
             }
         }
 
