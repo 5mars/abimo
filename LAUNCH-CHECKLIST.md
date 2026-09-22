@@ -48,9 +48,10 @@ App Store Connect → Business (or Agreements, Tax, and Banking).
   English-only 1.0 is common; put French on the 1.x list.
 
 ### 0c. Domain, e-mail, website
-- ☐ Register **abimo.ca** (Cloudflare Registrar, ~US$15/yr, WHOIS privacy on).
-- ☐ **Apple mail**: iCloud+ Custom Email Domain → `abimo.ca` → paste Apple's MX/TXT/CNAME records into Cloudflare → create `support@`, `privacy@`, `review@` (steps in `docs/ops/DOMAIN-EMAIL-HOSTING.md` §3). Do NOT enable Cloudflare Email Routing.
-- ☐ Cloudflare DNS (DNS-only / grey cloud): `A` 185.199.108.153 ·
+- ☑ Registered **abimo.ca** on GoDaddy 2026-09-22; nameservers moved to Cloudflare (brett/zita) the same day.
+- ~~☐ Register **abimo.ca** (Cloudflare Registrar, ~US$15/yr, WHOIS privacy on).~~
+- ☑ **Apple mail** records live 2026-09-22 (iCloud MX ×2, apple-domain TXT, SPF, DKIM CNAME). ☐ Still to confirm: `support@` / `info@` show *verified* in iCloud settings and a test mail lands; add `review@` before App Review (steps in `docs/ops/DOMAIN-EMAIL-HOSTING.md` §3). Do NOT enable Cloudflare Email Routing.
+- ☑ Cloudflare DNS done 2026-09-22 (DNS-only / grey cloud): `A` 185.199.108.153 ·
   185.199.109.153 · 185.199.110.153 · 185.199.111.153, `AAAA`
   2606:50c0:8000::153 · 8001::153 · 8002::153 · 8003::153,
   `CNAME www → 5mars.github.io`.
