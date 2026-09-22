@@ -93,9 +93,13 @@ struct JourneyChapter: Identifiable, Equatable {
     var totalMinutes: Int { actions.reduce(0) { $0 + $1.timeEstimateMinutes } }
     var isComplete: Bool { !actions.isEmpty && actions.allSatisfy(\.isCompleted) }
 
+    /// Completion is part of equality on purpose: SwiftUI diffs the header
+    /// view by this, and a chapter whose steps just got checked off must
+    /// re-render its ring and eyebrow.
     static func == (lhs: JourneyChapter, rhs: JourneyChapter) -> Bool {
         lhs.kind == rhs.kind && lhs.title == rhs.title && lhs.part == rhs.part
             && lhs.actions.map(\.id) == rhs.actions.map(\.id)
+            && lhs.actions.map(\.isCompleted) == rhs.actions.map(\.isCompleted)
     }
 }
 

@@ -244,7 +244,7 @@ struct PaywallView: View {
     private var benefitsPanel: some View {
         VStack(alignment: .leading, spacing: 14) {
             benefitRow("book.pages.fill", "Next chapters",
-                       "Finish a plan, get the next 5-7 steps built from what you learned")
+                       "Four more chapters, each written for your skills, time and budget: prove people care, build it, first users, money")
             benefitRow("arrow.clockwise", "Re-taste after the work",
                        "The critic re-scores with your results as evidence. Watch the number move.")
             benefitRow("doc.text.magnifyingglass", "Full evidence",

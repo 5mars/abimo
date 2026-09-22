@@ -31,6 +31,8 @@ struct JourneyPathView: View {
     /// The open bubble's frame in global space (same space as `overlayTop`),
     /// so the path can scroll it fully into view.
     @State private var bubbleGlobalFrame: CGRect?
+    /// The tapped node's top edge in the same global space.
+    @State private var bubbleNodeGlobalTop: CGFloat?
     /// True while the path is scrolling on the bubble's behalf — that scroll
     /// must not dismiss the very bubble it is revealing.
     @State private var autoScrolling = false
@@ -107,7 +109,7 @@ struct JourneyPathView: View {
                     bubbleOverlay(anchors)
                 }
                 .onChange(of: bubbleActionId) { _, id in
-                    guard let id else { bubbleGlobalFrame = nil; return }
+                    guard let id else { bubbleGlobalFrame = nil; bubbleNodeGlobalTop = nil; return }
                     Task { await revealBubble(for: id, proxy: proxy) }
                 }
                 .task {
@@ -334,8 +336,7 @@ struct JourneyPathView: View {
     /// bottom edge. Waits one layout pass so the bubble has a measured frame.
     private func revealBubble(for id: UUID, proxy: ScrollViewProxy) async {
         try? await Task.sleep(nanoseconds: 60_000_000)
-        guard bubbleActionId == id, let bubble = bubbleGlobalFrame, viewportHeight > 0 else { return }
-        let nodeTop = bubble.minY - NodeBubbleModel.gap - layout.nodeSize
+        guard bubbleActionId == id, let bubble = bubbleGlobalFrame, let nodeTop = bubbleNodeGlobalTop, viewportHeight > 0 else { return }
         let obstructed = overlayTop + (stickyChapter != nil ? ChapterHeaderView.inlineHeight : 0)
         guard let targetTop = NodeBubbleModel.autoScrollNodeTop(
             nodeTop: nodeTop,
@@ -366,6 +367,9 @@ struct JourneyPathView: View {
                 let node = geo[anchor]
                 let frame = NodeBubbleModel.frame(nodeRect: node, containerWidth: geo.size.width, height: 0)
                 let state = nodeState(for: action, nextId: viewModel.nextRecommendedAction?.id)
+                // The overlay spans the whole scroll content; its global origin
+                // turns content-space rects into the space `overlayTop` lives in.
+                let overlayOrigin = geo.frame(in: .global).origin
 
                 ZStack(alignment: .topLeading) {
                     // Outside tap closes the bubble (and eats the tap, like Duolingo).
@@ -384,7 +388,16 @@ struct JourneyPathView: View {
                     )
                     .frame(width: frame.width)
                     .offset(x: frame.minX, y: frame.minY)
-                    .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { bubbleGlobalFrame = $0 }
+                    // `.offset` is a transform — a frame read here would ignore it,
+                    // so the global rect is rebuilt from the anchor instead. Only the
+                    // bubble's height is measured.
+                    .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height in
+                        bubbleGlobalFrame = CGRect(
+                            x: frame.minX + overlayOrigin.x, y: frame.minY + overlayOrigin.y,
+                            width: frame.width, height: height
+                        )
+                        bubbleNodeGlobalTop = node.minY + overlayOrigin.y
+                    }
                     .transition(
                         AnimationPolicy.reduceMotion
                             ? .opacity
