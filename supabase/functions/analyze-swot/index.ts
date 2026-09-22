@@ -13,7 +13,7 @@ const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY")!;
 const MODEL = "gpt-4o";
 
 // Free tier gets a real week of tasting; Plus gets the old ceiling.
-const DAILY_LIMIT = { free: 6, plus: 20 };
+const DAILY_LIMIT = { free: 6, plus: 12 };
 const MAX_TRANSCRIPTION_CHARS = 8000;
 const MAX_PIVOT_FIELD_CHARS = 500;
 const MAX_RETASTE_ACTIONS = 30;

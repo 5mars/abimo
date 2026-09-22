@@ -61,6 +61,14 @@ struct RecordingView: View {
         .animation(.spring(response: 0.4, dampingFraction: 0.75), value: saveFailed)
         .animation(.spring(response: 0.4, dampingFraction: 0.75), value: capBlocked)
         .task { await viewModel.refreshIdeaCount() }
+        .onChange(of: viewModel.stoppedAtMaxDuration) { _, hit in
+            // The ceiling already stopped the recorder; finish exactly like a tap on stop.
+            guard hit else { return }
+            viewModel.stoppedAtMaxDuration = false
+            showPipeline = true
+            walkIn.recordingSubmitted()
+            pipeline.start(recordingVM: viewModel, coordinator: coordinator)
+        }
         .onChange(of: coordinator.selectedTab) { _, newTab in
             // Kept-alive tabs never refire onAppear — refresh the quota here
             if newTab == .record {
@@ -112,6 +120,13 @@ struct RecordingView: View {
                     .foregroundColor(.brand)
                     .contentTransition(.numericText())
                 WaveformBarsView(level: viewModel.audioLevel)
+                if viewModel.isNearMaxDuration {
+                    Text("Land the plane — \(formatDuration(viewModel.timeRemaining)) left")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundColor(.secondary)
+                        .contentTransition(.numericText())
+                        .transition(.opacity)
+                }
             }
             .transition(.opacity.combined(with: .scale(scale: 0.9)))
         } else if saveFailed {

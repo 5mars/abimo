@@ -7,7 +7,7 @@ import { authenticate, consumeCredit, jsonError, requirePlus, CORS_HEADERS } fro
 // here through the caller's own RLS-scoped client, so nothing can be forged.
 
 const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY")!;
-const DAILY_LIMIT = { free: 0, plus: 20 };
+const DAILY_LIMIT = { free: 0, plus: 12 };
 const MAX_CHAPTER = 6;
 
 // Same shape generate-action-plan returns, so the app reuses ActionPlanResponse.
@@ -162,7 +162,7 @@ Generate chapter ${nextChapter}: 5-7 new micro-actions with copy-paste templates
       method: "POST",
       headers: { "Authorization": `Bearer ${OPENAI_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "gpt-4o",
+        model: "gpt-4o-mini", // step lists don't need the scored model; 16× cheaper,
         temperature: 0.4,
         max_tokens: 2500,
         response_format: { type: "json_schema", json_schema: { name: "plan_chapter", schema: CHAPTER_SCHEMA, strict: true } },

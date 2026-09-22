@@ -513,15 +513,21 @@ class SupabaseService {
         let session = try await client.auth.session
         let userId = session.user.id
 
-        // Delete storage files first (RPC won't handle storage)
-        let files = try await client.storage
-            .from("voice-recordings")
-            .list(path: "\(userId)")
-        if !files.isEmpty {
-            let paths = files.map { "\(userId)/\($0.name)" }
-            try await client.storage
-                .from("voice-recordings")
-                .remove(paths: paths)
+        // Delete storage files first (RPC won't handle storage). `list` is
+        // paginated (100 per page by default), so keep listing until the folder
+        // is empty — the privacy policy promises every recording goes.
+        let bucket = client.storage.from("voice-recordings")
+        let pageSize = 100
+        var pagesRemoved = 0
+        while true {
+            let files = try await bucket.list(
+                path: "\(userId)",
+                options: SearchOptions(limit: pageSize, offset: 0)
+            )
+            if files.isEmpty { break }
+            try await bucket.remove(paths: files.map { "\(userId)/\($0.name)" })
+            pagesRemoved += 1
+            if pagesRemoved > 1_000 { break } // safety valve against a bucket that never empties
         }
 
         // Delete all user data + auth record via server-side RPC

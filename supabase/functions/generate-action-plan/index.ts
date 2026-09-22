@@ -3,7 +3,7 @@ import { gate, jsonError, CORS_HEADERS } from "../_shared/gate.ts";
 
 const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY")!;
 
-const DAILY_LIMIT = { free: 6, plus: 20 };
+const DAILY_LIMIT = { free: 6, plus: 12 };
 const MAX_TRANSCRIPTION_CHARS = 8000;
 const MAX_SWOT_CONTEXT_CHARS = 6000;
 
@@ -187,7 +187,7 @@ Generate 7-9 micro-actions with copy-paste templates.`;
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gpt-4o",
+        model: "gpt-4o-mini", // step lists don't need the scored model; 16× cheaper,
         temperature: 0.4,
         max_tokens: 2500,
         response_format: {

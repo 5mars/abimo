@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { gate, jsonError, CORS_HEADERS } from "../_shared/gate.ts"
 
-const DAILY_LIMIT = 10
+const DAILY_LIMIT = { free: 3, plus: 6 }
 const MAX_AUDIO_BYTES = 20 * 1024 * 1024 // Whisper's own ceiling is 25 MB
 const ALLOWED_HOST = "ymbfqlrarlnqtzatgfah.supabase.co"
 const ALLOWED_PATH_PREFIX = "/storage/v1/object/sign/voice-recordings/"
@@ -61,7 +61,7 @@ serve(async (req) => {
     // Create form data for Whisper API
     const formData = new FormData()
     formData.append('file', audioBlob, 'audio.m4a')
-    formData.append('model', 'whisper-1')
+    formData.append('model', 'gpt-4o-mini-transcribe') // half the price of whisper-1, same endpoint
     formData.append('language', 'en')
 
     console.log('Calling OpenAI Whisper API...')

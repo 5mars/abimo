@@ -16,6 +16,9 @@ class RecordingViewModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var recordingFileURL: URL?
     @Published var activeIdeaCount: Int?   // nil until first fetch
+    /// Set when the 5-minute ceiling stopped the recording for the user. The
+    /// view saves and runs the pipeline exactly as if they had tapped stop.
+    @Published var stoppedAtMaxDuration = false
 
     /// Free-tier gate: at the cap when not premium and the last known count
     /// has reached the limit. While the count is unfetched (nil) we allow
@@ -41,6 +44,12 @@ class RecordingViewModel: ObservableObject {
             .sink { [weak self] _ in self?.objectWillChange.send() }
             .store(in: &cancellables)
 
+        audioService.onMaxDurationReached = { [weak self] in
+            guard let self, self.isRecording else { return }
+            self.stopRecording()
+            self.stoppedAtMaxDuration = true
+        }
+
         // Forward permission changes so the denied-mic card appears/disappears live
         permissionsManager.objectWillChange
             .sink { [weak self] _ in self?.objectWillChange.send() }
@@ -54,6 +63,10 @@ class RecordingViewModel: ObservableObject {
     var audioLevel: Float {
         audioService.audioLevel
     }
+
+    var timeRemaining: TimeInterval { audioService.timeRemaining }
+    /// Under a minute left — the readout switches to a countdown hint.
+    var isNearMaxDuration: Bool { isRecording && timeRemaining <= 60 }
 
     var micDenied: Bool {
         permissionsManager.microphoneDenied

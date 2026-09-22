@@ -65,7 +65,7 @@ struct ActionPlanDetailView: View {
         .animation(.easeInOut(duration: 0.3), value: viewModel.celebrationState)
         .animation(.easeInOut(duration: 0.25), value: viewModel.errorMessage)
         .navigationTitle(viewModel.actionPlan?.title ?? "")
-        .navigationSubtitle(progressSubtitle)
+        .navigationSubtitleIfAvailable(progressSubtitle)
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(Color.journeyBg, for: .navigationBar)
         .sheet(isPresented: $showIntro, onDismiss: { introSeen = true }) {
