@@ -30,10 +30,10 @@ capped account can cost and *what happens when the prepaid balance runs out*.
 
 | Call | Free/day | Plus/day | Cost per call, worst case | Notes |
 |---|---|---|---|---|
-| transcribe (whisper-1) | 3 | 10 | **≈ $0.15** (20 MB ≈ 25 min at $0.006/min) | dominated by *length*; typical 2-min idea = $0.012 |
-| research (gpt-4o + web search) | 3 | 10 | ≈ $0.10–0.20 | $0.01 per search call (model may search several times) + ~20k content tokens + 4k output |
-| analyze-swot (gpt-4o) | 6 | 20 | ≈ $0.07–0.10 | ~12k input (prompt + transcript + digest), up to 4k output, sometimes a second remix call |
-| plan / next chapter (gpt-4o) | 6 / 0 | 20 / 20 | ≈ $0.05 | 2.5k output cap |
+| transcribe (gpt-4o-mini-transcribe) | 3 | 6 | **≈ $0.15** (20 MB ≈ 25 min at $0.006/min) | dominated by *length*; typical 2-min idea = $0.012 |
+| research (gpt-4o + web search) | 3 | 6 | ≈ $0.10–0.20 | $0.01 per search call (model may search several times) + ~20k content tokens + 4k output |
+| analyze-swot (gpt-4o) | 6 | 12 | ≈ $0.07–0.10 | ~12k input (prompt + transcript + digest), up to 4k output, sometimes a second remix call |
+| plan / next chapter (gpt-4o-mini) | 6 / 0 | 12 / 12 | ≈ $0.05 | 2.5k output cap |
 
 - **Hostile free account, maxing everything with 25-minute recordings: ≈ $1.6/day.**
   With normal 2-minute recordings: ≈ $1.0/day.
@@ -61,18 +61,18 @@ most ~$1.6 of your money per day, and your provider cap ends the game.
    Settings → Billing: recharge $25 when below $10, monthly cap $100. Your
    worst month is then $100, and the app never goes dark for a paying user.
    Raise the cap as revenue comes in; it's a five-second change.
-3. **Cap recording length in the app (5 minutes).** Transcription is the
+3. ✅ *Done 2026-09-22.* **Cap recording length in the app (5 minutes).** Transcription is the
    only call whose cost scales with what the user sends, and there is no
    limit today (`AudioRecordingService.swift` records until stopped; 20 MB
    is the only ceiling). A 5-minute cap makes the worst free account
    ≈ $0.9/day and matches the product ("one idea, said out loud").
-4. **Cheaper models where calibration doesn't matter.** Keep gpt-4o for
+4. ✅ *Done 2026-09-22 (needs the function redeploy).* **Cheaper models where calibration doesn't matter.** Keep gpt-4o for
    `analyze-swot` — the score is calibrated to it. Switch
    `generate-action-plan` and `extend-action-plan` to **gpt-4o-mini**
    (16× cheaper, plenty for step lists) and `transcribe-audio` to
    **gpt-4o-mini-transcribe** ($0.003/min, half of whisper-1). Saves ~30 %
    of a typical idea's cost with no visible change.
-5. **Tighten Plus daily caps or add a monthly one.** 10/10/20/20 per *day*
+5. ✅ *Done 2026-09-22 — Plus is now 6/6/12/12 (needs the function redeploy).* **Tighten Plus daily caps or add a monthly one.** 10/10/20/20 per *day*
    lets one subscriber cost 50× their fee. Either 5/5/10/10 per day, or keep
    the daily caps and add a monthly cap (e.g. 60 tastings) in
    `consume_ai_credit` — "burners back next month" copy already fits.

@@ -181,7 +181,7 @@ Already live on Supabase project `ymbfqlrarlnqtzatgfah` (verified with curl):
 | Protection | Value |
 |---|---|
 | JWT verification | all 6 edge functions, gateway + in-function |
-| Daily per-user budgets | transcribe 10 · research 10 · SWOT 20 · plan 20 |
+| Daily per-user budgets | free 3 · 3 · 6 · 6 — Plus 6 · 6 · 12 · 12 (transcribe · research · SWOT · plan/next chapter) |
 | voice_notes insert backstop | 10/user/day (DB trigger) |
 | transcribe-audio URL lock | only this project's voice-recordings bucket, ≤20 MB |
 | max_tokens caps | SWOT 4096 · plan 2500 · research 3000 |
@@ -233,7 +233,7 @@ anchors by inflating dimensions.
 
 Server-side tiers. Free = one full taste + chapter 1 per idea, 3 active ideas,
 daily AI caps 3 (research/transcribe) / 6 (analyze/plan). Plus = next chapters,
-re-taste, full evidence, unlimited ideas, caps 10/10/20/20.
+re-taste, full evidence, unlimited ideas, caps 6/6/12/12.
 
 **Order of operations (the client ships last):**
 1. ✅ DONE 2026-09-17 — `supabase db push` applied `20260916130000_profiles_plus.sql`

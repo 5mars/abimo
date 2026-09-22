@@ -55,7 +55,7 @@ Plus is what happens after you do the work:
 • Next chapters — finish chapter one and Abimo builds the next 5–7 steps from what you learned
 • Re-taste — the critic re-scores with your results as evidence; watch the number move
 • Full evidence — every tasting note, market stat, and the receipt behind the score
-• Unlimited stalls and three times the daily tastings
+• Unlimited stalls and double the daily tastings
 
 Plus is $4.99/month or $34.99/year, each with a 7-day free trial. Cancel anytime in Settings.
 

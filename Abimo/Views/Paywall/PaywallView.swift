@@ -37,7 +37,7 @@ struct PaywallView: View {
             case .fullAnalysis: return "Every point, every detail, every market stat — no blur."
             case .nextChapter:  return "Plus builds the next chapter from what you learned."
             case .retaste:      return "Re-score after the work and watch the number move."
-            case .dailyCap:     return "Ten tastings a day instead of three, every day."
+            case .dailyCap:     return "Six tastings a day instead of three, every day."
             }
         }
 
@@ -250,7 +250,7 @@ struct PaywallView: View {
             benefitRow("doc.text.magnifyingglass", "Full evidence",
                        "Every tasting note, market stat, and the receipt behind the score")
             benefitRow("flame.fill", "Unlimited stalls, more gallop",
-                       "No 3-idea cap, and three times the daily tastings")
+                       "No 3-idea cap, and double the daily tastings")
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .duoPanel()

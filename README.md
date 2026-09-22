@@ -55,7 +55,7 @@ full deploy procedure and the "Plus is the second chapter" tier model.
 
 Free: 3 active ideas, one full tasting + chapter one each, 3 tastings/day.
 **Abimo Plus** (`com.mars.Abimo.plus.monthly` $4.99, `.yearly` $34.99, 7-day trial): next
-chapters, re-taste, full evidence, unlimited ideas, 10/10/20/20 daily caps.
+chapters, re-taste, full evidence, unlimited ideas, 6/6/12/12 daily caps.
 
 ## Legal
 
