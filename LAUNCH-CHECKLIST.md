@@ -49,18 +49,16 @@ App Store Connect → Business (or Agreements, Tax, and Banking).
 
 ### 0c. Domain, e-mail, website
 - ☐ Register **abimo.ca** (Cloudflare Registrar, ~US$15/yr, WHOIS privacy on).
-- ☐ Cloudflare → Email Routing: `support@`, `privacy@`, `review@` → your inbox.
+- ☐ **Apple mail**: iCloud+ Custom Email Domain → `abimo.ca` → paste Apple's MX/TXT/CNAME records into Cloudflare → create `support@`, `privacy@`, `review@` (steps in `docs/ops/DOMAIN-EMAIL-HOSTING.md` §3). Do NOT enable Cloudflare Email Routing.
 - ☐ Cloudflare DNS (DNS-only / grey cloud): `A` 185.199.108.153 ·
   185.199.109.153 · 185.199.110.153 · 185.199.111.153, `AAAA`
   2606:50c0:8000::153 · 8001::153 · 8002::153 · 8003::153,
   `CNAME www → 5mars.github.io`.
-- ☐ Merge **5mars/abimo-legal PR #1** (landing + support + refreshed
+- ☑ Merged **5mars/abimo-legal PR #1** 2026-09-22 (landing + support + refreshed
   privacy/terms + CNAME). Then repo Settings → Pages → Custom domain shows
   `abimo.ca`; tick **Enforce HTTPS** once the certificate is issued
   (~10 min). Old `5mars.github.io/abimo-legal/…` links redirect.
-- ☐ Tell Claude the domain resolves → the in-app feedback e-mail and
-  privacy/terms links switch to `support@abimo.ca` / `abimo.ca/...`
-  (`SettingsView.swift`, `PaywallView.swift`) and get committed.
+- ☑ In-app feedback e-mail → `support@abimo.ca`, privacy links → `https://abimo.ca/privacy/` (2026-09-22). Terms link stays Apple's standard EULA.
 
 ### 0d. Other consoles
 - ☐ **OpenAI** → Settings → Limits: hard monthly budget **$50**, alert **$25**.

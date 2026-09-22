@@ -118,7 +118,7 @@ struct SettingsView: View {
                             settingsRow(icon: "arrow.clockwise", title: "Clear Local Data", color: .brandAmber)
                         }
                         Divider().overlay(Color.cardEdge)
-                        Link(destination: URL(string: "https://5mars.github.io/abimo-legal/privacy/")!) {
+                        Link(destination: URL(string: "https://abimo.ca/privacy/")!) {
                             settingsRow(icon: "hand.raised", title: "Privacy Policy", color: .brandGreen)
                         }
                         Divider().overlay(Color.cardEdge)
@@ -139,7 +139,7 @@ struct SettingsView: View {
                         }
                         Divider().overlay(Color.cardEdge)
                         Button {
-                            if let url = URL(string: "mailto:jeremy@cinqmars.ca?subject=Abimo%20Feedback") {
+                            if let url = URL(string: "mailto:support@abimo.ca?subject=Abimo%20Feedback") {
                                 UIApplication.shared.open(url)
                             }
                         } label: {

@@ -4,7 +4,7 @@ The domain is registered at **GoDaddy** (done 2026-09-22). GoDaddy's own DNS
 and e-mail are upsell-heavy, so the plan is: keep the registration at
 GoDaddy, hand DNS to **Cloudflare's free plan**, and use Cloudflare for
 e-mail forwarding. One evening of clicking; the only cost is the domain.
-Order matters: nameservers → DNS → e-mail → website → Supabase mail.
+Order matters: nameservers → DNS → website → Apple e-mail → Supabase mail.
 
 ## 1. Put the domain on Cloudflare DNS (GoDaddy keeps the registration) — 15 min + waiting
 
@@ -50,42 +50,54 @@ real hostname to issue the certificate):
 https://docs.github.com/pages/configuring-a-custom-domain-for-your-github-pages-site/managing-a-custom-domain-for-your-github-pages-site
 — check they still match before adding.)
 
-## 3. E-mail on the domain (receive) — 10 min
+## 3. E-mail on the domain with Apple (iCloud+ Custom Email Domain) — 15 min
 
-Websites → abimo.ca → **Email → Email Routing**.
+You use Apple's inbox, so skip Cloudflare Email Routing entirely and let
+iCloud host the mailboxes. It sends *and* receives, works in Mail on every
+Apple device, and is included with any paid iCloud+ plan (50 GB tier is
+enough). Do this only once Cloudflare says the zone is *Active*.
 
-1. **Get started** → it adds the MX and TXT records itself (click *Add records
-   and enable*).
-2. **Destination addresses → Add**: your real inbox (the one you read).
-   Cloudflare sends a verification mail; click it.
-3. **Routing rules → Custom addresses → Create address**, three times:
-   `support@abimo.ca`, `privacy@abimo.ca`, `review@abimo.ca` → your inbox.
-   Leave *catch-all* off (spam magnet).
-4. Test: send a mail from your phone to support@abimo.ca; it lands in your inbox.
+1. On the Mac: **System Settings → [your name] → iCloud → iCloud Mail →
+   Custom Email Domain** (or on the web: https://icloud.com/icloudplus →
+   *Custom Email Domain*). Choose **Only you** (you can add family later).
+2. Enter `abimo.ca`. When asked whether the domain already has e-mail
+   addresses, say **No** and continue. Apple offers to sign in to your
+   registrar — choose the **manual** route ("I'll set up my own records").
+3. Apple shows four DNS records. Add each in **Cloudflare → DNS → Records**,
+   all *DNS only* (grey cloud). They look like this (copy Apple's exact values):
 
-## 4. Replying *as* support@abimo.ca (send) — 10 min, optional but recommended
+   | Type | Name | Content / priority |
+   |---|---|---|
+   | MX | `@` | `mx01.mail.icloud.com` — priority 10 |
+   | MX | `@` | `mx02.mail.icloud.com` — priority 10 |
+   | TXT | `@` | `apple-domain=XXXXXXXXXXXXXXXX` (verification) |
+   | TXT | `@` | `v=spf1 include:icloud.com ~all` |
+   | CNAME | `sig1._domainkey` | `sig1.dkim.abimo.ca.at.icloudmailer.com` |
 
-Cloudflare routing is receive-only. To reply without exposing your personal
-address, pick one:
+   If Cloudflare already created an SPF TXT for another service, **edit** it
+   to `v=spf1 include:icloud.com include:amazonses.com ~all` instead of
+   adding a second SPF record (two SPF records break delivery).
+4. Back in Apple's dialog click **Finish setup / Verify**. It can take a few
+   minutes after the records propagate.
+5. **Create addresses**: `support@abimo.ca`, `privacy@abimo.ca`,
+   `review@abimo.ca` (up to three per person per domain). Optionally turn on
+   **Allow all incoming messages** (catch-all) so typos still reach you.
+6. In **Mail → Settings → Composing** choose which address is the default
+   for new mail; when replying to a support message Mail answers from the
+   address it arrived on automatically.
+7. Test from your phone: mail `support@abimo.ca` → it lands in Mail under
+   iCloud; reply → it goes out as support@abimo.ca.
 
-**If your inbox is Gmail / Google Workspace:**
-1. Google Account → Security → 2-Step Verification on → **App passwords** →
-   create one named "Abimo support".
-2. Gmail → Settings → Accounts → *Send mail as* → **Add another email address**.
-   Name `Abimo Support`, address `support@abimo.ca`, *treat as an alias* ✓.
-3. SMTP `smtp.gmail.com`, port `587`, TLS, username = your Gmail address,
-   password = the app password.
-4. Gmail sends a confirmation to support@abimo.ca → it arrives via Cloudflare
-   → click it. Repeat for privacy@ if you want.
-5. Add a Cloudflare DNS **TXT** `@` → `v=spf1 include:_spf.google.com include:_spf.mx.cloudflare.net ~all`
-   so replies aren't marked as spam. (Cloudflare will have created an SPF
-   record already; edit it to add the Google include rather than adding a second.)
+Notes
+- iCloud custom domains and Cloudflare Email Routing both want the MX
+  records, so use only Apple's. Resend (section 6) uses a subdomain and
+  coexists.
+- Apple caps custom-domain mailboxes at the same iCloud storage you already
+  pay for; support volume for an indie app is nowhere near it.
+- If you ever want Gmail instead, the free path is Cloudflare Email Routing
+  + Gmail *Send mail as* (see the git history of this file for those steps).
 
-**If your inbox is iCloud Mail and you pay for iCloud+:**
-Settings → iCloud → iCloud Mail → **Custom Email Domain** → add `abimo.ca`
-→ create `support@`. Apple gives you the MX/TXT records to paste into
-Cloudflare (this *replaces* Cloudflare Email Routing — use one or the other).
-Send and receive both work in Mail.app.
+## 4. (folded into 3 — Apple sends and receives)
 
 ## 5. Publish the website — 5 min + ~10 min waiting
 
@@ -109,7 +121,7 @@ fix: a transactional mail provider on your own domain.
 
 1. https://resend.com → sign up (free tier: 3,000 mails/month, plenty).
 2. **Domains → Add domain** `abimo.ca` (region: US). Resend shows 3–4 DNS
-   records (MX for `send`, TXT SPF, TXT DKIM `resend._domainkey`). Add each
+   records (MX + TXT on the `send` subdomain, plus a DKIM TXT `resend._domainkey`) — they don't collide with the iCloud records. Add each
    in Cloudflare DNS, *DNS only*. Click **Verify**.
 3. **API Keys → Create** ("supabase-auth", sending access only). Copy it once.
 4. Supabase dashboard → Project → **Authentication → SMTP Settings** → enable
