@@ -23,7 +23,7 @@ tastes your idea, a stable that holds three of them for free.
 | Field | Value |
 |---|---|
 | Privacy Policy URL | `https://abimo.ca/privacy/` (fallback `https://5mars.github.io/abimo-legal/privacy/`) |
-| Support URL | `https://abimo.ca/` |
+| Support URL | `https://abimo.ca/support/` |
 | Marketing URL | `https://abimo.ca/` |
 | License Agreement | Apple standard EULA (leave the custom field empty) |
 
