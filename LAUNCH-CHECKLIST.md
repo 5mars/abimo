@@ -75,7 +75,7 @@ deno test supabase/functions/_shared/
 supabase db push                              # chapter_briefs + micro_actions.chapter 1..5
 supabase functions deploy extend-action-plan
 ```
-☐ **Redeploy `generate-action-plan` + `extend-action-plan`** (2026-09-22 evening: 8–12 / 6–10 steps with a retry when short):
+☑ **Redeployed `generate-action-plan` + `extend-action-plan`** 2026-09-22 evening (8–12 / 6–10 steps with a retry when short). For later changes:
 ```bash
 supabase functions deploy generate-action-plan extend-action-plan
 ```
