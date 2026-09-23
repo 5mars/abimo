@@ -64,7 +64,10 @@ It's not a chatbot and it's not a business plan generator. It's one honest criti
 
 Abimo needs an account (email) so your ideas follow you between devices. Recordings are transcribed and analysed by AI on our servers; we never sell your data and there are no ads. Full policy at abimo.ca/privacy.
 
-Payment is charged to your Apple ID account at confirmation of purchase. Subscriptions renew automatically unless cancelled at least 24 hours before the end of the current period. Manage or cancel in Settings › Apple ID › Subscriptions. Terms: apple.com/legal/internet-services/itunes/dev/stdeula. Privacy: abimo.ca/privacy.
+Payment is charged to your Apple ID account at confirmation of purchase. Subscriptions renew automatically unless cancelled at least 24 hours before the end of the current period. Manage or cancel in Settings › Apple ID › Subscriptions.
+
+Terms of Use (EULA): https://www.apple.com/legal/internet-services/itunes/dev/stdeula/
+Privacy Policy: https://abimo.ca/privacy/
 ```
 
 ## Keywords (100, comma-separated, no spaces after commas)
