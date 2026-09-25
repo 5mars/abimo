@@ -1,0 +1,26 @@
+{
+  "images" : [
+    {
+      "filename" : "facepalm_1x.png",
+      "idiom" : "universal",
+      "scale" : "1x"
+    },
+    {
+      "filename" : "facepalm_2x.png",
+      "idiom" : "universal",
+      "scale" : "2x"
+    },
+    {
+      "filename" : "facepalm_3x.png",
+      "idiom" : "universal",
+      "scale" : "3x"
+    }
+  ],
+  "properties" : {
+    "compression-type" : "lossy"
+  },
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}

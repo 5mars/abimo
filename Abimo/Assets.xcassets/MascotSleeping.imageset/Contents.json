@@ -1,0 +1,26 @@
+{
+  "images" : [
+    {
+      "filename" : "sleeping_1x.png",
+      "idiom" : "universal",
+      "scale" : "1x"
+    },
+    {
+      "filename" : "sleeping_2x.png",
+      "idiom" : "universal",
+      "scale" : "2x"
+    },
+    {
+      "filename" : "sleeping_3x.png",
+      "idiom" : "universal",
+      "scale" : "3x"
+    }
+  ],
+  "properties" : {
+    "compression-type" : "lossy"
+  },
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "images" : [
+    {
+      "filename" : "horseshoe_1x.png",
+      "idiom" : "universal",
+      "scale" : "1x"
+    },
+    {
+      "filename" : "horseshoe_2x.png",
+      "idiom" : "universal",
+      "scale" : "2x"
+    },
+    {
+      "filename" : "horseshoe_3x.png",
+      "idiom" : "universal",
+      "scale" : "3x"
+    }
+  ],
+  "properties" : {
+    "compression-type" : "lossy"
+  },
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}

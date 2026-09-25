@@ -1,0 +1,26 @@
+{
+  "images" : [
+    {
+      "filename" : "welcomeBack_1x.png",
+      "idiom" : "universal",
+      "scale" : "1x"
+    },
+    {
+      "filename" : "welcomeBack_2x.png",
+      "idiom" : "universal",
+      "scale" : "2x"
+    },
+    {
+      "filename" : "welcomeBack_3x.png",
+      "idiom" : "universal",
+      "scale" : "3x"
+    }
+  ],
+  "properties" : {
+    "compression-type" : "lossy"
+  },
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}

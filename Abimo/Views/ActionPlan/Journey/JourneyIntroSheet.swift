@@ -16,7 +16,7 @@ struct JourneyIntroSheet: View {
 
     var body: some View {
         VStack(spacing: 22) {
-            MascotView(mood: moment.mood, size: 140, motion: .entrance)
+            MascotView(mood: moment.mood, size: 140, motion: .entrance, expression: moment.expression)
                 .padding(.top, 12)
 
             MascotCalloutLine(line: moment.line)

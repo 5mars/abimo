@@ -73,6 +73,14 @@ struct DailyDaresCard: View {
                     .id(burstTrigger)
             }
         }
+        .task(id: burstTrigger) {
+            // Vortex keeps redrawing every frame while mounted — take the
+            // confetti down once the burst has fallen instead of animating
+            // an empty canvas for as long as the tab stays open.
+            guard burstTrigger > 0 else { return }
+            try? await Task.sleep(nanoseconds: 3_000_000_000)
+            burstTrigger = 0
+        }
         .animation(
             AnimationPolicy.reduceMotion ? nil : .spring(response: 0.4, dampingFraction: 0.75),
             value: allCleared

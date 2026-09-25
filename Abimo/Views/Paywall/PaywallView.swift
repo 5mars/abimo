@@ -30,6 +30,20 @@ struct PaywallView: View {
             }
         }
 
+        /// Who's guarding this gate: a "stable's full" sign, the stopwatch at
+        /// closing time, the evidence receipt, the bouncer at chapter two,
+        /// the spoon for a re-taste, and the crowned VIP for the full menu.
+        var mascotPose: MascotExpression {
+            switch self {
+            case .ideaCap:      return .sign
+            case .general:      return .vip
+            case .fullAnalysis: return .receipt
+            case .nextChapter:  return .doorman
+            case .retaste:      return .tasting
+            case .dailyCap:     return .stopwatch
+            }
+        }
+
         var subtitle: String {
             switch self {
             case .ideaCap:      return "Free stables hold 3 ideas. Yours is packed."
@@ -232,7 +246,7 @@ struct PaywallView: View {
 
     private var mascotHeader: some View {
         HStack(alignment: .center, spacing: 4) {
-            MascotView(mood: .sassy, size: 110)
+            MascotView(mood: .sassy, size: 110, expression: context.mascotPose)
             MascotSpeechLine(line: context.mascotLine, arrowOffsetY: 26)
             Spacer(minLength: 0)
         }

@@ -32,7 +32,8 @@ struct SignUpView: View {
 
                     // Header — same staged entrance as LoginView
                     VStack(spacing: 12) {
-                        MascotView(mood: .playful, size: 130)
+                        // Snooty maître d' bow for the new member.
+                        MascotView(mood: .playful, size: 130, expression: .bowtie)
                             .scaleEffect(appeared ? 1 : 0.6)
                             .opacity(appeared ? 1 : 0)
 

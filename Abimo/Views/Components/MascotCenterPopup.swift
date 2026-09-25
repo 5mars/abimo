@@ -23,7 +23,7 @@ struct MascotCenterPopup: View {
                 .onTapGesture { onDismiss() }
 
             VStack(spacing: 16) {
-                MascotView(mood: moment.mood, size: 130, motion: .entrance)
+                MascotView(mood: moment.mood, size: 130, motion: .entrance, expression: moment.expression)
 
                 Text(moment.line)
                     .font(.system(size: 17, weight: .bold, design: .rounded))

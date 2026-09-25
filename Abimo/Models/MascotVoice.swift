@@ -72,6 +72,9 @@ struct MascotMoment: Identifiable, Equatable {
     let line: String
     let mood: MascotMood
     var action: MascotAction? = nil
+    /// The scenario's own pose (a trophy for a finished plan, tea and a
+    /// smirk for a streak at risk). nil = the pose mapped to `mood`.
+    var expression: MascotExpression? = nil
 }
 
 enum MascotVoice {
@@ -90,7 +93,30 @@ enum MascotVoice {
         }
         var moment = MascotMoment(trigger: trigger, line: line, mood: mood)
         moment.action = defaultAction(for: trigger)
+        moment.expression = pose(for: trigger)
         return moment
+    }
+
+    /// Which pose acts out each moment. The mood still drives the line
+    /// pools; this is what the horse is physically doing while he says it.
+    private static func pose(for trigger: MascotMomentTrigger) -> MascotExpression? {
+        switch trigger {
+        case .scoreRevealed(let verdict): return .forVerdict(verdict)
+        case .actionCompleted:            return .horseshoe
+        case .streakExtended:             return .flame
+        case .dailyGoalHit:               return .flex
+        case .daresCleared:               return .dare
+        case .chapterComplete:            return .gallop
+        case .journeyIntro:               return .pointing
+        case .planComplete:               return .trophy
+        case .walkInWelcome:              return .waving
+        case .returnedAfterAbsence:       return .welcomeBack
+        case .streakAtRisk:               return .worried
+        case .emptyKitchen:               return .sleeping
+        case .recordPrompt:               return .listening
+        case .launching:                  return nil
+        case .ideaCapReached:             return .sign
+        }
     }
 
     /// Every popup trigger carries an action — that's the point of a popup.

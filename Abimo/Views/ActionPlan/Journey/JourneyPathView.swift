@@ -128,7 +128,13 @@ struct JourneyPathView: View {
                 }
             }
         }
-        .onGeometryChange(for: CGSize.self) { $0.size } action: { size in
+        // Rounded to whole points: the path's width feeds its own layout, and
+        // on a finished plan each pass came back ~1e-13 pt wider — every
+        // "change" re-ran layout, forever (the app froze after the last
+        // "I did it"). Sub-point noise must not count as a change.
+        .onGeometryChange(for: CGSize.self) {
+            CGSize(width: $0.size.width.rounded(), height: $0.size.height.rounded())
+        } action: { size in
             pathWidth = size.width
             viewportHeight = size.height
         }

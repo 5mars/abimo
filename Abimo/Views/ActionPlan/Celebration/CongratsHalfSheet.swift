@@ -13,13 +13,25 @@ struct CongratsHalfSheet: View {
 
     @State private var moment: MascotMoment?
 
+    /// The horse acts out the biggest thing this step earned — the strip
+    /// below lists it, he grudgingly hands it over. Plain steps fall back to
+    /// the moment's own pose (a chapter gallop, or the XP horseshoe flip).
+    private var pose: MascotExpression? {
+        if moment?.trigger == .chapterComplete { return moment?.expression }
+        guard let rewards = viewModel.lastRewards else { return moment?.expression }
+        if rewards.badge != nil { return .medal }
+        if rewards.streak != nil { return .flame }
+        if rewards.goalHit != nil || rewards.milestone != nil { return .flex }
+        return moment?.expression
+    }
+
     var body: some View {
         VStack(spacing: 24) {
             // The mascot IS the celebration — big, with confetti behind it
             ZStack {
                 InlineConfettiView()
                     .allowsHitTesting(false)
-                MascotView(mood: moment?.mood ?? .playful, size: 160, motion: .entrance)
+                MascotView(mood: moment?.mood ?? .playful, size: 160, motion: .entrance, expression: pose)
             }
             .frame(width: 200, height: 180)
 

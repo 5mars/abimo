@@ -1,0 +1,26 @@
+{
+  "images" : [
+    {
+      "filename" : "tasting_1x.png",
+      "idiom" : "universal",
+      "scale" : "1x"
+    },
+    {
+      "filename" : "tasting_2x.png",
+      "idiom" : "universal",
+      "scale" : "2x"
+    },
+    {
+      "filename" : "tasting_3x.png",
+      "idiom" : "universal",
+      "scale" : "3x"
+    }
+  ],
+  "properties" : {
+    "compression-type" : "lossy"
+  },
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}
