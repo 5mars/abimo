@@ -20,8 +20,8 @@ struct MascotEmptyStateView<Extra: View>: View {
     var body: some View {
         VStack(spacing: 24) {
             HStack(alignment: .center, spacing: 2) {
-                // Bored on the floor — "I can't roast air."
-                MascotView(mood: .neutral, size: 140, expression: .sitting)
+                // Nothing to judge, so he's napping — "I can't roast air."
+                MascotView(mood: .neutral, size: 140, expression: .sleeping)
                 MascotSpeechLine(line: line, arrowOffsetY: 25)
             }
             .padding(.horizontal, 8)

@@ -64,16 +64,20 @@ struct PipelineProgressView: View {
         }
     }
 
-    /// One pose per stage — the critic takes notes, scouts, cooks, approves.
+    /// One pose per stage — the critic takes notes, scouts, tastes, writes
+    /// the plan. On a Chef's Kiss he's caught off guard for the last beat;
+    /// anything less gets the usual smug thumb (no spoilers for bad news).
     private var stageExpression: MascotExpression? {
         switch pipeline.stage {
-        case .idle, .running(.saving):     return nil
+        case .idle, .running(.saving):     return .listening
         case .running(.transcribing):      return .writing
-        case .running(.scouting):          return .sunglasses
-        case .running(.analyzing):         return .cooking
+        case .running(.scouting):          return .searching
+        case .running(.analyzing):         return .tasting
         case .running(.planning):          return .writing
-        case .done:                        return .thumbsUp
-        case .failed:                      return .crying
+        case .done:
+            let score = pipeline.analysis?.viabilityScore ?? 0
+            return ScoreVerdict(score: score) == .chefsKiss ? .shocked : .thumbsUp
+        case .failed:                      return .facepalm
         }
     }
 

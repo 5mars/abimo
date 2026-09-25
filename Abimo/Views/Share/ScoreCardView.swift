@@ -22,13 +22,7 @@ struct ScoreCardView: View {
 
     private var verdict: ScoreVerdict { ScoreVerdict(score: score) }
 
-    private var expression: MascotExpression {
-        switch verdict {
-        case .burnt, .halfBaked:      return .grumpy
-        case .needsSeasoning:         return .thumbsUp
-        case .simmering, .chefsKiss:  return .waving
-        }
-    }
+    private var expression: MascotExpression { .forVerdict(verdict) }
 
     var body: some View {
         ZStack {

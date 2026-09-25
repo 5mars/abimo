@@ -5,6 +5,15 @@
 // shared bottom-aligned square canvas, export 1x/2x/3x PNGs.
 //
 // usage: swift slice.swift <sheet> <outDir> <minY> <name1> <name2> ...
+//
+// Single-pose mode, for one character per render (props, "z"s and motion
+// lines included): pass `single:<side>` instead of <minY> and ONE name.
+// Every foreground piece is kept, and the canvas is a FIXED <side> source
+// pixels (bottom-aligned) instead of hugging the sprite — so a pose holding
+// a wide prop doesn't shrink the horse. Pick <side> so the standing horse
+// fills ~95% of it (850 for the 1024x1024 renders); lower it for renders
+// where the horse is drawn smaller. Exports 240/480/720 px (sharp at the
+// 260 pt loading size); sheet mode keeps 120/240/360 for the launch screen.
 
 import Foundation
 import CoreGraphics
@@ -16,7 +25,8 @@ let args = CommandLine.arguments
 guard args.count >= 5 else { fatalError("usage: slice.swift <sheet> <outDir> <minY> names...") }
 let inputPath = args[1]
 let outDir = args[2]
-let bandMinY = Int(args[3])!
+let singleSide: Int? = args[3].hasPrefix("single:") ? Int(args[3].dropFirst(7)) : nil
+let bandMinY = singleSide == nil ? Int(args[3])! : 0
 let names = Array(args[4...])
 
 guard let src = CGImageSourceCreateWithURL(URL(fileURLWithPath: inputPath) as CFURL, nil),
@@ -40,7 +50,9 @@ px.withUnsafeMutableBytes { buf in
 // Anything this light AND reachable from the borders is background — paper
 // or the beige ground shadow. The dark outline seals the body, so the light
 // muzzle and eye whites are never reachable and survive whatever this is.
-let hardBG = 172
+// Single renders carry a darker beige ground shadow (min channel ~170) —
+// key deeper so it goes too; the dark outline still seals the body.
+let hardBG = singleSide == nil ? 172 : 150
 var isBG = [Bool](repeating: false, count: w * h)
 var stack: [Int] = []
 for x in 0..<w { stack.append(x); stack.append((h - 1) * w + x) }
@@ -62,7 +74,7 @@ for i in 0..<(w * h) {
     rgb[i * 3] = Double(px[i * 4]); rgb[i * 3 + 1] = Double(px[i * 4 + 1]); rgb[i * 3 + 2] = Double(px[i * 4 + 2])
     if isBG[i] { alpha[i] = 0 }
 }
-let softLow = 110.0
+let softLow = singleSide == nil ? 110.0 : 95.0
 for i in 0..<(w * h) where !isBG[i] {
     let x = i % w, y = i / w
     var touchesBG = false
@@ -102,16 +114,24 @@ for start in 0..<(w * h) where !isBG[start] && !seen[start] {
             if !isBG[j] && !seen[j] { seen[j] = true; st.append(j) }
         }
     }
-    if count > 400 && box.height > 60 { boxes.append(box) }
+    if singleSide != nil ? count > 25 : (count > 400 && box.height > 60) { boxes.append(box) }
 }
-let band = boxes.filter { $0.minY >= bandMinY }.sorted { $0.minX < $1.minX }
+var band = boxes.filter { $0.minY >= bandMinY }.sorted { $0.minX < $1.minX }
+if singleSide != nil, let first = band.first {
+    // One character: every piece belongs to it — union them into one box.
+    band = [band.dropFirst().reduce(first) {
+        Box(minX: min($0.minX, $1.minX), minY: min($0.minY, $1.minY),
+            maxX: max($0.maxX, $1.maxX), maxY: max($0.maxY, $1.maxY))
+    }]
+}
 print("components total: \(boxes.count); in band (minY >= \(bandMinY)): \(band.count)")
 for b in band { print("  box x:\(b.minX)-\(b.maxX) y:\(b.minY)-\(b.maxY) (\(b.width)x\(b.height))") }
 guard band.count == names.count else { fatalError("expected \(names.count) sprites, found \(band.count)") }
 
 // --- 4. Shared square canvas, bottom-aligned --------------------------------
 let pad = 8
-let side = max(band.map(\.width).max()!, band.map(\.height).max()!) + pad * 2
+let fitSide = max(band.map(\.width).max()!, band.map(\.height).max()!) + pad * 2
+let side = max(singleSide ?? 0, fitSide)
 print("canvas: \(side)x\(side)")
 
 func writePNG(_ image: CGImage, to path: String) {
@@ -159,7 +179,7 @@ for (box, name) in zip(band, names) {
     }
     // Intrinsic 1x point size drives the native launch screen — keep it at
     // the historical 120pt; 2x/3x are resampled from the native canvas.
-    let base: CGFloat = 120
+    let base: CGFloat = singleSide == nil ? 120 : 240
     writePNG(scaled(image, by: base / CGFloat(side)), to: "\(outDir)/\(name)_1x.png")
     writePNG(scaled(image, by: base * 2 / CGFloat(side)), to: "\(outDir)/\(name)_2x.png")
     writePNG(scaled(image, by: base * 3 / CGFloat(side)), to: "\(outDir)/\(name)_3x.png")

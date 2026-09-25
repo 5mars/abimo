@@ -28,10 +28,10 @@ struct SparkCard: View {
 
     private var expression: MascotExpression {
         switch kind {
-        case .recordIdea: return .sitting
-        case .tasteIdea:  return .neutral
-        case .buildPlan:  return .thumbsUp
-        case .whatsNext:  return .waving
+        case .recordIdea: return .listening  // arms crossed, waiting for the pitch
+        case .tasteIdea:  return .tasting    // spoon's out, the dish isn't
+        case .buildPlan:  return .writing    // notepad ready for the plan
+        case .whatsNext:  return .dare       // "I bet you won't do another"
         }
     }
 

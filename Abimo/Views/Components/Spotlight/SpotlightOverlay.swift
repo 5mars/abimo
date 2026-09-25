@@ -164,7 +164,8 @@ struct SpotlightOverlay: View {
     private var coachBubble: some View {
         VStack(spacing: 14) {
             HStack(alignment: .center, spacing: 6) {
-                MascotView(mood: .neutral, size: 72, motion: .talking)
+                // Points at the cutout without looking at it — obviously.
+                MascotView(mood: .neutral, size: 72, motion: .talking, expression: .pointing)
                 MascotSpeechLine(line: spec.line, arrowOffsetY: 30)
             }
 

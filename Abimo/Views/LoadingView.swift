@@ -18,8 +18,9 @@ struct MascotLoadingView: View {
     var rotatingMessages: [String] = []
     var subtitle: String? = nil
     var mood: MascotMood = .neutral
-    /// Waiting is a sit-down job for the critic. Pass nil to follow `mood`.
-    var expression: MascotExpression? = .sitting
+    /// The critic waits like he's being kept waiting — glaring at his
+    /// watch, hoof tapping. Pass nil to follow `mood`.
+    var expression: MascotExpression? = .tapping
 
     @State private var appeared = false
     @State private var spinning = false
