@@ -215,7 +215,25 @@ class AIAnalysisService: ObservableObject {
         noteTitle.trimmingCharacters(in: .whitespaces).isEmpty ? responseTitle : "\(noteTitle)'s action plan"
     }
 
+    /// Generations in flight, by analysis. Several surfaces can ask for the
+    /// same plan at once (the pipeline's auto-generate, the idea screen's
+    /// "Get your action plan", a retry) — they all await ONE request instead
+    /// of each passing the "no plan yet" check and saving its own copy.
+    private static var planGenerations: [UUID: Task<(ActionPlan, [MicroAction]), Error>] = [:]
+
     func generateAndSaveActionPlan(analysis: SWOTAnalysis, transcriptionText: String, noteTitle: String = "") async throws -> (ActionPlan, [MicroAction]) {
+        if let running = Self.planGenerations[analysis.id] {
+            return try await running.value
+        }
+        let task = Task { @MainActor in
+            try await self.cookActionPlan(analysis: analysis, transcriptionText: transcriptionText, noteTitle: noteTitle)
+        }
+        Self.planGenerations[analysis.id] = task
+        defer { Self.planGenerations[analysis.id] = nil }
+        return try await task.value
+    }
+
+    private func cookActionPlan(analysis: SWOTAnalysis, transcriptionText: String, noteTitle: String) async throws -> (ActionPlan, [MicroAction]) {
         guard let userId = try await supabase.getCurrentUser()?.id else {
             throw NSError(domain: "AIAnalysisService", code: 401, userInfo: [NSLocalizedDescriptionKey: "Not authenticated"])
         }
@@ -314,7 +332,17 @@ class AIAnalysisService: ObservableObject {
             )
         }
 
-        try await supabase.createActionPlan(plan)
+        do {
+            try await supabase.createActionPlan(plan)
+        } catch let error as PostgrestError where error.code == "23505" {
+            // Unique index on analysis_id: another device or launch saved a
+            // plan for this analysis while we were cooking. Theirs wins.
+            if let existing = try await supabase.fetchActionPlan(analysisId: analysis.id) {
+                let actions = try await supabase.fetchMicroActions(actionPlanId: existing.id)
+                return (existing, actions)
+            }
+            throw error
+        }
         try await supabase.createMicroActions(microActions)
 
         return (plan, microActions)

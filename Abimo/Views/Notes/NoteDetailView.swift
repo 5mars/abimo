@@ -495,7 +495,8 @@ struct NoteDetailView: View {
             let aiService = AIAnalysisService()
             let (plan, actions) = try await aiService.generateAndSaveActionPlan(
                 analysis: analysis,
-                transcriptionText: transcription.text
+                transcriptionText: transcription.text,
+                noteTitle: noteTitle
             )
             actionPlan = plan
             actionPlanProgress = (completed: 0, total: actions.count)
